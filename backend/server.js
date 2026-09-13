@@ -2,7 +2,8 @@ const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
-// const workerRoutes = require("./routes/workerRoutes");
+const workerRoutes = require("./routes/workerRoutes");
+const bookingRoutes = require("./routes/bookingRoutes");
 dotenv.config();
 
 const app = express();
@@ -13,7 +14,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-// app.use("/api/workers", workerRoutes);
+app.use("/api/workers", workerRoutes);
+app.use("/api/bookings", bookingRoutes);
 
 // ===============================
 // ROUTES
