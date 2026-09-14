@@ -8,22 +8,36 @@ const projectSchema = new mongoose.Schema(
       trim: true
     },
 
-    province: {
+    projectCode: {
       type: String,
       required: true,
+      unique: true,
       trim: true
+    },
+
+    province: {
+      type: String,
+      required: true
     },
 
     district: {
       type: String,
-      required: true,
-      trim: true
+      required: true
+    },
+
+    municipality: {
+      type: String,
+      required: true
+    },
+
+    contractor: {
+      type: String,
+      required: true
     },
 
     budget: {
       type: Number,
-      required: true,
-      min: 0
+      required: true
     },
 
     progress: {
@@ -35,64 +49,27 @@ const projectSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: [
-        "Active",
-        "Completed",
-        "Delayed",
-        "Critical"
-      ],
+      enum: ["Active", "Delayed", "Completed", "Critical"],
       default: "Active"
     },
 
     risk: {
       type: String,
-      enum: [
-        "Low",
-        "Medium",
-        "High",
-        "Critical"
-      ],
+      enum: ["Low", "Medium", "High", "Critical"],
       default: "Low"
-    },
-
-    contractor: {
-      type: String,
-      default: "",
-      trim: true
-    },
-
-    department: {
-      type: String,
-      default: "",
-      trim: true
     },
 
     startDate: {
       type: Date
     },
 
-    endDate: {
+    expectedEndDate: {
       type: Date
-    },
-
-    location: {
-      type: String,
-      default: "",
-      trim: true
-    },
-
-    latitude: {
-      type: Number
-    },
-
-    longitude: {
-      type: Number
     },
 
     description: {
       type: String,
-      default: "",
-      trim: true
+      default: ""
     },
 
     isPublished: {
@@ -105,6 +82,4 @@ const projectSchema = new mongoose.Schema(
   }
 );
 
-const Project = mongoose.model("Project", projectSchema);
-
-module.exports = Project;
+module.exports = mongoose.model("Project", projectSchema);

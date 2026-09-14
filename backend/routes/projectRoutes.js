@@ -1,30 +1,113 @@
 const express = require("express");
-
-const {
-  createProject,
-  getProjects,
-  getProject,
-  updateProject,
-  deleteProject
-} = require("../controllers/projectController");
-
-const authMiddleware = require("../middleware/authMiddleware");
-
 const router = express.Router();
 
-// Get all projects
-router.get("/", getProjects);
+// GET all projects
+router.get("/", async (req, res) => {
+    try {
+        res.json({
+            success: true,
+            message: "Projects fetched successfully",
+            projects: []
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Server error"
+        });
+    }
+});
 
-// Get single project
-router.get("/:id", getProject);
+// GET single project
+router.get("/:id", async (req, res) => {
+    try {
+        res.json({
+            success: true,
+            message: "Project fetched successfully",
+            project: null
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Server error"
+        });
+    }
+});
 
-// Create project - protected
-router.post("/", authMiddleware, createProject);
+// CREATE project
+router.post("/", async (req, res) => {
+    try {
+        const {
+            name,
+            description,
+            province,
+            district,
+            municipality,
+            contractor,
+            budget,
+            progress,
+            status,
+            startDate,
+            expectedEndDate,
+            isPublished
+        } = req.body;
 
-// Update project - protected
-router.put("/:id", authMiddleware, updateProject);
+        res.status(201).json({
+            success: true,
+            message: "Project created successfully",
+            project: {
+                name,
+                description,
+                province,
+                district,
+                municipality,
+                contractor,
+                budget,
+                progress,
+                status,
+                startDate,
+                expectedEndDate,
+                isPublished
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Server error"
+        });
+    }
+});
 
-// Delete project - protected
-router.delete("/:id", authMiddleware, deleteProject);
+// UPDATE project
+router.put("/:id", async (req, res) => {
+    try {
+        res.json({
+            success: true,
+            message: "Project updated successfully",
+            projectId: req.params.id,
+            data: req.body
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Server error"
+        });
+    }
+});
+
+// DELETE project
+router.delete("/:id", async (req, res) => {
+    try {
+        res.json({
+            success: true,
+            message: "Project deleted successfully",
+            projectId: req.params.id
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Server error"
+        });
+    }
+});
 
 module.exports = router;

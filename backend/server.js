@@ -4,6 +4,7 @@ const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const workerRoutes = require("./routes/workerRoutes");
 const bookingRoutes = require("./routes/bookingRoutes");
+const projectRoutes = require("./routes/projectRoutes");
 dotenv.config();
 
 const app = express();
@@ -16,7 +17,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use("/api/workers", workerRoutes);
 app.use("/api/bookings", bookingRoutes);
-
+app.use("/api/projects", projectRoutes);
 // ===============================
 // ROUTES
 // ===============================
