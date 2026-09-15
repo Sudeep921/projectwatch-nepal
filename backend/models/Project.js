@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 const projectSchema = new mongoose.Schema(
   {
-    name: {
+    projectName: {
       type: String,
       required: true,
       trim: true
@@ -17,27 +17,32 @@ const projectSchema = new mongoose.Schema(
 
     province: {
       type: String,
-      required: true
+      required: true,
+      trim: true
     },
 
     district: {
       type: String,
-      required: true
+      required: true,
+      trim: true
     },
 
     municipality: {
       type: String,
-      required: true
+      required: true,
+      trim: true
     },
 
     contractor: {
       type: String,
-      required: true
+      required: true,
+      trim: true
     },
 
     budget: {
       type: Number,
-      required: true
+      required: true,
+      min: 0
     },
 
     progress: {
@@ -53,23 +58,23 @@ const projectSchema = new mongoose.Schema(
       default: "Active"
     },
 
-    risk: {
+    riskLevel: {
       type: String,
       enum: ["Low", "Medium", "High", "Critical"],
       default: "Low"
+    },
+
+    description: {
+      type: String,
+      default: ""
     },
 
     startDate: {
       type: Date
     },
 
-    expectedEndDate: {
+    endDate: {
       type: Date
-    },
-
-    description: {
-      type: String,
-      default: ""
     },
 
     isPublished: {

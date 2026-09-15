@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-// GET all projects
+// Get all projects
 router.get("/", async (req, res) => {
     try {
         res.json({
@@ -12,33 +12,34 @@ router.get("/", async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: "Server error"
+            message: "Failed to fetch projects"
         });
     }
 });
 
-// GET single project
+// Get single project
 router.get("/:id", async (req, res) => {
     try {
         res.json({
             success: true,
             message: "Project fetched successfully",
-            project: null
+            project: {
+                id: req.params.id
+            }
         });
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: "Server error"
+            message: "Failed to fetch project"
         });
     }
 });
 
-// CREATE project
+// Create project
 router.post("/", async (req, res) => {
     try {
         const {
             name,
-            description,
             province,
             district,
             municipality,
@@ -46,8 +47,9 @@ router.post("/", async (req, res) => {
             budget,
             progress,
             status,
+            description,
             startDate,
-            expectedEndDate,
+            endDate,
             isPublished
         } = req.body;
 
@@ -56,7 +58,6 @@ router.post("/", async (req, res) => {
             message: "Project created successfully",
             project: {
                 name,
-                description,
                 province,
                 district,
                 municipality,
@@ -64,20 +65,21 @@ router.post("/", async (req, res) => {
                 budget,
                 progress,
                 status,
+                description,
                 startDate,
-                expectedEndDate,
+                endDate,
                 isPublished
             }
         });
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: "Server error"
+            message: "Failed to create project"
         });
     }
 });
 
-// UPDATE project
+// Update project
 router.put("/:id", async (req, res) => {
     try {
         res.json({
@@ -89,12 +91,12 @@ router.put("/:id", async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: "Server error"
+            message: "Failed to update project"
         });
     }
 });
 
-// DELETE project
+// Delete project
 router.delete("/:id", async (req, res) => {
     try {
         res.json({
@@ -105,7 +107,7 @@ router.delete("/:id", async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: "Server error"
+            message: "Failed to delete project"
         });
     }
 });
