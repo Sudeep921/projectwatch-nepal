@@ -28,6 +28,7 @@ const projectRoutes = require("./routes/projectRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const fieldReportRoutes = require("./routes/fieldReportRoutes");
 const complaintRoutes = require("./routes/complaintRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
 
 app.use("/api/auth", authRoutes);
 app.use("/api/projects", projectRoutes);
@@ -37,6 +38,7 @@ app.use("/api/projects", projectRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/field-reports", fieldReportRoutes);
 app.use("/api/complaints", complaintRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // ===============================
 // TEST ROUTE
