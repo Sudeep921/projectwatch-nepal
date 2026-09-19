@@ -15,6 +15,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use("/uploads", express.static("uploads"));
 
 
 
@@ -29,6 +30,11 @@ const dashboardRoutes = require("./routes/dashboardRoutes");
 const fieldReportRoutes = require("./routes/fieldReportRoutes");
 const complaintRoutes = require("./routes/complaintRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
+const verificationRoutes = require("./routes/verificationRoutes");
+const evidenceRoutes = require("./routes/evidenceRoutes");
+const alertRoutes = require("./routes/alertRoutes");
+const publicRoutes = require("./routes/publicRoutes");
+
 
 app.use("/api/auth", authRoutes);
 app.use("/api/projects", projectRoutes);
@@ -39,6 +45,13 @@ app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/field-reports", fieldReportRoutes);
 app.use("/api/complaints", complaintRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/verifications", verificationRoutes);
+app.use("/api/evidence", evidenceRoutes);
+app.use("/api/alerts", alertRoutes);
+app.use("/api/public", publicRoutes);
+
+
+
 
 // ===============================
 // TEST ROUTE

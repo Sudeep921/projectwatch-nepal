@@ -1,115 +1,91 @@
 const express = require("express");
+
+const {
+  createProject,
+  getProjects,
+  getProject,
+  updateProject,
+  deleteProject,
+  getPublicProjects
+} = require("../controllers/projectController");
+
+const authMiddleware = require("../middleware/authMiddleware");
+const roleMiddleware = require("../middleware/roleMiddleware");
+
 const router = express.Router();
 
-// Get all projects
-router.get("/", async (req, res) => {
-    try {
-        res.json({
-            success: true,
-            message: "Projects fetched successfully",
-            projects: []
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: "Failed to fetch projects"
-        });
-    }
-});
 
-// Get single project
-router.get("/:id", async (req, res) => {
-    try {
-        res.json({
-            success: true,
-            message: "Project fetched successfully",
-            project: {
-                id: req.params.id
-            }
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: "Failed to fetch project"
-        });
-    }
-});
+// ========================================
+// PUBLIC PROJECTS
+// ========================================
+// Citizen / Public Portal
+// GET /api/projects/public
+router.get("/public", getPublicProjects);
 
-// Create project
-router.post("/", async (req, res) => {
-    try {
-        const {
-            name,
-            province,
-            district,
-            municipality,
-            contractor,
-            budget,
-            progress,
-            status,
-            description,
-            startDate,
-            endDate,
-            isPublished
-        } = req.body;
 
-        res.status(201).json({
-            success: true,
-            message: "Project created successfully",
-            project: {
-                name,
-                province,
-                district,
-                municipality,
-                contractor,
-                budget,
-                progress,
-                status,
-                description,
-                startDate,
-                endDate,
-                isPublished
-            }
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: "Failed to create project"
-        });
-    }
-});
+// ========================================
+// GET ALL PROJECTS
+// ========================================
+// Admin + Officer
+// GET /api/projects
+router.get(
+  "/",
+  authMiddleware,
+  roleMiddleware("admin", "officer"),
+  getProjects
+);
 
-// Update project
-router.put("/:id", async (req, res) => {
-    try {
-        res.json({
-            success: true,
-            message: "Project updated successfully",
-            projectId: req.params.id,
-            data: req.body
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: "Failed to update project"
-        });
-    }
-});
 
-// Delete project
-router.delete("/:id", async (req, res) => {
-    try {
-        res.json({
-            success: true,
-            message: "Project deleted successfully",
-            projectId: req.params.id
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: "Failed to delete project"
-        });
-    }
-});
+// ========================================
+// GET SINGLE PROJECT
+// ========================================
+// Admin + Officer
+// GET /api/projects/:id
+router.get(
+  "/:id",
+  authMiddleware,
+  roleMiddleware("admin", "officer"),
+  getProject
+);
+
+
+// ========================================
+// CREATE PROJECT
+// ========================================
+// Only Admin
+// POST /api/projects
+router.post(
+  "/",
+  authMiddleware,
+  roleMiddleware("admin"),
+  createProject
+);
+
+
+// ========================================
+// UPDATE PROJECT
+// ========================================
+// Only Admin
+// PUT /api/projects/:id
+router.put(
+  "/:id",
+  authMiddleware,
+  roleMiddleware("admin"),
+  updateProject
+);
+
+
+// ========================================
+// DELETE PROJECT
+// ========================================
+// Only Admin
+// DELETE /api/projects/:id
+router.delete(
+  "/:id",
+  authMiddleware,
+  roleMiddleware("admin"),
+  deleteProject
+);
+
 
 module.exports = router;

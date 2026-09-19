@@ -1,90 +1,100 @@
 const mongoose = require("mongoose");
 
 const projectSchema = new mongoose.Schema(
-  {
-    projectName: {
-      type: String,
-      required: true,
-      trim: true
-    },
+    {
+        projectName: {
+            type: String,
+            required: true,
+            trim: true
+        },
 
-    projectCode: {
-      type: String,
-      required: true,
-      unique: true,
-      trim: true
-    },
+        projectCode: {
+            type: String,
+            required: true,
+            unique: true,
+            trim: true
+        },
 
-    province: {
-      type: String,
-      required: true,
-      trim: true
-    },
+        province: {
+            type: String,
+            required: true
+        },
 
-    district: {
-      type: String,
-      required: true,
-      trim: true
-    },
+        district: {
+            type: String,
+            required: true
+        },
 
-    municipality: {
-      type: String,
-      required: true,
-      trim: true
-    },
+        municipality: {
+            type: String,
+            required: true
+        },
 
-    contractor: {
-      type: String,
-      required: true,
-      trim: true
-    },
+        contractor: {
+            type: String,
+            required: true
+        },
+        assignedOfficer: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            default: null
+     },
 
-    budget: {
-      type: Number,
-      required: true,
-      min: 0
-    },
+        budget: {
+            type: Number,
+            required: true
+        },
 
-    progress: {
-      type: Number,
-      default: 0,
-      min: 0,
-      max: 100
-    },
+        progress: {
+            type: Number,
+            default: 0,
+            min: 0,
+            max: 100
+        },
 
-    status: {
-      type: String,
-      enum: ["Active", "Delayed", "Completed", "Critical"],
-      default: "Active"
-    },
+        status: {
+            type: String,
+            enum: [
+                "Active",
+                "Delayed",
+                "Completed",
+                "Critical"
+            ],
+            default: "Active"
+        },
 
-    riskLevel: {
-      type: String,
-      enum: ["Low", "Medium", "High", "Critical"],
-      default: "Low"
-    },
+        riskLevel: {
+            type: String,
+            enum: [
+                "Low",
+                "Medium",
+                "High",
+                "Critical"
+            ],
+            default: "Low"
+        },
 
-    description: {
-      type: String,
-      default: ""
-    },
+        description: {
+            type: String,
+            default: ""
+        },
 
-    startDate: {
-      type: Date
-    },
+        startDate: {
+            type: Date
+        },
 
-    endDate: {
-      type: Date
-    },
+        endDate: {
+            type: Date
+        },
 
-    isPublished: {
-      type: Boolean,
-      default: true
+        isPublished: {
+            type: Boolean,
+            default: false
+        }
+    },
+    {
+        timestamps: true
     }
-  },
-  {
-    timestamps: true
-  }
 );
 
 module.exports = mongoose.model("Project", projectSchema);

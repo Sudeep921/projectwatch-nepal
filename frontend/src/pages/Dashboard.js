@@ -1,41 +1,177 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import StatCard from "../components/StatCard";
 
 function Dashboard() {
+  // =====================================================
+  // DASHBOARD API DATA
+  // =====================================================
+
+  const [dashboardStats, setDashboardStats] = useState({
+    totalProjects: 0,
+    activeProjects: 0,
+    completedProjects: 0,
+    delayedProjects: 0,
+    criticalProjects: 0,
+    totalBudget: 0,
+    averageProgress: 0,
+  });
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  // =====================================================
+  // FETCH DASHBOARD STATS
+  // =====================================================
+
+  useEffect(function () {
+    fetchDashboardStats();
+  }, []);
+
+  async function fetchDashboardStats() {
+    try {
+      setLoading(true);
+      setError("");
+
+      const token = localStorage.getItem("token");
+
+      const response = await fetch(
+        "http://localhost:8000/api/dashboard/stats",
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + token,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Failed to fetch dashboard statistics"
+        );
+      }
+
+      if (data.success) {
+        setDashboardStats(data.stats);
+      }
+    } catch (err) {
+      console.error("Dashboard API Error:", err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // =====================================================
+  // FORMAT BUDGET
+  // =====================================================
+
+  function formatBudget(amount) {
+    if (!amount) {
+      return "NPR 0";
+    }
+
+    if (amount >= 1000000000) {
+      return (
+        "NPR " +
+        (amount / 1000000000).toFixed(2) +
+        "B"
+      );
+    }
+
+    if (amount >= 1000000) {
+      return (
+        "NPR " +
+        (amount / 1000000).toFixed(2) +
+        "M"
+      );
+    }
+
+    if (amount >= 1000) {
+      return (
+        "NPR " +
+        (amount / 1000).toFixed(2) +
+        "K"
+      );
+    }
+
+    return "NPR " + Number(amount).toLocaleString();
+  }
+
+  // =====================================================
+  // CALCULATE REMAINING BUDGET
+  // =====================================================
+
+  function getRemainingBudget() {
+    const totalBudget = dashboardStats.totalBudget || 0;
+    const progress = dashboardStats.averageProgress || 0;
+
+    const usedBudget =
+      totalBudget * (progress / 100);
+
+    const remainingBudget =
+      totalBudget - usedBudget;
+
+    return remainingBudget > 0
+      ? remainingBudget
+      : 0;
+  }
+
+  // =====================================================
+  // STATISTICS
+  // =====================================================
+
   const stats = [
     {
       icon: "▣",
       title: "Total Projects",
-      value: "1,284",
-      change: "+12.5%",
-      description: "vs last month",
+      value: loading
+        ? "..."
+        : dashboardStats.totalProjects.toLocaleString(),
+      change: "",
+      description: "all registered projects",
       type: "blue",
     },
+
     {
       icon: "◉",
       title: "Active Projects",
-      value: "742",
-      change: "+8.2%",
+      value: loading
+        ? "..."
+        : dashboardStats.activeProjects.toLocaleString(),
+      change: "",
       description: "currently active",
       type: "green",
     },
+
     {
       icon: "◷",
       title: "Delayed Projects",
-      value: "151",
-      change: "-4.3%",
-      description: "vs last month",
+      value: loading
+        ? "..."
+        : dashboardStats.delayedProjects.toLocaleString(),
+      change: "",
+      description: "projects behind schedule",
       type: "orange",
     },
+
     {
       icon: "⚠",
       title: "Critical Projects",
-      value: "37",
-      change: "+2.1%",
+      value: loading
+        ? "..."
+        : dashboardStats.criticalProjects.toLocaleString(),
+      change: "",
       description: "requires attention",
       type: "red",
     },
   ];
+
+  // =====================================================
+  // CRITICAL PROJECTS
+  // =====================================================
 
   const criticalProjects = [
     {
@@ -44,12 +180,14 @@ function Dashboard() {
       progress: "42%",
       risk: "Critical",
     },
+
     {
       name: "Pokhara Regional Bridge",
       province: "Gandaki",
       progress: "38%",
       risk: "Critical",
     },
+
     {
       name: "District Hospital Upgrade",
       province: "Koshi",
@@ -57,6 +195,10 @@ function Dashboard() {
       risk: "At Risk",
     },
   ];
+
+  // =====================================================
+  // ALERTS
+  // =====================================================
 
   const alerts = [
     {
@@ -66,6 +208,7 @@ function Dashboard() {
       icon: "!",
       type: "warning",
     },
+
     {
       title: "Evidence submission received",
       project: "Pokhara Bridge",
@@ -73,6 +216,7 @@ function Dashboard() {
       icon: "✓",
       type: "success",
     },
+
     {
       title: "Project deadline approaching",
       project: "Hospital Upgrade",
@@ -80,6 +224,7 @@ function Dashboard() {
       icon: "◷",
       type: "warning",
     },
+
     {
       title: "New citizen complaint",
       project: "Road Maintenance",
@@ -88,6 +233,10 @@ function Dashboard() {
       type: "danger",
     },
   ];
+
+  // =====================================================
+  // BUTTON FUNCTIONS
+  // =====================================================
 
   function handleAddProject() {
     alert(
@@ -101,13 +250,23 @@ function Dashboard() {
     );
   }
 
+  function handleBudgetPeriod() {
+    alert(
+      "Budget period selector will be added soon."
+    );
+  }
+
+  // =====================================================
+  // MAIN UI
+  // =====================================================
+
   return React.createElement(
     "main",
     { className: "main-content" },
 
-    /* =====================================================
-       WELCOME HEADER
-       ===================================================== */
+    // ===================================================
+    // WELCOME HEADER
+    // ===================================================
 
     React.createElement(
       "div",
@@ -140,9 +299,23 @@ function Dashboard() {
       )
     ),
 
-    /* =====================================================
-       STATISTICS
-       ===================================================== */
+    // ===================================================
+    // ERROR MESSAGE
+    // ===================================================
+
+    error &&
+      React.createElement(
+        "div",
+        {
+          className: "dashboard-error",
+        },
+        "⚠ ",
+        error
+      ),
+
+    // ===================================================
+    // STATISTICS
+    // ===================================================
 
     React.createElement(
       "div",
@@ -161,23 +334,29 @@ function Dashboard() {
       })
     ),
 
-    /* =====================================================
-       BUDGET + PROGRESS
-       ===================================================== */
+    // ===================================================
+    // BUDGET + PROGRESS
+    // ===================================================
 
     React.createElement(
       "div",
       { className: "dashboard-grid" },
 
-      /* ---------------- BUDGET ---------------- */
+      // -------------------------------------------------
+      // PROJECT BUDGET
+      // -------------------------------------------------
 
       React.createElement(
         "section",
-        { className: "panel budget-panel" },
+        {
+          className: "panel budget-panel",
+        },
 
         React.createElement(
           "div",
-          { className: "panel-header" },
+          {
+            className: "panel-header",
+          },
 
           React.createElement(
             "div",
@@ -200,9 +379,7 @@ function Dashboard() {
             "button",
             {
               className: "period-button",
-              onClick: function () {
-                alert("Budget period selector will be added soon.");
-              },
+              onClick: handleBudgetPeriod,
             },
             "This Year ⌄"
           )
@@ -210,20 +387,32 @@ function Dashboard() {
 
         React.createElement(
           "div",
-          { className: "budget-number" },
-          "NPR 48.2B"
+          {
+            className: "budget-number",
+          },
+          loading
+            ? "..."
+            : formatBudget(
+                dashboardStats.totalBudget
+              )
         ),
 
         React.createElement(
           "div",
-          { className: "progress-bar" },
+          {
+            className: "progress-bar",
+          },
 
           React.createElement(
             "div",
             {
               className: "progress-fill",
               style: {
-                width: "72%",
+                width:
+                  Math.min(
+                    dashboardStats.averageProgress || 0,
+                    100
+                  ) + "%",
               },
             }
           )
@@ -231,31 +420,47 @@ function Dashboard() {
 
         React.createElement(
           "div",
-          { className: "budget-footer" },
+          {
+            className: "budget-footer",
+          },
 
           React.createElement(
             "span",
             null,
-            "72% allocated"
+            loading
+              ? "Loading..."
+              : Math.round(
+                  dashboardStats.averageProgress || 0
+                ) + "% progress"
           ),
 
           React.createElement(
             "strong",
             null,
-            "NPR 13.5B remaining"
+            loading
+              ? "..."
+              : formatBudget(
+                  getRemainingBudget()
+                ) + " remaining"
           )
         )
       ),
 
-      /* ---------------- PROJECT PROGRESS ---------------- */
+      // -------------------------------------------------
+      // PROJECT PROGRESS
+      // -------------------------------------------------
 
       React.createElement(
         "section",
-        { className: "panel progress-panel" },
+        {
+          className: "panel progress-panel",
+        },
 
         React.createElement(
           "div",
-          { className: "panel-header" },
+          {
+            className: "panel-header",
+          },
 
           React.createElement(
             "div",
@@ -277,20 +482,35 @@ function Dashboard() {
 
         React.createElement(
           "div",
-          { className: "progress-circle-container" },
+          {
+            className: "progress-circle-container",
+          },
 
           React.createElement(
             "div",
-            { className: "progress-circle" },
+            {
+              className: "progress-circle",
+              style: {
+                "--progress":
+                  (dashboardStats.averageProgress || 0) +
+                  "%",
+              },
+            },
 
             React.createElement(
               "div",
-              { className: "circle-inner" },
+              {
+                className: "circle-inner",
+              },
 
               React.createElement(
                 "strong",
                 null,
-                "67%"
+                loading
+                  ? "..."
+                  : Math.round(
+                      dashboardStats.averageProgress || 0
+                    ) + "%"
               ),
 
               React.createElement(
@@ -303,7 +523,11 @@ function Dashboard() {
 
           React.createElement(
             "div",
-            { className: "progress-legend" },
+            {
+              className: "progress-legend",
+            },
+
+            // COMPLETED
 
             React.createElement(
               "div",
@@ -325,9 +549,11 @@ function Dashboard() {
               React.createElement(
                 "strong",
                 null,
-                "391"
+                dashboardStats.completedProjects
               )
             ),
+
+            // ACTIVE
 
             React.createElement(
               "div",
@@ -349,9 +575,11 @@ function Dashboard() {
               React.createElement(
                 "strong",
                 null,
-                "742"
+                dashboardStats.activeProjects
               )
             ),
+
+            // DELAYED
 
             React.createElement(
               "div",
@@ -373,7 +601,7 @@ function Dashboard() {
               React.createElement(
                 "strong",
                 null,
-                "151"
+                dashboardStats.delayedProjects
               )
             )
           )
@@ -381,23 +609,31 @@ function Dashboard() {
       )
     ),
 
-    /* =====================================================
-       CRITICAL PROJECTS + ALERTS
-       ===================================================== */
+    // ===================================================
+    // CRITICAL PROJECTS + ALERTS
+    // ===================================================
 
     React.createElement(
       "div",
-      { className: "bottom-grid" },
+      {
+        className: "bottom-grid",
+      },
 
-      /* ---------------- CRITICAL PROJECTS ---------------- */
+      // -------------------------------------------------
+      // CRITICAL PROJECTS
+      // -------------------------------------------------
 
       React.createElement(
         "section",
-        { className: "panel critical-panel" },
+        {
+          className: "panel critical-panel",
+        },
 
         React.createElement(
           "div",
-          { className: "panel-header" },
+          {
+            className: "panel-header",
+          },
 
           React.createElement(
             "div",
@@ -503,15 +739,21 @@ function Dashboard() {
         })
       ),
 
-      /* ---------------- RECENT ALERTS ---------------- */
+      // -------------------------------------------------
+      // RECENT ALERTS
+      // -------------------------------------------------
 
       React.createElement(
         "section",
-        { className: "panel alerts-panel" },
+        {
+          className: "panel alerts-panel",
+        },
 
         React.createElement(
           "div",
-          { className: "panel-header" },
+          {
+            className: "panel-header",
+          },
 
           React.createElement(
             "div",

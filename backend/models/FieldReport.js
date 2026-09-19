@@ -22,13 +22,15 @@ const fieldReportSchema = new mongoose.Schema(
 
     description: {
       type: String,
-      required: true
+      required: true,
+      trim: true
     },
 
     progress: {
       type: Number,
       min: 0,
-      max: 100
+      max: 100,
+      default: 0
     },
 
     workStatus: {
@@ -59,6 +61,21 @@ const fieldReportSchema = new mongoose.Schema(
       type: String,
       enum: ["Pending", "Verified", "Rejected"],
       default: "Pending"
+    },
+
+    evidenceCount: {
+      type: Number,
+      default: 0
+    },
+
+    hasGPS: {
+      type: Boolean,
+      default: false
+    },
+
+    verificationNote: {
+      type: String,
+      default: ""
     }
   },
   {

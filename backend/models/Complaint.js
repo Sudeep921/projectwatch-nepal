@@ -39,7 +39,14 @@ const complaintSchema = new mongoose.Schema(
 
     category: {
       type: String,
-      enum: ["Delay", "Quality", "Budget", "Contractor", "Safety", "Other"],
+      enum: [
+        "Delay",
+        "Quality",
+        "Budget",
+        "Contractor",
+        "Safety",
+        "Other"
+      ],
       default: "Other"
     },
 
@@ -66,12 +73,28 @@ const complaintSchema = new mongoose.Schema(
       default: ""
     },
 
-    latitude: Number,
-    longitude: Number,
+    latitude: {
+      type: Number
+    },
+
+    longitude: {
+      type: Number
+    },
 
     resolutionNote: {
       type: String,
       default: ""
+    },
+
+    resolvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null
+    },
+
+    resolvedAt: {
+      type: Date,
+      default: null
     }
   },
   {
