@@ -1,4 +1,12 @@
-import React, { useState } from "react";
+import React from "react";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate
+} from "react-router-dom";
+
+import { useAuth } from "./context/AuthContext";
 
 import DashboardLayout from "./layouts/DashboardLayout";
 
@@ -14,126 +22,207 @@ import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import PublicPortal from "./pages/PublicPortal";
 
-function App() {
-  const [page, setPage] = useState("dashboard");
-  const [selectedProject, setSelectedProject] = useState(null);
+const ProtectedRoutes = () => {
+  const {
+    user,
+    loading
+  } = useAuth();
 
-  /* =========================================
-     OPEN PROJECT DETAILS
-     ========================================= */
-
-  function openProject(project) {
-    setSelectedProject(project);
-    setPage("project-details");
+  if (loading) {
+    return React.createElement(
+      "div",
+      {
+        className: "app-loading"
+      },
+      "Loading ProjectWatch Nepal..."
+    );
   }
 
-  /* =========================================
-     PUBLIC PORTAL
-     ========================================= */
-
-  if (page === "public-portal") {
-    return React.createElement(PublicPortal);
+  if (!user) {
+    return React.createElement(
+      Navigate,
+      {
+        to: "/public",
+        replace: true
+      }
+    );
   }
-
-  /* =========================================
-     RENDER ADMIN PAGES
-     ========================================= */
-
-  function renderPage() {
-    /* DASHBOARD */
-
-    if (page === "dashboard") {
-      return React.createElement(Dashboard);
-    }
-
-    /* PROJECTS */
-
-    if (page === "projects") {
-      return React.createElement(Projects, {
-        setPage: setPage,
-        onViewProject: openProject
-      });
-    }
-
-    /* PROJECT DETAILS */
-
-    if (page === "project-details") {
-      return React.createElement(ProjectDetails, {
-        project: selectedProject,
-
-        onBack: function () {
-          setPage("projects");
-        }
-      });
-    }
-
-    /* LIVE MAP */
-
-    if (page === "map") {
-      return React.createElement(Map, {
-        setPage: setPage,
-        onViewProject: openProject
-      });
-    }
-
-    /* FIELD REPORTS */
-
-    if (page === "field-reports") {
-      return React.createElement(FieldReports);
-    }
-
-    /* COMPLAINTS */
-
-    if (page === "complaints") {
-      return React.createElement(Complaints);
-    }
-    if (page === "public-portal") {
-      return React.createElement(PublicPortal, {
-        setPage: setPage
-      });
-    }
-
-    /* EVIDENCE */
-
-    if (page === "evidence") {
-      return React.createElement(Evidence);
-    }
-
-    /* ALERTS */
-
-    if (page === "alerts") {
-      return React.createElement(Alerts);
-    }
-
-    /* REPORTS */
-
-    if (page === "reports") {
-      return React.createElement(Reports);
-    }
-
-    /* SETTINGS */
-
-    if (page === "settings") {
-      return React.createElement(Settings);
-    }
-
-    /* FALLBACK */
-
-    return React.createElement(Dashboard);
-  }
-
-  /* =========================================
-     ADMIN LAYOUT
-     ========================================= */
 
   return React.createElement(
-    DashboardLayout,
-    {
-      currentPage: page,
-      setPage: setPage
-    },
-    renderPage()
+    DashboardLayout
   );
-}
+};
+
+const App = () => {
+  return React.createElement(
+    BrowserRouter,
+    null,
+
+    React.createElement(
+      Routes,
+      null,
+
+      React.createElement(
+        Route,
+        {
+          path: "/public",
+          element:
+            React.createElement(
+              PublicPortal
+            )
+        }
+      ),
+
+      React.createElement(
+        Route,
+        {
+          path: "/",
+          element:
+            React.createElement(
+              ProtectedRoutes
+            )
+        },
+
+        React.createElement(
+          Route,
+          {
+            index: true,
+            element:
+              React.createElement(
+                Navigate,
+                {
+                  to: "/dashboard",
+                  replace: true
+                }
+              )
+          }
+        ),
+
+        React.createElement(
+          Route,
+          {
+            path: "dashboard",
+            element:
+              React.createElement(
+                Dashboard
+              )
+          }
+        ),
+
+        React.createElement(
+          Route,
+          {
+            path: "projects",
+            element:
+              React.createElement(
+                Projects
+              )
+          }
+        ),
+
+        React.createElement(
+          Route,
+          {
+            path: "projects/:id",
+            element:
+              React.createElement(
+                ProjectDetails
+              )
+          }
+        ),
+
+        React.createElement(
+          Route,
+          {
+            path: "map",
+            element:
+              React.createElement(Map)
+          }
+        ),
+
+        React.createElement(
+          Route,
+          {
+            path: "field-reports",
+            element:
+              React.createElement(
+                FieldReports
+              )
+          }
+        ),
+
+        React.createElement(
+          Route,
+          {
+            path: "complaints",
+            element:
+              React.createElement(
+                Complaints
+              )
+          }
+        ),
+
+        React.createElement(
+          Route,
+          {
+            path: "evidence",
+            element:
+              React.createElement(
+                Evidence
+              )
+          }
+        ),
+
+        React.createElement(
+          Route,
+          {
+            path: "alerts",
+            element:
+              React.createElement(
+                Alerts
+              )
+          }
+        ),
+
+        React.createElement(
+          Route,
+          {
+            path: "reports",
+            element:
+              React.createElement(
+                Reports
+              )
+          }
+        ),
+
+        React.createElement(
+          Route,
+          {
+            path: "settings",
+            element:
+              React.createElement(
+                Settings
+              )
+          }
+        )
+      ),
+
+      React.createElement(
+        Route,
+        {
+          path: "*",
+          element:
+            React.createElement(
+              Navigate,
+              {
+                to: "/public",
+                replace: true
+              }
+            )
+        }
+      )
+    )
+  );
+};
 
 export default App;

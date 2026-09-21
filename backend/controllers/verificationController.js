@@ -1,8 +1,13 @@
-const Verification = require("../models/verification");
-const Project = require("../models/Project");
+const Verification = require("../models/Verification");
 const FieldReport = require("../models/FieldReport");
+const Project = require("../models/Project");
+const Alert = require("../models/Alert");
 
+
+// ==========================================
 // CREATE VERIFICATION
+// ==========================================
+
 const createVerification = async (req, res) => {
   try {
     const {
@@ -15,13 +20,6 @@ const createVerification = async (req, res) => {
       discrepancyDetected,
       discrepancyDetails
     } = req.body;
-
-    if (!project || !fieldReport || !verificationType) {
-      return res.status(400).json({
-        success: false,
-        message: "Project, field report and verification type are required"
-      });
-    }
 
     const projectExists = await Project.findById(project);
 
@@ -41,26 +39,55 @@ const createVerification = async (req, res) => {
       });
     }
 
-    if (reportExists.project.toString() !== project.toString()) {
-      return res.status(400).json({
-        success: false,
-        message: "Field report does not belong to this project"
-      });
-    }
-
-    const verifier = req.user._id;
-
     const verification = await Verification.create({
       project,
       fieldReport,
-      verifier,
+      verifier: req.user.id,
       verificationType,
       status,
       verifiedProgress,
       remarks,
       discrepancyDetected,
-      discrepancyDetails
+      discrepancyDetails,
+      verifiedAt:
+        status === "Verified" ||
+        status === "Rejected"
+          ? new Date()
+          : null
     });
+
+    // Update field report status
+    if (status === "Verified") {
+      reportExists.verificationStatus = "Verified";
+    }
+
+    if (status === "Rejected") {
+      reportExists.verificationStatus = "Rejected";
+    }
+
+    await reportExists.save();
+
+    // Sync verified progress to project
+    if (
+      status === "Verified" &&
+      typeof verifiedProgress === "number"
+    ) {
+      projectExists.progress = verifiedProgress;
+      await projectExists.save();
+    }
+
+    // Discrepancy alert
+    if (discrepancyDetected) {
+      await Alert.create({
+        project,
+        title: "Potential Discrepancy Detected",
+        message:
+          discrepancyDetails ||
+          "Verification requires human review.",
+        type: "Verification",
+        severity: "High"
+      });
+    }
 
     res.status(201).json({
       success: true,
@@ -79,18 +106,13 @@ const createVerification = async (req, res) => {
 };
 
 
+// ==========================================
 // GET ALL VERIFICATIONS
+// ==========================================
+
 const getVerifications = async (req, res) => {
   try {
-    const { project, fieldReport, status } = req.query;
-
-    const filter = {};
-
-    if (project) filter.project = project;
-    if (fieldReport) filter.fieldReport = fieldReport;
-    if (status) filter.status = status;
-
-    const verifications = await Verification.find(filter)
+    const verifications = await Verification.find()
       .populate("project")
       .populate("fieldReport")
       .populate("verifier", "-password")
@@ -103,7 +125,7 @@ const getVerifications = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Get verification error:", error);
+    console.error("Get verifications error:", error);
 
     res.status(500).json({
       success: false,
@@ -113,10 +135,15 @@ const getVerifications = async (req, res) => {
 };
 
 
+// ==========================================
 // GET SINGLE VERIFICATION
+// ==========================================
+
 const getVerification = async (req, res) => {
   try {
-    const verification = await Verification.findById(req.params.id)
+    const verification = await Verification.findById(
+      req.params.id
+    )
       .populate("project")
       .populate("fieldReport")
       .populate("verifier", "-password");
@@ -144,31 +171,45 @@ const getVerification = async (req, res) => {
 };
 
 
+// ==========================================
 // UPDATE VERIFICATION
+// ==========================================
+
 const updateVerification = async (req, res) => {
   try {
-    const updateData = { ...req.body };
-
-    // Verifier user बाट मात्र लिने
-    delete updateData.verifier;
-
-    const verification = await Verification.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      {
-        new: true,
-        runValidators: true
-      }
-    )
-      .populate("project")
-      .populate("fieldReport")
-      .populate("verifier", "-password");
+    const verification = await Verification.findById(
+      req.params.id
+    );
 
     if (!verification) {
       return res.status(404).json({
         success: false,
         message: "Verification not found"
       });
+    }
+
+    Object.assign(verification, req.body);
+
+    if (
+      req.body.status === "Verified" ||
+      req.body.status === "Rejected"
+    ) {
+      verification.verifiedAt = new Date();
+    }
+
+    await verification.save();
+
+    // Sync project progress after verification
+    if (
+      verification.status === "Verified" &&
+      typeof verification.verifiedProgress === "number"
+    ) {
+      await Project.findByIdAndUpdate(
+        verification.project,
+        {
+          progress: verification.verifiedProgress
+        }
+      );
     }
 
     res.json({
@@ -188,11 +229,16 @@ const updateVerification = async (req, res) => {
 };
 
 
+// ==========================================
 // DELETE VERIFICATION
+// ==========================================
+
 const deleteVerification = async (req, res) => {
   try {
     const verification =
-      await Verification.findByIdAndDelete(req.params.id);
+      await Verification.findByIdAndDelete(
+        req.params.id
+      );
 
     if (!verification) {
       return res.status(404).json({

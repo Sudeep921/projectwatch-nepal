@@ -1,16 +1,34 @@
+// ==========================================
+// PROJECT RISK CALCULATION SERVICE
+// ==========================================
+
 const calculateRisk = (project) => {
+
   let riskScore = 0;
 
-  // Progress risk
+
+  // ----------------------------------------
+  // PROGRESS
+  // ----------------------------------------
+
   if (project.progress < 25) {
+
     riskScore += 3;
+
   } else if (project.progress < 50) {
+
     riskScore += 2;
+
   } else if (project.progress < 75) {
+
     riskScore += 1;
   }
 
-  // Status risk
+
+  // ----------------------------------------
+  // PROJECT STATUS
+  // ----------------------------------------
+
   if (project.status === "Delayed") {
     riskScore += 2;
   }
@@ -19,7 +37,11 @@ const calculateRisk = (project) => {
     riskScore += 4;
   }
 
-  // Existing risk
+
+  // ----------------------------------------
+  // EXISTING RISK
+  // ----------------------------------------
+
   if (project.riskLevel === "Medium") {
     riskScore += 1;
   }
@@ -32,6 +54,10 @@ const calculateRisk = (project) => {
     riskScore += 4;
   }
 
+
+  // ----------------------------------------
+  // FINAL RISK
+  // ----------------------------------------
 
   if (riskScore >= 7) {
     return "Critical";

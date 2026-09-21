@@ -1,30 +1,35 @@
 import React from "react";
+import { Outlet } from "react-router-dom";
+
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 
-function DashboardLayout({
-  children,
-  currentPage,
-  setPage
-}) {
+const DashboardLayout = () => {
   return React.createElement(
     "div",
-    { className: "dashboard-layout" },
+    {
+      className: "dashboard-layout"
+    },
 
-    React.createElement(Sidebar, {
-      currentPage: currentPage,
-      setPage: setPage
-    }),
+    React.createElement(Sidebar),
 
     React.createElement(
       "div",
-      { className: "main-area" },
+      {
+        className: "main-layout"
+      },
 
       React.createElement(Header),
 
-      children
+      React.createElement(
+        "main",
+        {
+          className: "main-content"
+        },
+        React.createElement(Outlet)
+      )
     )
   );
-}
+};
 
 export default DashboardLayout;

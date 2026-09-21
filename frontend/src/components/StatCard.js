@@ -1,73 +1,70 @@
 import React from "react";
 
-function StatCard({
-  icon,
+const StatCard = ({
   title,
   value,
-  change,
-  description,
+  subtitle,
+  icon,
   type,
-}) {
-  function handleMenuClick() {
-    alert(title + " details will be available soon.");
-  }
-
+  onClick
+}) => {
   return React.createElement(
     "div",
-    { className: "stat-card" },
+    {
+      className: `stat-card ${
+        type || ""
+      }`,
+      onClick: onClick
+    },
 
     React.createElement(
       "div",
-      { className: "stat-top" },
+      {
+        className: "stat-card-top"
+      },
 
       React.createElement(
         "div",
         {
-          className: "stat-icon " + type,
+          className: "stat-card-icon"
         },
-        icon
-      ),
+        icon || "▦"
+      )
+    ),
+
+    React.createElement(
+      "div",
+      {
+        className: "stat-card-content"
+      },
 
       React.createElement(
-        "button",
+        "span",
         {
-          className: "stat-menu",
-          onClick: handleMenuClick,
-          title: "View details",
+          className: "stat-card-title"
         },
-        "•••"
-      )
-    ),
-
-    React.createElement(
-      "div",
-      { className: "stat-title" },
-      title
-    ),
-
-    React.createElement(
-      "div",
-      { className: "stat-value" },
-      value
-    ),
-
-    React.createElement(
-      "div",
-      { className: "stat-bottom" },
-
-      React.createElement(
-        "span",
-        { className: "stat-change" },
-        change
+        title
       ),
 
       React.createElement(
-        "span",
-        { className: "stat-description" },
-        description
-      )
+        "strong",
+        {
+          className: "stat-card-value"
+        },
+        value ?? 0
+      ),
+
+      subtitle
+        ? React.createElement(
+            "span",
+            {
+              className: "stat-card-subtitle"
+            },
+            subtitle
+          )
+        : null
     )
   );
-}
+};
 
 export default StatCard;

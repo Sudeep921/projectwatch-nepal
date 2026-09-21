@@ -4,21 +4,49 @@ const {
   createNotification,
   getNotifications,
   markAsRead,
+  markAllAsRead,
   deleteNotification
 } = require("../controllers/notificationController");
 
+const authMiddleware = require("../middleware/authMiddleware");
+const roleMiddleware = require("../middleware/roleMiddleware");
+
 const router = express.Router();
 
-// Create notification
-router.post("/", createNotification);
+// Admin can create notification
+router.post(
+  "/",
+  authMiddleware,
+  roleMiddleware("admin"),
+  createNotification
+);
 
-// Get all notifications
-router.get("/", getNotifications);
+router.get(
+  "/",
+  authMiddleware,
+  roleMiddleware("admin", "officer", "citizen"),
+  getNotifications
+);
 
-// Mark notification as read
-router.put("/:id/read", markAsRead);
+router.put(
+  "/:id/read",
+  authMiddleware,
+  roleMiddleware("admin", "officer", "citizen"),
+  markAsRead
+);
 
-// Delete notification
-router.delete("/:id", deleteNotification);
+router.put(
+  "/read-all",
+  authMiddleware,
+  roleMiddleware("admin", "officer", "citizen"),
+  markAllAsRead
+);
+
+router.delete(
+  "/:id",
+  authMiddleware,
+  roleMiddleware("admin", "officer", "citizen"),
+  deleteNotification
+);
 
 module.exports = router;

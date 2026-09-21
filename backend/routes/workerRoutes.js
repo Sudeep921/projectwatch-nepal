@@ -1,19 +1,41 @@
 const express = require("express");
 
 const {
-  createWorker,
   getWorkers,
   getWorker,
+  createWorker,
   updateWorker,
   deleteWorker
 } = require("../controllers/workerController");
 
+const authMiddleware = require("../middleware/authMiddleware");
+
 const router = express.Router();
 
-router.post("/", createWorker);
-router.get("/", getWorkers);
-router.get("/:id", getWorker);
-router.put("/:id", updateWorker);
-router.delete("/:id", deleteWorker);
+router.get("/", authMiddleware, getWorkers);
+
+router.get(
+  "/:id",
+  authMiddleware,
+  getWorker
+);
+
+router.post(
+  "/",
+  authMiddleware,
+  createWorker
+);
+
+router.put(
+  "/:id",
+  authMiddleware,
+  updateWorker
+);
+
+router.delete(
+  "/:id",
+  authMiddleware,
+  deleteWorker
+);
 
 module.exports = router;

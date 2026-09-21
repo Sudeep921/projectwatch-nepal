@@ -5,8 +5,8 @@ const {
   getComplaints,
   getComplaint,
   updateComplaint,
-  deleteComplaint,
-  resolveComplaint
+  resolveComplaint,
+  deleteComplaint
 } = require("../controllers/complaintController");
 
 const authMiddleware = require("../middleware/authMiddleware");
@@ -14,12 +14,7 @@ const roleMiddleware = require("../middleware/roleMiddleware");
 
 const router = express.Router();
 
-
-// ==========================================
-// SUBMIT COMPLAINT
-// Citizen, Officer, Admin
-// ==========================================
-
+// Citizen + Officer + Admin
 router.post(
   "/",
   authMiddleware,
@@ -27,24 +22,13 @@ router.post(
   createComplaint
 );
 
-
-// ==========================================
-// GET ALL COMPLAINTS
-// Officer, Admin
-// ==========================================
-
+// Officer + Admin
 router.get(
   "/",
   authMiddleware,
   roleMiddleware("officer", "admin"),
   getComplaints
 );
-
-
-// ==========================================
-// GET SINGLE COMPLAINT
-// Officer, Admin
-// ==========================================
 
 router.get(
   "/:id",
@@ -53,24 +37,12 @@ router.get(
   getComplaint
 );
 
-
-// ==========================================
-// UPDATE COMPLAINT
-// Officer, Admin
-// ==========================================
-
 router.put(
   "/:id",
   authMiddleware,
   roleMiddleware("officer", "admin"),
   updateComplaint
 );
-
-
-// ==========================================
-// RESOLVE COMPLAINT
-// Officer, Admin
-// ==========================================
 
 router.put(
   "/:id/resolve",
@@ -79,18 +51,12 @@ router.put(
   resolveComplaint
 );
 
-
-// ==========================================
-// DELETE COMPLAINT
-// Admin ONLY
-// ==========================================
-
+// Admin only
 router.delete(
   "/:id",
   authMiddleware,
   roleMiddleware("admin"),
   deleteComplaint
 );
-
 
 module.exports = router;

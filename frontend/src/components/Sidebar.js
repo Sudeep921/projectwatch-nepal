@@ -1,79 +1,111 @@
 import React from "react";
+import { NavLink } from "react-router-dom";
 
-function Sidebar({ currentPage, setPage }) {
-  const menuItems = [
-    {
-      name: "Dashboard",
-      icon: "▦",
-      page: "dashboard"
-    },
-    {
-      name: "Projects",
-      icon: "▤",
-      page: "projects"
-    },
-    {
-      name: "Live Map",
-      icon: "⌖",
-      page: "map"
-    },
-    {
-      name: "Field Reports",
-      icon: "▣",
-      page: "field-reports"
-    },
-    {
-      name: "Complaints",
-      icon: "⚑",
-      page: "complaints"
-    },
-    {
-      name: "Evidence",
-      icon: "▧",
-      page: "evidence"
-    },
-    {
-      name: "Alerts",
-      icon: "◉",
-      page: "alerts"
-    },
-    {
-      name: "Reports",
-      icon: "▥",
-      page: "reports"
-    },
-    {
-      name: "Settings",
-      icon: "⚙",
-      page: "settings"
-    },
+const menuItems = [
+  {
+    label: "Dashboard",
+    path: "/dashboard",
+    icon: "▦"
+  },
+  {
+    label: "Projects",
+    path: "/projects",
+    icon: "▤"
+  },
+  {
+    label: "Live Map",
+    path: "/map",
+    icon: "⌖"
+  },
+  {
+    label: "Field Reports",
+    path: "/field-reports",
+    icon: "◫"
+  },
+  {
+    label: "Complaints",
+    path: "/complaints",
+    icon: "⚠"
+  },
+  {
+    label: "Evidence",
+    path: "/evidence",
+    icon: "▣"
+  },
+  {
+    label: "Alerts",
+    path: "/alerts",
+    icon: "!"
+  },
+  {
+    label: "Reports",
+    path: "/reports",
+    icon: "▥"
+  }
+];
 
-    /* PUBLIC PORTAL */
-    {
-      name: "Public Portal",
-      icon: "🌐",
-      page: "public-portal"
-    }
-  ];
+const bottomItems = [
+  {
+    label: "Settings",
+    path: "/settings",
+    icon: "⚙"
+  }
+];
+
+const Sidebar = () => {
+  const renderItem = (item) => {
+    return React.createElement(
+      NavLink,
+      {
+        key: item.path,
+        to: item.path,
+        className: ({ isActive }) =>
+          `sidebar-link ${
+            isActive ? "active" : ""
+          }`
+      },
+
+      React.createElement(
+        "span",
+        {
+          className: "sidebar-icon"
+        },
+        item.icon
+      ),
+
+      React.createElement(
+        "span",
+        null,
+        item.label
+      )
+    );
+  };
 
   return React.createElement(
     "aside",
-    { className: "sidebar" },
+    {
+      className: "sidebar"
+    },
 
-    /* BRAND */
     React.createElement(
       "div",
-      { className: "sidebar-brand" },
+      {
+        className: "sidebar-brand"
+      },
 
       React.createElement(
         "div",
-        { className: "brand-logo" },
+        {
+          className: "brand-logo"
+        },
         "PW"
       ),
 
       React.createElement(
         "div",
-        { className: "brand-text" },
+        {
+          className: "brand-text"
+        },
 
         React.createElement(
           "strong",
@@ -84,97 +116,76 @@ function Sidebar({ currentPage, setPage }) {
         React.createElement(
           "span",
           null,
-          "NEPAL"
+          "Nepal"
         )
       )
     ),
 
-    /* MENU TITLE */
     React.createElement(
       "div",
-      { className: "sidebar-section-title" },
+      {
+        className: "sidebar-section-title"
+      },
       "MAIN MENU"
     ),
 
-    /* MENU */
     React.createElement(
       "nav",
-      { className: "sidebar-nav" },
-
-      menuItems.map(function (item) {
-        const isActive =
-          currentPage === item.page;
-
-        return React.createElement(
-          "button",
-          {
-            key: item.page,
-
-            className:
-              "sidebar-link" +
-              (isActive
-                ? " sidebar-link-active"
-                : ""),
-
-            onClick: function () {
-              setPage(item.page);
-            }
-          },
-
-          React.createElement(
-            "span",
-            { className: "sidebar-icon" },
-            item.icon
-          ),
-
-          React.createElement(
-            "span",
-            null,
-            item.name
-          )
-        );
-      })
+      {
+        className: "sidebar-nav"
+      },
+      menuItems.map(renderItem)
     ),
 
-    /* BOTTOM */
     React.createElement(
       "div",
-      { className: "sidebar-bottom" },
+      {
+        className: "sidebar-section-title sidebar-bottom-title"
+      },
+      "SYSTEM"
+    ),
+
+    React.createElement(
+      "nav",
+      {
+        className: "sidebar-nav"
+      },
+      bottomItems.map(renderItem)
+    ),
+
+    React.createElement(
+      "div",
+      {
+        className: "sidebar-footer"
+      },
 
       React.createElement(
         "div",
-        { className: "system-status" },
+        {
+          className: "sidebar-footer-status"
+        },
 
         React.createElement(
           "span",
-          { className: "status-dot" }
+          {
+            className: "status-dot"
+          }
         ),
 
         React.createElement(
-          "div",
+          "span",
           null,
-
-          React.createElement(
-            "strong",
-            null,
-            "System Online"
-          ),
-
-          React.createElement(
-            "span",
-            null,
-            "All services operational"
-          )
+          "System Operational"
         )
       ),
 
       React.createElement(
-        "div",
-        { className: "sidebar-version" },
-        "ProjectWatch Nepal • v1.0"
+        "small",
+        null,
+        "ProjectWatch Nepal v1.0"
       )
     )
   );
-}
+};
 
 export default Sidebar;

@@ -8,17 +8,21 @@ const {
 
 const router = express.Router();
 
+// No authentication required
 
-// Public project list
-router.get("/projects", publicProjects);
+router.get(
+  "/projects",
+  publicProjects
+);
 
+router.get(
+  "/projects/:id",
+  publicProjectDetails
+);
 
-// Public project details
-router.get("/projects/:id", publicProjectDetails);
-
-
-// Public statistics
-router.get("/summary", publicSummary);
-
+router.get(
+  "/summary",
+  publicSummary
+);
 
 module.exports = router;

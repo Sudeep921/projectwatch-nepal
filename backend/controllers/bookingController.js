@@ -1,26 +1,11 @@
 const Booking = require("../models/Booking");
 
-const createBooking = async (req, res) => {
-  try {
-    const booking = await Booking.create(req.body);
-
-    res.status(201).json({
-      success: true,
-      message: "Booking created successfully",
-      booking
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-};
-
 const getBookings = async (req, res) => {
   try {
     const bookings = await Booking.find()
-      .populate("worker")
+      .populate("project", "name province district")
+      .populate("worker", "name email phone specialization")
+      .populate("requestedBy", "name email")
       .sort({ createdAt: -1 });
 
     res.json({
@@ -38,8 +23,11 @@ const getBookings = async (req, res) => {
 
 const getBooking = async (req, res) => {
   try {
-    const booking = await Booking.findById(req.params.id)
-      .populate("worker");
+    const booking =
+      await Booking.findById(req.params.id)
+        .populate("project")
+        .populate("worker")
+        .populate("requestedBy", "name email");
 
     if (!booking) {
       return res.status(404).json({
@@ -60,16 +48,52 @@ const getBooking = async (req, res) => {
   }
 };
 
+const createBooking = async (req, res) => {
+  try {
+    const booking =
+      await Booking.create({
+        project: req.body.project,
+        worker: req.body.worker,
+        requestedBy:
+          req.user?.id || req.body.requestedBy,
+        bookingDate: req.body.bookingDate,
+        purpose: req.body.purpose,
+        notes: req.body.notes || ""
+      });
+
+    const populatedBooking =
+      await Booking.findById(booking._id)
+        .populate("project")
+        .populate("worker")
+        .populate("requestedBy", "name email");
+
+    res.status(201).json({
+      success: true,
+      message: "Booking created successfully",
+      booking: populatedBooking
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
 const updateBooking = async (req, res) => {
   try {
-    const booking = await Booking.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      {
-        new: true,
-        runValidators: true
-      }
-    ).populate("worker");
+    const booking =
+      await Booking.findByIdAndUpdate(
+        req.params.id,
+        req.body,
+        {
+          new: true,
+          runValidators: true
+        }
+      )
+        .populate("project")
+        .populate("worker")
+        .populate("requestedBy", "name email");
 
     if (!booking) {
       return res.status(404).json({
@@ -84,7 +108,7 @@ const updateBooking = async (req, res) => {
       booking
     });
   } catch (error) {
-    res.status(500).json({
+    res.status(400).json({
       success: false,
       message: error.message
     });
@@ -93,7 +117,10 @@ const updateBooking = async (req, res) => {
 
 const deleteBooking = async (req, res) => {
   try {
-    const booking = await Booking.findByIdAndDelete(req.params.id);
+    const booking =
+      await Booking.findByIdAndDelete(
+        req.params.id
+      );
 
     if (!booking) {
       return res.status(404).json({
@@ -115,9 +142,9 @@ const deleteBooking = async (req, res) => {
 };
 
 module.exports = {
-  createBooking,
   getBookings,
   getBooking,
+  createBooking,
   updateBooking,
   deleteBooking
 };

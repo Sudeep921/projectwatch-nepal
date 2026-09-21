@@ -1,85 +1,154 @@
 import React from "react";
+import { useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
-function Header() {
+const pageNames = {
+  "/dashboard": "Government Dashboard",
+  "/projects": "Project Management",
+  "/map": "Live Project Map",
+  "/field-reports": "Field Reports",
+  "/complaints": "Citizen Complaints",
+  "/evidence": "Evidence Center",
+  "/alerts": "Alerts & Notifications",
+  "/reports": "Reports & Analytics",
+  "/settings": "System Settings"
+};
+
+const Header = () => {
+  const location = useLocation();
+  const { user, logout } = useAuth();
+
+  const currentPage =
+    pageNames[location.pathname] ||
+    "ProjectWatch Nepal";
+
+  const displayName =
+    user?.name || "Administrator";
+
+  const role =
+    user?.role === "admin"
+      ? "Super Admin"
+      : user?.role || "Administrator";
+
+  const handleLogout = () => {
+    logout();
+    window.location.href = "/public";
+  };
+
   return React.createElement(
     "header",
-    { className: "header" },
+    {
+      className: "top-header"
+    },
 
     React.createElement(
       "div",
-      { className: "header-left" },
+      {
+        className: "header-left"
+      },
 
       React.createElement(
-        "button",
-        { className: "mobile-menu" },
-        "☰"
+        "div",
+        {
+          className: "mobile-brand"
+        },
+        "ProjectWatch Nepal"
       ),
 
       React.createElement(
         "div",
-        null,
+        {
+          className: "breadcrumb"
+        },
+
         React.createElement(
-          "h1",
+          "span",
           null,
-          "Government Project Dashboard"
+          "ProjectWatch"
         ),
 
         React.createElement(
-          "p",
+          "span",
+          {
+            className: "breadcrumb-separator"
+          },
+          "/"
+        ),
+
+        React.createElement(
+          "strong",
           null,
-          "Monitor Nepal's public projects in real time"
+          currentPage
         )
       )
     ),
 
     React.createElement(
       "div",
-      { className: "header-right" },
+      {
+        className: "header-right"
+      },
 
       React.createElement(
         "button",
-        { className: "notification-button" },
-        "♧",
-        React.createElement(
-          "span",
-          { className: "notification-badge" },
-          "4"
-        )
+        {
+          type: "button",
+          className: "header-icon-button",
+          title: "Notifications",
+          onClick: () => {
+            window.location.href = "/alerts";
+          }
+        },
+        "🔔"
       ),
 
       React.createElement(
         "div",
-        { className: "profile" },
+        {
+          className: "header-user"
+        },
 
         React.createElement(
           "div",
-          { className: "profile-avatar" },
-          "A"
+          {
+            className: "header-avatar"
+          },
+          displayName
+            .charAt(0)
+            .toUpperCase()
         ),
 
         React.createElement(
           "div",
-          { className: "profile-info" },
+          {
+            className: "header-user-info"
+          },
+
           React.createElement(
             "strong",
             null,
-            "Administrator"
+            displayName
           ),
+
           React.createElement(
             "span",
             null,
-            "Super Admin"
+            role
           )
-        ),
-
-        React.createElement(
-          "span",
-          { className: "profile-arrow" },
-          "⌄"
         )
+      ),
+
+      React.createElement(
+        "button",
+        {
+          type: "button",
+          className: "logout-button",
+          onClick: handleLogout
+        },
+        "Logout"
       )
     )
   );
-}
+};
 
 export default Header;

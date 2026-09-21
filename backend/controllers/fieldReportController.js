@@ -1,62 +1,67 @@
 const FieldReport = require("../models/FieldReport");
 const Project = require("../models/Project");
+const Alert = require("../models/Alert");
 
 
-// ===============================
+// ==========================================
 // CREATE FIELD REPORT
-// ===============================
+// ==========================================
+
 const createFieldReport = async (req, res) => {
   try {
     const {
       project,
-      reportTitle,
-      description,
       progress,
-      workStatus,
-      location,
-      latitude,
-      longitude,
-      reportDate
+      workStatus
     } = req.body;
 
-    // Required fields
-    if (!project || !reportTitle || !description) {
-      return res.status(400).json({
-        success: false,
-        message: "Project, report title and description are required"
-      });
-    }
+    const projectExists = await Project.findById(project);
 
-    // Check project
-    const existingProject = await Project.findById(project);
-
-    if (!existingProject) {
+    if (!projectExists) {
       return res.status(404).json({
         success: false,
         message: "Project not found"
       });
     }
 
-    // Officer from logged-in user
-    const officer = req.user._id;
-
     const report = await FieldReport.create({
-      project,
-      officer,
-      reportTitle,
-      description,
-      progress,
-      workStatus,
-      location,
-      latitude,
-      longitude,
-      reportDate,
-      hasGPS:
-        latitude !== undefined &&
-        latitude !== null &&
-        longitude !== undefined &&
-        longitude !== null
+      ...req.body,
+      officer: req.user.id
     });
+
+    // Update project progress
+    if (typeof progress === "number") {
+      projectExists.progress = progress;
+    }
+
+    // Update project status
+    if (workStatus === "Delayed") {
+      projectExists.status = "Delayed";
+    }
+
+    if (workStatus === "Critical") {
+      projectExists.status = "Critical";
+    }
+
+    await projectExists.save();
+
+    // Create alert for delayed/critical report
+    if (
+      workStatus === "Delayed" ||
+      workStatus === "Critical"
+    ) {
+      await Alert.create({
+        project: projectExists._id,
+        title: `Field Report: ${workStatus}`,
+        message: `${projectExists.projectName} has a ${workStatus.toLowerCase()} field report.`,
+        type: workStatus === "Delayed"
+          ? "Delay"
+          : "Critical Risk",
+        severity: workStatus === "Critical"
+          ? "Critical"
+          : "High"
+      });
+    }
 
     res.status(201).json({
       success: true,
@@ -75,37 +80,18 @@ const createFieldReport = async (req, res) => {
 };
 
 
-// ===============================
+// ==========================================
 // GET ALL FIELD REPORTS
-// ===============================
+// ==========================================
+
 const getFieldReports = async (req, res) => {
   try {
-    const {
-      project,
-      verificationStatus,
-      workStatus
-    } = req.query;
-
-    const filter = {};
-
-    if (project) {
-      filter.project = project;
-    }
-
-    if (verificationStatus) {
-      filter.verificationStatus = verificationStatus;
-    }
-
-    if (workStatus) {
-      filter.workStatus = workStatus;
-    }
-
-    const reports = await FieldReport.find(filter)
+    const reports = await FieldReport.find()
       .populate("project")
       .populate("officer", "-password")
       .sort({ createdAt: -1 });
 
-    res.status(200).json({
+    res.json({
       success: true,
       count: reports.length,
       reports
@@ -122,9 +108,10 @@ const getFieldReports = async (req, res) => {
 };
 
 
-// ===============================
+// ==========================================
 // GET SINGLE FIELD REPORT
-// ===============================
+// ==========================================
+
 const getFieldReport = async (req, res) => {
   try {
     const report = await FieldReport.findById(req.params.id)
@@ -138,7 +125,7 @@ const getFieldReport = async (req, res) => {
       });
     }
 
-    res.status(200).json({
+    res.json({
       success: true,
       report
     });
@@ -154,56 +141,13 @@ const getFieldReport = async (req, res) => {
 };
 
 
-// ===============================
+// ==========================================
 // UPDATE FIELD REPORT
-// ===============================
+// ==========================================
+
 const updateFieldReport = async (req, res) => {
   try {
-    // Do not allow officer to change
-    // report ownership through body
-    const updateData = { ...req.body };
-
-    delete updateData.officer;
-
-    // Automatically update GPS status
-    if (
-      updateData.latitude !== undefined ||
-      updateData.longitude !== undefined
-    ) {
-      const currentReport = await FieldReport.findById(req.params.id);
-
-      if (!currentReport) {
-        return res.status(404).json({
-          success: false,
-          message: "Field report not found"
-        });
-      }
-
-      const latitude =
-        updateData.latitude !== undefined
-          ? updateData.latitude
-          : currentReport.latitude;
-
-      const longitude =
-        updateData.longitude !== undefined
-          ? updateData.longitude
-          : currentReport.longitude;
-
-      updateData.hasGPS =
-        latitude !== undefined &&
-        latitude !== null &&
-        longitude !== undefined &&
-        longitude !== null;
-    }
-
-    const report = await FieldReport.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      {
-        new: true,
-        runValidators: true
-      }
-    );
+    const report = await FieldReport.findById(req.params.id);
 
     if (!report) {
       return res.status(404).json({
@@ -212,7 +156,11 @@ const updateFieldReport = async (req, res) => {
       });
     }
 
-    res.status(200).json({
+    Object.assign(report, req.body);
+
+    await report.save();
+
+    res.json({
       success: true,
       message: "Field report updated successfully",
       report
@@ -229,14 +177,13 @@ const updateFieldReport = async (req, res) => {
 };
 
 
-// ===============================
+// ==========================================
 // DELETE FIELD REPORT
-// ===============================
+// ==========================================
+
 const deleteFieldReport = async (req, res) => {
   try {
-    const report = await FieldReport.findByIdAndDelete(
-      req.params.id
-    );
+    const report = await FieldReport.findByIdAndDelete(req.params.id);
 
     if (!report) {
       return res.status(404).json({
@@ -245,7 +192,7 @@ const deleteFieldReport = async (req, res) => {
       });
     }
 
-    res.status(200).json({
+    res.json({
       success: true,
       message: "Field report deleted successfully"
     });
@@ -261,9 +208,6 @@ const deleteFieldReport = async (req, res) => {
 };
 
 
-// ===============================
-// EXPORT
-// ===============================
 module.exports = {
   createFieldReport,
   getFieldReports,

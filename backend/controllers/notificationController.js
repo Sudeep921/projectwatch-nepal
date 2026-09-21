@@ -1,5 +1,10 @@
 const Notification = require("../models/Notification");
 
+
+// ==========================================
+// CREATE NOTIFICATION
+// ==========================================
+
 const createNotification = async (req, res) => {
   try {
     const notification = await Notification.create(req.body);
@@ -9,6 +14,7 @@ const createNotification = async (req, res) => {
       message: "Notification created successfully",
       notification
     });
+
   } catch (error) {
     console.error("Create notification error:", error);
 
@@ -19,10 +25,16 @@ const createNotification = async (req, res) => {
   }
 };
 
+
+// ==========================================
+// GET MY NOTIFICATIONS
+// ==========================================
+
 const getNotifications = async (req, res) => {
   try {
-    const notifications = await Notification.find()
-      .populate("user", "-password")
+    const notifications = await Notification.find({
+      user: req.user.id
+    })
       .populate("relatedProject")
       .populate("relatedComplaint")
       .sort({ createdAt: -1 });
@@ -32,6 +44,7 @@ const getNotifications = async (req, res) => {
       count: notifications.length,
       notifications
     });
+
   } catch (error) {
     console.error("Get notifications error:", error);
 
@@ -42,12 +55,24 @@ const getNotifications = async (req, res) => {
   }
 };
 
+
+// ==========================================
+// MARK AS READ
+// ==========================================
+
 const markAsRead = async (req, res) => {
   try {
-    const notification = await Notification.findByIdAndUpdate(
-      req.params.id,
-      { isRead: true },
-      { new: true }
+    const notification = await Notification.findOneAndUpdate(
+      {
+        _id: req.params.id,
+        user: req.user.id
+      },
+      {
+        isRead: true
+      },
+      {
+        new: true
+      }
     );
 
     if (!notification) {
@@ -62,6 +87,7 @@ const markAsRead = async (req, res) => {
       message: "Notification marked as read",
       notification
     });
+
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -70,10 +96,47 @@ const markAsRead = async (req, res) => {
   }
 };
 
+
+// ==========================================
+// MARK ALL AS READ
+// ==========================================
+
+const markAllAsRead = async (req, res) => {
+  try {
+    await Notification.updateMany(
+      {
+        user: req.user.id,
+        isRead: false
+      },
+      {
+        isRead: true
+      }
+    );
+
+    res.json({
+      success: true,
+      message: "All notifications marked as read"
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+
+// ==========================================
+// DELETE NOTIFICATION
+// ==========================================
+
 const deleteNotification = async (req, res) => {
   try {
-    const notification =
-      await Notification.findByIdAndDelete(req.params.id);
+    const notification = await Notification.findOneAndDelete({
+      _id: req.params.id,
+      user: req.user.id
+    });
 
     if (!notification) {
       return res.status(404).json({
@@ -86,6 +149,7 @@ const deleteNotification = async (req, res) => {
       success: true,
       message: "Notification deleted successfully"
     });
+
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -94,9 +158,11 @@ const deleteNotification = async (req, res) => {
   }
 };
 
+
 module.exports = {
   createNotification,
   getNotifications,
   markAsRead,
+  markAllAsRead,
   deleteNotification
 };

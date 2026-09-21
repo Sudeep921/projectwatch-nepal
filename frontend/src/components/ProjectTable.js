@@ -1,508 +1,309 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 
-function ProjectTable({
-  projects,
-  onViewProject
-}) {
+const ProjectTable = ({
+  projects = []
+}) => {
+  const navigate = useNavigate();
 
-  function getStatusClass(status) {
-    return (
-      "table-status " +
-      status
-        .toLowerCase()
-        .replace(/\s+/g, "-")
-    );
-  }
+  const getStatusClass = (value) => {
+    return String(value || "")
+      .toLowerCase()
+      .replace(/\s+/g, "-");
+  };
 
-  function getRiskClass(risk) {
-    return (
-      "table-risk " +
-      risk
-        .toLowerCase()
-        .replace(/\s+/g, "-")
-    );
-  }
+  const openProject = (project) => {
+    const id =
+      project._id || project.id;
 
-  function handleView(project) {
-    if (onViewProject) {
-      onViewProject(project);
+    if (id) {
+      navigate(`/projects/${id}`);
     }
+  };
+
+  if (!projects.length) {
+    return React.createElement(
+      "div",
+      {
+        className: "empty-state"
+      },
+
+      React.createElement(
+        "div",
+        {
+          className: "empty-state-icon"
+        },
+        "▤"
+      ),
+
+      React.createElement(
+        "h3",
+        null,
+        "No projects found"
+      ),
+
+      React.createElement(
+        "p",
+        null,
+        "There are no projects matching the current filters."
+      )
+    );
   }
 
   return React.createElement(
     "div",
-    { className: "project-registry" },
-
-    /* =====================================================
-       REGISTRY HEADER
-       ===================================================== */
+    {
+      className: "project-table-wrapper"
+    },
 
     React.createElement(
-      "div",
-      { className: "registry-header" },
+      "table",
+      {
+        className: "project-table"
+      },
 
       React.createElement(
-        "div",
+        "thead",
         null,
 
         React.createElement(
-          "h3",
+          "tr",
           null,
-          "Project Registry"
-        ),
 
-        React.createElement(
-          "p",
-          null,
-          "Official government project records and monitoring status."
+          React.createElement(
+            "th",
+            null,
+            "PROJECT"
+          ),
+
+          React.createElement(
+            "th",
+            null,
+            "LOCATION"
+          ),
+
+          React.createElement(
+            "th",
+            null,
+            "BUDGET"
+          ),
+
+          React.createElement(
+            "th",
+            null,
+            "PROGRESS"
+          ),
+
+          React.createElement(
+            "th",
+            null,
+            "STATUS"
+          ),
+
+          React.createElement(
+            "th",
+            null,
+            "RISK"
+          ),
+
+          React.createElement(
+            "th",
+            null,
+            "ACTION"
+          )
         )
       ),
 
       React.createElement(
-        "div",
-        { className: "verified-registry" },
+        "tbody",
+        null,
 
-        React.createElement(
-          "span",
-          null,
-          "✓"
-        ),
+        projects.map((project) => {
+          const progress =
+            Number(
+              project.progress || 0
+            );
 
-        " Verified Registry"
-      )
-    ),
+          const status =
+            project.status ||
+            "Active";
 
-    /* =====================================================
-       TABLE
-       ===================================================== */
+          const risk =
+            project.riskLevel ||
+            "Low";
 
-    React.createElement(
-      "div",
-      { className: "project-table-wrapper" },
-
-      React.createElement(
-        "table",
-        { className: "project-table" },
-
-        /* ---------------- TABLE HEADER ---------------- */
-
-        React.createElement(
-          "thead",
-          null,
-
-          React.createElement(
+          return React.createElement(
             "tr",
-            null,
+            {
+              key:
+                project._id ||
+                project.id ||
+                project.name
+            },
 
             React.createElement(
-              "th",
+              "td",
               null,
-              "PROJECT"
-            ),
 
-            React.createElement(
-              "th",
-              null,
-              "LOCATION"
-            ),
-
-            React.createElement(
-              "th",
-              null,
-              "BUDGET"
-            ),
-
-            React.createElement(
-              "th",
-              null,
-              "PROGRESS"
-            ),
-
-            React.createElement(
-              "th",
-              null,
-              "STATUS"
-            ),
-
-            React.createElement(
-              "th",
-              null,
-              "RISK"
-            ),
-
-            React.createElement(
-              "th",
-              null,
-              "UPDATED"
-            ),
-
-            React.createElement(
-              "th",
-              null,
-              "ACTION"
-            )
-          )
-        ),
-
-        /* ---------------- TABLE BODY ---------------- */
-
-        React.createElement(
-          "tbody",
-          null,
-
-          projects.length === 0
-
-            ? React.createElement(
-                "tr",
-                null,
+              React.createElement(
+                "div",
+                {
+                  className:
+                    "table-project-name"
+                },
 
                 React.createElement(
-                  "td",
-                  {
-                    colSpan: 8,
-                    className: "no-projects"
-                  },
-                  React.createElement(
-                    "div",
-                    {
-                      className: "empty-project-icon"
-                    },
-                    "⌕"
-                  ),
+                  "strong",
+                  null,
+                  project.name ||
+                    "Unnamed Project"
+                ),
 
-                  React.createElement(
-                    "strong",
-                    null,
-                    "No projects found"
-                  ),
+                React.createElement(
+                  "span",
+                  null,
+                  project.projectId ||
+                    project.code ||
+                    project._id ||
+                    "N/A"
+                )
+              )
+            ),
+
+            React.createElement(
+              "td",
+              null,
+
+              React.createElement(
+                "div",
+                {
+                  className:
+                    "table-location"
+                },
+
+                project.district ||
+                  "N/A",
+
+                project.province
+                  ? React.createElement(
+                      "small",
+                      null,
+                      project.province
+                    )
+                  : null
+              )
+            ),
+
+            React.createElement(
+              "td",
+              null,
+              project.budget ||
+                "N/A"
+            ),
+
+            React.createElement(
+              "td",
+              null,
+
+              React.createElement(
+                "div",
+                {
+                  className:
+                    "table-progress"
+                },
+
+                React.createElement(
+                  "div",
+                  {
+                    className:
+                      "table-progress-top"
+                  },
 
                   React.createElement(
                     "span",
                     null,
-                    "Try changing your search or filters."
+                    `${progress}%`
+                  )
+                ),
+
+                React.createElement(
+                  "div",
+                  {
+                    className:
+                      "table-progress-bar"
+                  },
+
+                  React.createElement(
+                    "div",
+                    {
+                      className:
+                        "table-progress-fill",
+                      style: {
+                        width: `${Math.min(
+                          Math.max(
+                            progress,
+                            0
+                          ),
+                          100
+                        )}%`
+                      }
+                    }
                   )
                 )
               )
+            ),
 
-            : projects.map(function (project) {
+            React.createElement(
+              "td",
+              null,
 
-                return React.createElement(
-                  "tr",
-                  {
-                    key: project.id
-                  },
+              React.createElement(
+                "span",
+                {
+                  className: `status-badge ${getStatusClass(
+                    status
+                  )}`
+                },
+                status
+              )
+            ),
 
-                  /* =================================================
-                     PROJECT
-                     ================================================= */
+            React.createElement(
+              "td",
+              null,
 
-                  React.createElement(
-                    "td",
-                    null,
+              React.createElement(
+                "span",
+                {
+                  className: `risk-badge ${getStatusClass(
+                    risk
+                  )}`
+                },
+                risk
+              )
+            ),
 
-                    React.createElement(
-                      "div",
-                      {
-                        className:
-                          "project-name-cell"
-                      },
+            React.createElement(
+              "td",
+              null,
 
-                      React.createElement(
-                        "div",
-                        {
-                          className:
-                            "project-icon"
-                        },
-                        project.icon || "▣"
-                      ),
-
-                      React.createElement(
-                        "div",
-                        null,
-
-                        React.createElement(
-                          "strong",
-                          null,
-                          project.name
-                        ),
-
-                        React.createElement(
-                          "span",
-                          null,
-                          project.id
-                        )
-                      )
-                    )
-                  ),
-
-                  /* =================================================
-                     LOCATION
-                     ================================================= */
-
-                  React.createElement(
-                    "td",
-                    null,
-
-                    React.createElement(
-                      "div",
-                      {
-                        className:
-                          "location-cell"
-                      },
-
-                      React.createElement(
-                        "strong",
-                        null,
-                        project.district
-                      ),
-
-                      React.createElement(
-                        "span",
-                        null,
-                        project.province
-                      )
-                    )
-                  ),
-
-                  /* =================================================
-                     BUDGET
-                     ================================================= */
-
-                  React.createElement(
-                    "td",
-                    {
-                      className:
-                        "budget-cell"
-                    },
-                    project.budget
-                  ),
-
-                  /* =================================================
-                     PROGRESS
-                     ================================================= */
-
-                  React.createElement(
-                    "td",
-                    null,
-
-                    React.createElement(
-                      "div",
-                      {
-                        className:
-                          "table-progress"
-                      },
-
-                      React.createElement(
-                        "div",
-                        {
-                          className:
-                            "table-progress-top"
-                        },
-
-                        React.createElement(
-                          "strong",
-                          null,
-                          project.progress + "%"
-                        ),
-
-                        React.createElement(
-                          "span",
-                          null,
-                          project.progressLabel ||
-                            "Progress"
-                        )
-                      ),
-
-                      React.createElement(
-                        "div",
-                        {
-                          className:
-                            "table-progress-bar"
-                        },
-
-                        React.createElement(
-                          "span",
-                          {
-                            style: {
-                              width:
-                                project.progress +
-                                "%"
-                            }
-                          }
-                        )
-                      )
-                    )
-                  ),
-
-                  /* =================================================
-                     STATUS
-                     ================================================= */
-
-                  React.createElement(
-                    "td",
-                    null,
-
-                    React.createElement(
-                      "span",
-                      {
-                        className:
-                          getStatusClass(
-                            project.status
-                          )
-                      },
-
-                      React.createElement(
-                        "i",
-                        null
-                      ),
-
-                      project.status
-                    )
-                  ),
-
-                  /* =================================================
-                     RISK
-                     ================================================= */
-
-                  React.createElement(
-                    "td",
-                    null,
-
-                    React.createElement(
-                      "span",
-                      {
-                        className:
-                          getRiskClass(
-                            project.risk
-                          )
-                      },
-
-                      React.createElement(
-                        "i",
-                        null
-                      ),
-
-                      project.risk
-                    )
-                  ),
-
-                  /* =================================================
-                     UPDATED
-                     ================================================= */
-
-                  React.createElement(
-                    "td",
-                    {
-                      className:
-                        "updated-cell"
-                    },
-
-                    React.createElement(
-                      "span",
-                      null,
-                      project.updated
-                    )
-                  ),
-
-                  /* =================================================
-                     ACTION
-                     ================================================= */
-
-                  React.createElement(
-                    "td",
-                    null,
-
-                    React.createElement(
-                      "button",
-                      {
-                        className:
-                          "table-action-btn",
-
-                        title:
-                          "View Project",
-
-                        onClick:
-                          function () {
-                            handleView(
-                              project
-                            );
-                          }
-                      },
-
-                      "View →"
-                    )
-                  )
-                );
-              })
-        )
-      )
-    ),
-
-    /* =====================================================
-       REGISTRY FOOTER
-       ===================================================== */
-
-    React.createElement(
-      "div",
-      { className: "registry-footer" },
-
-      React.createElement(
-        "span",
-        null,
-
-        "Showing ",
-
-        React.createElement(
-          "strong",
-          null,
-          projects.length
-        ),
-
-        " projects"
-      ),
-
-      React.createElement(
-        "div",
-        { className: "pagination" },
-
-        React.createElement(
-          "button",
-          {
-            title: "Previous page"
-          },
-          "‹"
-        ),
-
-        React.createElement(
-          "button",
-          {
-            className: "active"
-          },
-          "1"
-        ),
-
-        React.createElement(
-          "button",
-          null,
-          "2"
-        ),
-
-        React.createElement(
-          "button",
-          null,
-          "3"
-        ),
-
-        React.createElement(
-          "button",
-          {
-            title: "Next page"
-          },
-          "›"
-        )
+              React.createElement(
+                "button",
+                {
+                  type: "button",
+                  className:
+                    "table-action-button",
+                  onClick: () =>
+                    openProject(project)
+                },
+                "View"
+              )
+            )
+          );
+        })
       )
     )
   );
-}
+};
 
 export default ProjectTable;

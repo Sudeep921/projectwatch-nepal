@@ -1,22 +1,19 @@
 const express = require("express");
 
 const {
-  register,
-  login,
-  getMe
-} = require("../controllers/authController");
+  getProjectReport
+} = require("../controllers/reportController");
 
 const authMiddleware = require("../middleware/authMiddleware");
+const roleMiddleware = require("../middleware/roleMiddleware");
 
 const router = express.Router();
 
-router.post("/register", register);
-router.post("/login", login);
-
 router.get(
-  "/me",
+  "/projects",
   authMiddleware,
-  getMe
+  roleMiddleware("admin", "officer"),
+  getProjectReport
 );
 
 module.exports = router;

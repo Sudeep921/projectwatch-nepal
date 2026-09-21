@@ -1,33 +1,18 @@
 const Complaint = require("../models/Complaint");
+const Notification = require("../models/Notification");
+const Alert = require("../models/Alert");
 const Project = require("../models/Project");
 
+
+// ==========================================
 // CREATE COMPLAINT
+// ==========================================
+
 const createComplaint = async (req, res) => {
   try {
-    const {
-      project,
-      citizenName,
-      citizenPhone,
-      citizenEmail,
-      title,
-      description,
-      category,
-      priority,
-      location,
-      latitude,
-      longitude
-    } = req.body;
+    const project = await Project.findById(req.body.project);
 
-    if (!project || !citizenName || !title || !description) {
-      return res.status(400).json({
-        success: false,
-        message: "Project, citizen name, title and description are required"
-      });
-    }
-
-    const projectExists = await Project.findById(project);
-
-    if (!projectExists) {
+    if (!project) {
       return res.status(404).json({
         success: false,
         message: "Project not found"
@@ -35,18 +20,22 @@ const createComplaint = async (req, res) => {
     }
 
     const complaint = await Complaint.create({
-      project,
-      citizenName,
-      citizenPhone,
-      citizenEmail,
-      title,
-      description,
-      category,
-      priority,
-      location,
-      latitude,
-      longitude
+      ...req.body
     });
+
+    // Critical / High complaint creates alert
+    if (
+      complaint.priority === "High" ||
+      complaint.priority === "Critical"
+    ) {
+      await Alert.create({
+        project: complaint.project,
+        title: `New ${complaint.priority} Complaint`,
+        message: complaint.title,
+        type: "Complaint",
+        severity: complaint.priority
+      });
+    }
 
     res.status(201).json({
       success: true,
@@ -65,25 +54,15 @@ const createComplaint = async (req, res) => {
 };
 
 
+// ==========================================
 // GET ALL COMPLAINTS
+// ==========================================
+
 const getComplaints = async (req, res) => {
   try {
-    const {
-      project,
-      category,
-      priority,
-      status
-    } = req.query;
-
-    const filter = {};
-
-    if (project) filter.project = project;
-    if (category) filter.category = category;
-    if (priority) filter.priority = priority;
-    if (status) filter.status = status;
-
-    const complaints = await Complaint.find(filter)
+    const complaints = await Complaint.find()
       .populate("project")
+      .populate("resolvedBy", "-password")
       .sort({ createdAt: -1 });
 
     res.json({
@@ -103,11 +82,15 @@ const getComplaints = async (req, res) => {
 };
 
 
+// ==========================================
 // GET SINGLE COMPLAINT
+// ==========================================
+
 const getComplaint = async (req, res) => {
   try {
     const complaint = await Complaint.findById(req.params.id)
-      .populate("project");
+      .populate("project")
+      .populate("resolvedBy", "-password");
 
     if (!complaint) {
       return res.status(404).json({
@@ -132,17 +115,15 @@ const getComplaint = async (req, res) => {
 };
 
 
+// ==========================================
 // UPDATE COMPLAINT
+// ==========================================
+
 const updateComplaint = async (req, res) => {
   try {
-    const updateData = { ...req.body };
-
-    // Project change गर्न नदिने
-    delete updateData.project;
-
     const complaint = await Complaint.findByIdAndUpdate(
       req.params.id,
-      updateData,
+      req.body,
       {
         new: true,
         runValidators: true
@@ -173,50 +154,14 @@ const updateComplaint = async (req, res) => {
 };
 
 
-// DELETE COMPLAINT
-const deleteComplaint = async (req, res) => {
-  try {
-    const complaint = await Complaint.findByIdAndDelete(
-      req.params.id
-    );
-
-    if (!complaint) {
-      return res.status(404).json({
-        success: false,
-        message: "Complaint not found"
-      });
-    }
-
-    res.json({
-      success: true,
-      message: "Complaint deleted successfully"
-    });
-
-  } catch (error) {
-    console.error("Delete complaint error:", error);
-
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-};
+// ==========================================
+// RESOLVE COMPLAINT
+// ==========================================
 
 const resolveComplaint = async (req, res) => {
   try {
-    const complaint = await Complaint.findByIdAndUpdate(
-      req.params.id,
-      {
-        status: "Resolved",
-        resolutionNote: req.body.resolutionNote || "",
-        resolvedBy: req.body.resolvedBy || null,
-        resolvedAt: new Date()
-      },
-      {
-        new: true,
-        runValidators: true
-      }
-    ).populate("project");
+    const complaint = await Complaint.findById(req.params.id)
+      .populate("project");
 
     if (!complaint) {
       return res.status(404).json({
@@ -224,6 +169,18 @@ const resolveComplaint = async (req, res) => {
         message: "Complaint not found"
       });
     }
+
+    complaint.status = "Resolved";
+
+    complaint.resolutionNote =
+      req.body.resolutionNote || "";
+
+    // Use logged-in user
+    complaint.resolvedBy = req.user.id;
+
+    complaint.resolvedAt = new Date();
+
+    await complaint.save();
 
     res.json({
       success: true,
@@ -241,11 +198,50 @@ const resolveComplaint = async (req, res) => {
   }
 };
 
+
+// ==========================================
+// DELETE COMPLAINT
+// ==========================================
+
+const deleteComplaint = async (req, res) => {
+  try {
+    const complaint = await Complaint.findByIdAndDelete(
+      req.params.id
+    );
+
+    if (!complaint) {
+      return res.status(404).json({
+        success: false,
+        message: "Complaint not found"
+      });
+    }
+
+    await Alert.deleteMany({
+      project: complaint.project,
+      type: "Complaint"
+    });
+
+    res.json({
+      success: true,
+      message: "Complaint deleted successfully"
+    });
+
+  } catch (error) {
+    console.error("Delete complaint error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+
 module.exports = {
   createComplaint,
   getComplaints,
   getComplaint,
   updateComplaint,
-  deleteComplaint,
-   resolveComplaint
+  resolveComplaint,
+  deleteComplaint
 };

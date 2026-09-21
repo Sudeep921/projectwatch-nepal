@@ -13,70 +13,42 @@ const roleMiddleware = require("../middleware/roleMiddleware");
 
 const router = express.Router();
 
-
-// ========================================
-// CREATE FIELD REPORT
-// ========================================
-// Admin + Officer
-
+// Officer + Admin can create
 router.post(
   "/",
   authMiddleware,
-  roleMiddleware("admin", "officer"),
+  roleMiddleware("officer", "admin"),
   createFieldReport
 );
 
-
-// ========================================
-// GET ALL FIELD REPORTS
-// ========================================
-// Admin + Officer
-
+// Officer + Admin
 router.get(
   "/",
   authMiddleware,
-  roleMiddleware("admin", "officer"),
+  roleMiddleware("officer", "admin"),
   getFieldReports
 );
-
-
-// ========================================
-// GET SINGLE FIELD REPORT
-// ========================================
-// Admin + Officer
 
 router.get(
   "/:id",
   authMiddleware,
-  roleMiddleware("admin", "officer"),
+  roleMiddleware("officer", "admin"),
   getFieldReport
 );
-
-
-// ========================================
-// UPDATE FIELD REPORT
-// ========================================
-// Admin + Officer
 
 router.put(
   "/:id",
   authMiddleware,
-  roleMiddleware("admin", "officer"),
+  roleMiddleware("officer", "admin"),
   updateFieldReport
 );
 
-
-// ========================================
-// DELETE FIELD REPORT
-// ========================================
 // Admin only
-
 router.delete(
   "/:id",
   authMiddleware,
   roleMiddleware("admin"),
   deleteFieldReport
 );
-
 
 module.exports = router;

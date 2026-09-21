@@ -1,27 +1,9 @@
 const Worker = require("../models/Worker");
 
-// Create Worker
-const createWorker = async (req, res) => {
-  try {
-    const worker = await Worker.create(req.body);
-
-    res.status(201).json({
-      success: true,
-      message: "Worker created successfully",
-      worker
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-};
-
-// Get All Workers
 const getWorkers = async (req, res) => {
   try {
-    const workers = await Worker.find().sort({ createdAt: -1 });
+    const workers = await Worker.find()
+      .sort({ createdAt: -1 });
 
     res.json({
       success: true,
@@ -36,10 +18,11 @@ const getWorkers = async (req, res) => {
   }
 };
 
-// Get Single Worker
 const getWorker = async (req, res) => {
   try {
-    const worker = await Worker.findById(req.params.id);
+    const worker = await Worker.findById(
+      req.params.id
+    );
 
     if (!worker) {
       return res.status(404).json({
@@ -60,17 +43,46 @@ const getWorker = async (req, res) => {
   }
 };
 
-// Update Worker
+const createWorker = async (req, res) => {
+  try {
+    const worker = await Worker.create({
+      name: req.body.name,
+      email: req.body.email,
+      phone: req.body.phone,
+      address: req.body.address,
+      specialization: req.body.specialization,
+      province: req.body.province,
+      district: req.body.district,
+      municipality: req.body.municipality,
+      experience: req.body.experience,
+      status: req.body.status || "Available",
+      isVerified: req.body.isVerified || false
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Worker created successfully",
+      worker
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
 const updateWorker = async (req, res) => {
   try {
-    const worker = await Worker.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      {
-        new: true,
-        runValidators: true
-      }
-    );
+    const worker =
+      await Worker.findByIdAndUpdate(
+        req.params.id,
+        req.body,
+        {
+          new: true,
+          runValidators: true
+        }
+      );
 
     if (!worker) {
       return res.status(404).json({
@@ -85,17 +97,19 @@ const updateWorker = async (req, res) => {
       worker
     });
   } catch (error) {
-    res.status(500).json({
+    res.status(400).json({
       success: false,
       message: error.message
     });
   }
 };
 
-// Delete Worker
 const deleteWorker = async (req, res) => {
   try {
-    const worker = await Worker.findByIdAndDelete(req.params.id);
+    const worker =
+      await Worker.findByIdAndDelete(
+        req.params.id
+      );
 
     if (!worker) {
       return res.status(404).json({
@@ -117,9 +131,9 @@ const deleteWorker = async (req, res) => {
 };
 
 module.exports = {
-  createWorker,
   getWorkers,
   getWorker,
+  createWorker,
   updateWorker,
   deleteWorker
 };

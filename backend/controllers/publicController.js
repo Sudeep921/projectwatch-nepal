@@ -2,15 +2,46 @@ const Project = require("../models/Project");
 const Complaint = require("../models/Complaint");
 
 
-// ========================================
-// PUBLIC PROJECTS
-// ========================================
+// ==========================================
+// PUBLIC PROJECT LIST
+// ==========================================
 
 const publicProjects = async (req, res) => {
   try {
-    const projects = await Project.find({
+
+    const filter = {
       isPublished: true
-    })
+    };
+
+    // Search
+    if (req.query.search) {
+      filter.$or = [
+        {
+          projectName: {
+            $regex: req.query.search,
+            $options: "i"
+          }
+        },
+        {
+          projectCode: {
+            $regex: req.query.search,
+            $options: "i"
+          }
+        }
+      ];
+    }
+
+    // Province filter
+    if (req.query.province) {
+      filter.province = req.query.province;
+    }
+
+    // Status filter
+    if (req.query.status) {
+      filter.status = req.query.status;
+    }
+
+    const projects = await Project.find(filter)
       .select(
         "projectName projectCode province district municipality contractor budget progress status riskLevel description startDate endDate"
       )
@@ -25,6 +56,12 @@ const publicProjects = async (req, res) => {
     });
 
   } catch (error) {
+
+    console.error(
+      "Public projects error:",
+      error
+    );
+
     res.status(500).json({
       success: false,
       message: "Failed to load public projects"
@@ -33,12 +70,13 @@ const publicProjects = async (req, res) => {
 };
 
 
-// ========================================
-// PUBLIC SINGLE PROJECT
-// ========================================
+// ==========================================
+// PUBLIC PROJECT DETAILS
+// ==========================================
 
 const publicProjectDetails = async (req, res) => {
   try {
+
     const project = await Project.findOne({
       _id: req.params.id,
       isPublished: true
@@ -59,6 +97,7 @@ const publicProjectDetails = async (req, res) => {
     });
 
   } catch (error) {
+
     res.status(500).json({
       success: false,
       message: "Failed to load project"
@@ -67,40 +106,49 @@ const publicProjectDetails = async (req, res) => {
 };
 
 
-// ========================================
-// PUBLIC PROJECT SUMMARY
-// ========================================
+// ==========================================
+// PUBLIC SUMMARY
+// ==========================================
 
 const publicSummary = async (req, res) => {
   try {
-    const totalProjects = await Project.countDocuments({
-      isPublished: true
-    });
 
-    const activeProjects = await Project.countDocuments({
-      isPublished: true,
-      status: "Active"
-    });
+    const totalProjects =
+      await Project.countDocuments({
+        isPublished: true
+      });
 
-    const delayedProjects = await Project.countDocuments({
-      isPublished: true,
-      status: "Delayed"
-    });
+    const activeProjects =
+      await Project.countDocuments({
+        isPublished: true,
+        status: "Active"
+      });
 
-    const completedProjects = await Project.countDocuments({
-      isPublished: true,
-      status: "Completed"
-    });
+    const delayedProjects =
+      await Project.countDocuments({
+        isPublished: true,
+        status: "Delayed"
+      });
 
-    const criticalProjects = await Project.countDocuments({
-      isPublished: true,
-      status: "Critical"
-    });
+    const completedProjects =
+      await Project.countDocuments({
+        isPublished: true,
+        status: "Completed"
+      });
 
-    const complaintCount = await Complaint.countDocuments();
+    const criticalProjects =
+      await Project.countDocuments({
+        isPublished: true,
+        status: "Critical"
+      });
+
+    const complaintCount =
+      await Complaint.countDocuments();
+
 
     res.json({
       success: true,
+
       summary: {
         totalProjects,
         activeProjects,
@@ -112,6 +160,12 @@ const publicSummary = async (req, res) => {
     });
 
   } catch (error) {
+
+    console.error(
+      "Public summary error:",
+      error
+    );
+
     res.status(500).json({
       success: false,
       message: "Failed to load public summary"

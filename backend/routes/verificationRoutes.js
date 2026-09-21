@@ -13,7 +13,6 @@ const roleMiddleware = require("../middleware/roleMiddleware");
 
 const router = express.Router();
 
-// Create verification
 router.post(
   "/",
   authMiddleware,
@@ -21,7 +20,6 @@ router.post(
   createVerification
 );
 
-// Get all verifications
 router.get(
   "/",
   authMiddleware,
@@ -29,7 +27,6 @@ router.get(
   getVerifications
 );
 
-// Get single verification
 router.get(
   "/:id",
   authMiddleware,
@@ -37,7 +34,6 @@ router.get(
   getVerification
 );
 
-// Update verification
 router.put(
   "/:id",
   authMiddleware,
@@ -45,7 +41,6 @@ router.put(
   updateVerification
 );
 
-// Delete verification - Admin only
 router.delete(
   "/:id",
   authMiddleware,

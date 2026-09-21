@@ -14,20 +14,13 @@ const roleMiddleware = require("../middleware/roleMiddleware");
 
 const router = express.Router();
 
+// Public projects
+router.get(
+  "/public",
+  getPublicProjects
+);
 
-// ========================================
-// PUBLIC PROJECTS
-// ========================================
-// Citizen / Public Portal
-// GET /api/projects/public
-router.get("/public", getPublicProjects);
-
-
-// ========================================
-// GET ALL PROJECTS
-// ========================================
 // Admin + Officer
-// GET /api/projects
 router.get(
   "/",
   authMiddleware,
@@ -35,12 +28,6 @@ router.get(
   getProjects
 );
 
-
-// ========================================
-// GET SINGLE PROJECT
-// ========================================
-// Admin + Officer
-// GET /api/projects/:id
 router.get(
   "/:id",
   authMiddleware,
@@ -48,12 +35,7 @@ router.get(
   getProject
 );
 
-
-// ========================================
-// CREATE PROJECT
-// ========================================
-// Only Admin
-// POST /api/projects
+// Admin only
 router.post(
   "/",
   authMiddleware,
@@ -61,12 +43,6 @@ router.post(
   createProject
 );
 
-
-// ========================================
-// UPDATE PROJECT
-// ========================================
-// Only Admin
-// PUT /api/projects/:id
 router.put(
   "/:id",
   authMiddleware,
@@ -74,18 +50,11 @@ router.put(
   updateProject
 );
 
-
-// ========================================
-// DELETE PROJECT
-// ========================================
-// Only Admin
-// DELETE /api/projects/:id
 router.delete(
   "/:id",
   authMiddleware,
   roleMiddleware("admin"),
   deleteProject
 );
-
 
 module.exports = router;
