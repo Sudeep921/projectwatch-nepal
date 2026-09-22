@@ -323,3 +323,33 @@ export const analyzeEvidence = (
     }
   );
 };
+
+// ==========================================
+// EVIDENCE API
+// ==========================================
+
+export const getEvidence = async (projectId) => {
+  return apiRequest(`/evidence/project/${projectId}`, {
+    method: "GET",
+  });
+};
+
+export const uploadEvidence = async (formData) => {
+  return apiRequest("/evidence", {
+    method: "POST",
+    body: formData,
+  });
+};
+
+export const createEvidence = async (data) => {
+  return apiRequest("/evidence", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+};
+
+export const deleteEvidence = async (evidenceId) => {
+  return apiRequest(`/evidence/${evidenceId}`, {
+    method: "DELETE",
+  });
+};

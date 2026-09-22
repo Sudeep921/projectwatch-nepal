@@ -1,103 +1,107 @@
 import React, { useState } from "react";
+import { createProject } from "../services/api";
 
-function AddProjectModal({ onClose, onSave }) {
+const AddProjectModal = ({
+  isOpen,
+  onClose,
+  onCreated
+}) => {
   const [form, setForm] = useState({
     name: "",
+    projectId: "",
     province: "Bagmati",
     district: "",
+    municipality: "",
     budget: "",
+    progress: 0,
     status: "Active",
-    risk: "Low",
-    contractor: "",
-    department: "",
-    startDate: "",
-    endDate: "",
-    location: "",
-    description: ""
+    riskLevel: "Low",
+    description: "",
+    contractor: ""
   });
 
-  function handleChange(event) {
-    const name = event.target.name;
-    const value = event.target.value;
+  const [loading, setLoading] =
+    useState(false);
 
-    setForm(function (previous) {
-      return {
-        ...previous,
-        [name]: value
-      };
-    });
+  const [error, setError] =
+    useState("");
+
+  if (!isOpen) {
+    return null;
   }
 
-  function handleSubmit(event) {
+  const handleChange = (event) => {
+    const {
+      name,
+      value
+    } = event.target;
+
+    setForm((previous) => ({
+      ...previous,
+      [name]:
+        name === "progress"
+          ? Number(value)
+          : value
+    }));
+  };
+
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
-    if (
-      !form.name.trim() ||
-      !form.district.trim() ||
-      !form.budget.trim() ||
-      !form.startDate ||
-      !form.endDate
-    ) {
-      alert("Please fill all required fields.");
+    setError("");
+
+    if (!form.name.trim()) {
+      setError("Project name is required.");
       return;
     }
 
-    const newProject = {
-      id:
-        "PW-" +
-        form.province.substring(0, 3).toUpperCase() +
-        "-" +
-        Math.floor(10000 + Math.random() * 90000),
+    setLoading(true);
 
-      name: form.name,
-      icon: "🏗️",
-      district: form.district,
-      province: form.province,
-      budget: form.budget,
-      progress: 0,
-      progressLabel: "Not Started",
-      status: form.status,
-      risk: form.risk,
-      updated: "Just now",
-      contractor: form.contractor || "Not assigned",
-      department: form.department || "Not assigned",
-      startDate: form.startDate,
-      endDate: form.endDate,
-      location:
-        form.location ||
-        form.district + ", " + form.province + " Province",
-      description: form.description
-    };
+    try {
+      const response =
+        await createProject(form);
 
-    console.log("NEW PROJECT:", newProject);
+      if (onCreated) {
+        onCreated(
+          response.project || response
+        );
+      }
 
-    if (onSave) {
-      onSave(newProject);
+      setForm({
+        name: "",
+        projectId: "",
+        province: "Bagmati",
+        district: "",
+        municipality: "",
+        budget: "",
+        progress: 0,
+        status: "Active",
+        riskLevel: "Low",
+        description: "",
+        contractor: ""
+      });
+
+      onClose();
+    } catch (err) {
+      setError(
+        err.message ||
+          "Unable to create project."
+      );
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
   return React.createElement(
     "div",
     {
-      style: {
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        zIndex: 999999,
-        background: "rgba(15, 23, 42, 0.65)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "30px"
-      },
-
-      onClick: function (event) {
-        if (event.target === event.currentTarget) {
-          if (onClose) {
-            onClose();
-          }
+      className: "modal-overlay",
+      onClick: (event) => {
+        if (
+          event.target ===
+          event.currentTarget
+        ) {
+          onClose();
         }
       }
     },
@@ -105,33 +109,13 @@ function AddProjectModal({ onClose, onSave }) {
     React.createElement(
       "div",
       {
-        style: {
-          width: "100%",
-          maxWidth: "850px",
-          maxHeight: "90vh",
-          overflowY: "auto",
-          background: "#ffffff",
-          borderRadius: "18px",
-          boxShadow: "0 30px 80px rgba(0,0,0,0.25)",
-          padding: "30px"
-        },
-
-        onClick: function (event) {
-          event.stopPropagation();
-        }
+        className: "modal-card"
       },
-
-      /* HEADER */
 
       React.createElement(
         "div",
         {
-          style: {
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            marginBottom: "25px"
-          }
+          className: "modal-header"
         },
 
         React.createElement(
@@ -139,41 +123,17 @@ function AddProjectModal({ onClose, onSave }) {
           null,
 
           React.createElement(
-            "div",
+            "span",
             {
-              style: {
-                fontSize: "11px",
-                fontWeight: "800",
-                color: "#2563eb",
-                letterSpacing: "1px",
-                marginBottom: "7px"
-              }
+              className: "modal-label"
             },
-            "PROJECT MANAGEMENT"
+            "PROJECT REGISTRY"
           ),
 
           React.createElement(
             "h2",
-            {
-              style: {
-                margin: 0,
-                fontSize: "26px",
-                color: "#172033"
-              }
-            },
+            null,
             "Add New Project"
-          ),
-
-          React.createElement(
-            "p",
-            {
-              style: {
-                margin: "7px 0 0",
-                color: "#7b8798",
-                fontSize: "13px"
-              }
-            },
-            "Create a new government project record."
           )
         ),
 
@@ -181,23 +141,22 @@ function AddProjectModal({ onClose, onSave }) {
           "button",
           {
             type: "button",
-            onClick: onClose,
-            style: {
-              border: "none",
-              background: "#f1f5f9",
-              width: "36px",
-              height: "36px",
-              borderRadius: "9px",
-              fontSize: "22px",
-              cursor: "pointer",
-              color: "#64748b"
-            }
+            className: "modal-close",
+            onClick: onClose
           },
           "×"
         )
       ),
 
-      /* FORM */
+      error
+        ? React.createElement(
+            "div",
+            {
+              className: "form-error"
+            },
+            error
+          )
+        : null,
 
       React.createElement(
         "form",
@@ -205,220 +164,333 @@ function AddProjectModal({ onClose, onSave }) {
           onSubmit: handleSubmit
         },
 
-        /* BASIC */
-
-        React.createElement(
-          "h3",
-          {
-            style: {
-              fontSize: "14px",
-              color: "#334155",
-              margin: "0 0 15px",
-              paddingBottom: "10px",
-              borderBottom: "1px solid #e8edf3"
-            }
-          },
-          "Basic Information"
-        ),
-
         React.createElement(
           "div",
           {
-            style: {
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "18px"
-            }
-          },
-
-          createInput(
-            "Project Name",
-            "name",
-            form.name,
-            handleChange,
-            "e.g. Kathmandu Ring Road Expansion",
-            true
-          ),
-
-          createSelect(
-            "Province",
-            "province",
-            form.province,
-            handleChange,
-            [
-              "Bagmati",
-              "Gandaki",
-              "Koshi",
-              "Lumbini",
-              "Madhesh",
-              "Karnali",
-              "Sudurpashchim"
-            ]
-          ),
-
-          createInput(
-            "District",
-            "district",
-            form.district,
-            handleChange,
-            "e.g. Kathmandu",
-            true
-          ),
-
-          createInput(
-            "Budget",
-            "budget",
-            form.budget,
-            handleChange,
-            "e.g. NPR 2.5B",
-            true
-          ),
-
-          createInput(
-            "Location",
-            "location",
-            form.location,
-            handleChange,
-            "Project location"
-          ),
-
-          createInput(
-            "Contractor",
-            "contractor",
-            form.contractor,
-            handleChange,
-            "Contractor company"
-          ),
-
-          createInput(
-            "Department",
-            "department",
-            form.department,
-            handleChange,
-            "Government department"
-          ),
-
-          createSelect(
-            "Status",
-            "status",
-            form.status,
-            handleChange,
-            [
-              "Active",
-              "Delayed",
-              "Completed",
-              "Critical"
-            ]
-          ),
-
-          createSelect(
-            "Risk Level",
-            "risk",
-            form.risk,
-            handleChange,
-            [
-              "Low",
-              "Medium",
-              "High",
-              "Critical"
-            ]
-          ),
-
-          createInput(
-            "Start Date",
-            "startDate",
-            form.startDate,
-            handleChange,
-            "",
-            true,
-            "date"
-          ),
-
-          createInput(
-            "End Date",
-            "endDate",
-            form.endDate,
-            handleChange,
-            "",
-            true,
-            "date"
-          )
-        ),
-
-        /* DESCRIPTION */
-
-        React.createElement(
-          "div",
-          {
-            style: {
-              marginTop: "20px"
-            }
+            className: "form-grid"
           },
 
           React.createElement(
-            "label",
+            "div",
             {
-              style: {
-                display: "block",
-                fontSize: "12px",
-                fontWeight: "700",
-                color: "#475569",
-                marginBottom: "7px"
-              }
+              className: "form-group full"
             },
-            "Project Description"
+
+            React.createElement(
+              "label",
+              null,
+              "Project Name"
+            ),
+
+            React.createElement("input", {
+              name: "name",
+              value: form.name,
+              onChange: handleChange,
+              placeholder:
+                "e.g. Kathmandu Ring Road Expansion",
+              required: true
+            })
           ),
 
-          React.createElement("textarea", {
-            name: "description",
-            value: form.description,
-            onChange: handleChange,
-            placeholder: "Brief description of the project...",
-            rows: 4,
-            style: {
-              width: "100%",
-              padding: "12px",
-              border: "1px solid #dbe2ea",
-              borderRadius: "9px",
-              resize: "vertical",
-              fontFamily: "inherit",
-              fontSize: "13px",
-              outline: "none",
-              boxSizing: "border-box"
-            }
-          })
-        ),
+          React.createElement(
+            "div",
+            {
+              className: "form-group"
+            },
 
-        /* FOOTER */
+            React.createElement(
+              "label",
+              null,
+              "Project ID"
+            ),
+
+            React.createElement("input", {
+              name: "projectId",
+              value: form.projectId,
+              onChange: handleChange,
+              placeholder:
+                "PW-BAG-00125"
+            })
+          ),
+
+          React.createElement(
+            "div",
+            {
+              className: "form-group"
+            },
+
+            React.createElement(
+              "label",
+              null,
+              "Budget"
+            ),
+
+            React.createElement("input", {
+              name: "budget",
+              value: form.budget,
+              onChange: handleChange,
+              placeholder:
+                "NPR 2.5B"
+            })
+          ),
+
+          React.createElement(
+            "div",
+            {
+              className: "form-group"
+            },
+
+            React.createElement(
+              "label",
+              null,
+              "Province"
+            ),
+
+            React.createElement(
+              "select",
+              {
+                name: "province",
+                value: form.province,
+                onChange: handleChange
+              },
+
+              [
+                "Bagmati",
+                "Gandaki",
+                "Koshi",
+                "Lumbini",
+                "Madhesh",
+                "Karnali",
+                "Sudurpashchim"
+              ].map((item) =>
+                React.createElement(
+                  "option",
+                  {
+                    key: item,
+                    value: item
+                  },
+                  item
+                )
+              )
+            )
+          ),
+
+          React.createElement(
+            "div",
+            {
+              className: "form-group"
+            },
+
+            React.createElement(
+              "label",
+              null,
+              "District"
+            ),
+
+            React.createElement("input", {
+              name: "district",
+              value: form.district,
+              onChange: handleChange,
+              placeholder: "Kathmandu"
+            })
+          ),
+
+          React.createElement(
+            "div",
+            {
+              className: "form-group"
+            },
+
+            React.createElement(
+              "label",
+              null,
+              "Municipality"
+            ),
+
+            React.createElement("input", {
+              name: "municipality",
+              value: form.municipality,
+              onChange: handleChange,
+              placeholder:
+                "Kathmandu Metropolitan City"
+            })
+          ),
+
+          React.createElement(
+            "div",
+            {
+              className: "form-group"
+            },
+
+            React.createElement(
+              "label",
+              null,
+              "Progress (%)"
+            ),
+
+            React.createElement("input", {
+              type: "number",
+              name: "progress",
+              min: 0,
+              max: 100,
+              value: form.progress,
+              onChange: handleChange
+            })
+          ),
+
+          React.createElement(
+            "div",
+            {
+              className: "form-group"
+            },
+
+            React.createElement(
+              "label",
+              null,
+              "Status"
+            ),
+
+            React.createElement(
+              "select",
+              {
+                name: "status",
+                value: form.status,
+                onChange: handleChange
+              },
+
+              React.createElement(
+                "option",
+                { value: "Active" },
+                "Active"
+              ),
+
+              React.createElement(
+                "option",
+                { value: "Delayed" },
+                "Delayed"
+              ),
+
+              React.createElement(
+                "option",
+                { value: "Completed" },
+                "Completed"
+              ),
+
+              React.createElement(
+                "option",
+                { value: "Critical" },
+                "Critical"
+              )
+            )
+          ),
+
+          React.createElement(
+            "div",
+            {
+              className: "form-group"
+            },
+
+            React.createElement(
+              "label",
+              null,
+              "Risk Level"
+            ),
+
+            React.createElement(
+              "select",
+              {
+                name: "riskLevel",
+                value: form.riskLevel,
+                onChange: handleChange
+              },
+
+              React.createElement(
+                "option",
+                { value: "Low" },
+                "Low"
+              ),
+
+              React.createElement(
+                "option",
+                { value: "Medium" },
+                "Medium"
+              ),
+
+              React.createElement(
+                "option",
+                { value: "High" },
+                "High"
+              ),
+
+              React.createElement(
+                "option",
+                { value: "Critical" },
+                "Critical"
+              )
+            )
+          ),
+
+          React.createElement(
+            "div",
+            {
+              className: "form-group"
+            },
+
+            React.createElement(
+              "label",
+              null,
+              "Contractor"
+            ),
+
+            React.createElement("input", {
+              name: "contractor",
+              value: form.contractor,
+              onChange: handleChange,
+              placeholder:
+                "Contractor name"
+            })
+          ),
+
+          React.createElement(
+            "div",
+            {
+              className:
+                "form-group full"
+            },
+
+            React.createElement(
+              "label",
+              null,
+              "Description"
+            ),
+
+            React.createElement(
+              "textarea",
+              {
+                name: "description",
+                value: form.description,
+                onChange: handleChange,
+                rows: 4,
+                placeholder:
+                  "Project description..."
+              }
+            )
+          )
+        ),
 
         React.createElement(
           "div",
           {
-            style: {
-              display: "flex",
-              justifyContent: "flex-end",
-              gap: "10px",
-              marginTop: "25px",
-              paddingTop: "20px",
-              borderTop: "1px solid #e8edf3"
-            }
+            className: "modal-actions"
           },
 
           React.createElement(
             "button",
             {
               type: "button",
-              onClick: onClose,
-              style: {
-                height: "42px",
-                padding: "0 20px",
-                border: "1px solid #dbe2ea",
-                background: "#ffffff",
-                borderRadius: "9px",
-                cursor: "pointer",
-                fontWeight: "700",
-                color: "#64748b"
-              }
+              className:
+                "secondary-button",
+              onClick: onClose
             },
             "Cancel"
           ),
@@ -427,150 +499,18 @@ function AddProjectModal({ onClose, onSave }) {
             "button",
             {
               type: "submit",
-              style: {
-                height: "42px",
-                padding: "0 24px",
-                border: "none",
-                background: "#2563eb",
-                color: "#ffffff",
-                borderRadius: "9px",
-                cursor: "pointer",
-                fontWeight: "700"
-              }
+              className:
+                "primary-button",
+              disabled: loading
             },
-            "✓ Save Project"
+            loading
+              ? "Creating..."
+              : "Create Project"
           )
         )
       )
     )
   );
-}
-
-
-/* =========================
-   INPUT COMPONENT
-========================= */
-
-function createInput(
-  label,
-  name,
-  value,
-  onChange,
-  placeholder,
-  required,
-  type
-) {
-  return React.createElement(
-    "div",
-    null,
-
-    React.createElement(
-      "label",
-      {
-        style: {
-          display: "block",
-          fontSize: "12px",
-          fontWeight: "700",
-          color: "#475569",
-          marginBottom: "7px"
-        }
-      },
-      label,
-      required
-        ? React.createElement(
-            "span",
-            {
-              style: {
-                color: "#ef4444"
-              }
-            },
-            " *"
-          )
-        : null
-    ),
-
-    React.createElement("input", {
-      type: type || "text",
-      name: name,
-      value: value,
-      onChange: onChange,
-      placeholder: placeholder,
-      required: required,
-      style: {
-        width: "100%",
-        height: "42px",
-        padding: "0 12px",
-        border: "1px solid #dbe2ea",
-        borderRadius: "9px",
-        fontSize: "13px",
-        outline: "none",
-        boxSizing: "border-box"
-      }
-    })
-  );
-}
-
-
-/* =========================
-   SELECT COMPONENT
-========================= */
-
-function createSelect(
-  label,
-  name,
-  value,
-  onChange,
-  options
-) {
-  return React.createElement(
-    "div",
-    null,
-
-    React.createElement(
-      "label",
-      {
-        style: {
-          display: "block",
-          fontSize: "12px",
-          fontWeight: "700",
-          color: "#475569",
-          marginBottom: "7px"
-        }
-      },
-      label
-    ),
-
-    React.createElement(
-      "select",
-      {
-        name: name,
-        value: value,
-        onChange: onChange,
-        style: {
-          width: "100%",
-          height: "42px",
-          padding: "0 12px",
-          border: "1px solid #dbe2ea",
-          borderRadius: "9px",
-          background: "#ffffff",
-          fontSize: "13px",
-          outline: "none",
-          boxSizing: "border-box"
-        }
-      },
-
-      options.map(function (option) {
-        return React.createElement(
-          "option",
-          {
-            key: option,
-            value: option
-          },
-          option
-        );
-      })
-    )
-  );
-}
+};
 
 export default AddProjectModal;

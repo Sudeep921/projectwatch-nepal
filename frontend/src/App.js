@@ -1,4 +1,5 @@
 import React from "react";
+
 import {
   BrowserRouter,
   Routes,
@@ -21,6 +22,12 @@ import Alerts from "./pages/Alerts";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import PublicPortal from "./pages/PublicPortal";
+import AdminLogin from "./pages/AdminLogin";
+
+
+/* =========================================
+   PROTECTED ROUTES
+========================================= */
 
 const ProtectedRoutes = () => {
   const {
@@ -28,6 +35,7 @@ const ProtectedRoutes = () => {
     loading
   } = useAuth();
 
+  /* Loading */
   if (loading) {
     return React.createElement(
       "div",
@@ -38,6 +46,7 @@ const ProtectedRoutes = () => {
     );
   }
 
+  /* User not logged in */
   if (!user) {
     return React.createElement(
       Navigate,
@@ -48,12 +57,19 @@ const ProtectedRoutes = () => {
     );
   }
 
+  /* Logged in */
   return React.createElement(
     DashboardLayout
   );
 };
 
+
+/* =========================================
+   APP
+========================================= */
+
 const App = () => {
+
   return React.createElement(
     BrowserRouter,
     null,
@@ -62,167 +78,207 @@ const App = () => {
       Routes,
       null,
 
+      /* =====================================
+         PUBLIC PORTAL
+      ===================================== */
+
       React.createElement(
         Route,
         {
           path: "/public",
-          element:
-            React.createElement(
-              PublicPortal
-            )
+          element: React.createElement(
+            PublicPortal
+          )
         }
       ),
+
+
+      /* =====================================
+         ADMIN LOGIN
+      ===================================== */
+
+      React.createElement(
+        Route,
+        {
+          path: "/admin-login",
+          element: React.createElement(
+            AdminLogin
+          )
+        }
+      ),
+
+
+      /* =====================================
+         PROTECTED DASHBOARD
+      ===================================== */
 
       React.createElement(
         Route,
         {
           path: "/",
-          element:
-            React.createElement(
-              ProtectedRoutes
-            )
+          element: React.createElement(
+            ProtectedRoutes
+          )
         },
 
+        /* Dashboard default */
         React.createElement(
           Route,
           {
             index: true,
-            element:
-              React.createElement(
-                Navigate,
-                {
-                  to: "/dashboard",
-                  replace: true
-                }
-              )
+            element: React.createElement(
+              Navigate,
+              {
+                to: "/dashboard",
+                replace: true
+              }
+            )
           }
         ),
 
+
+        /* Dashboard */
         React.createElement(
           Route,
           {
             path: "dashboard",
-            element:
-              React.createElement(
-                Dashboard
-              )
+            element: React.createElement(
+              Dashboard
+            )
           }
         ),
 
+
+        /* Projects */
         React.createElement(
           Route,
           {
             path: "projects",
-            element:
-              React.createElement(
-                Projects
-              )
+            element: React.createElement(
+              Projects
+            )
           }
         ),
 
+
+        /* Project Details */
         React.createElement(
           Route,
           {
             path: "projects/:id",
-            element:
-              React.createElement(
-                ProjectDetails
-              )
+            element: React.createElement(
+              ProjectDetails
+            )
           }
         ),
 
+
+        /* Map */
         React.createElement(
           Route,
           {
             path: "map",
-            element:
-              React.createElement(Map)
+            element: React.createElement(
+              Map
+            )
           }
         ),
 
+
+        /* Field Reports */
         React.createElement(
           Route,
           {
             path: "field-reports",
-            element:
-              React.createElement(
-                FieldReports
-              )
+            element: React.createElement(
+              FieldReports
+            )
           }
         ),
 
+
+        /* Complaints */
         React.createElement(
           Route,
           {
             path: "complaints",
-            element:
-              React.createElement(
-                Complaints
-              )
+            element: React.createElement(
+              Complaints
+            )
           }
         ),
 
+
+        /* Evidence */
         React.createElement(
           Route,
           {
             path: "evidence",
-            element:
-              React.createElement(
-                Evidence
-              )
+            element: React.createElement(
+              Evidence
+            )
           }
         ),
 
+
+        /* Alerts */
         React.createElement(
           Route,
           {
             path: "alerts",
-            element:
-              React.createElement(
-                Alerts
-              )
+            element: React.createElement(
+              Alerts
+            )
           }
         ),
 
+
+        /* Reports */
         React.createElement(
           Route,
           {
             path: "reports",
-            element:
-              React.createElement(
-                Reports
-              )
+            element: React.createElement(
+              Reports
+            )
           }
         ),
 
+
+        /* Settings */
         React.createElement(
           Route,
           {
             path: "settings",
-            element:
-              React.createElement(
-                Settings
-              )
+            element: React.createElement(
+              Settings
+            )
           }
         )
       ),
+
+
+      /* =====================================
+         UNKNOWN URL
+      ===================================== */
 
       React.createElement(
         Route,
         {
           path: "*",
-          element:
-            React.createElement(
-              Navigate,
-              {
-                to: "/public",
-                replace: true
-              }
-            )
+          element: React.createElement(
+            Navigate,
+            {
+              to: "/public",
+              replace: true
+            }
+          )
         }
       )
+
     )
   );
 };
+
 
 export default App;

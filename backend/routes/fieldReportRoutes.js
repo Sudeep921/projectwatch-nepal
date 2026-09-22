@@ -1,53 +1,47 @@
 const express = require("express");
 
 const {
-  createFieldReport,
   getFieldReports,
   getFieldReport,
+  createFieldReport,
   updateFieldReport,
   deleteFieldReport
-} = require("../controllers/fieldReportController");
-
-const authMiddleware = require("../middleware/authMiddleware");
-const roleMiddleware = require("../middleware/roleMiddleware");
-
-const router = express.Router();
-
-// Officer + Admin can create
-router.post(
-  "/",
-  authMiddleware,
-  roleMiddleware("officer", "admin"),
-  createFieldReport
+} = require(
+  "../controllers/fieldReportController"
 );
 
-// Officer + Admin
+const authMiddleware =
+  require(
+    "../middleware/authMiddleware"
+  );
+
+const router =
+  express.Router();
+
+router.use(authMiddleware);
+
 router.get(
   "/",
-  authMiddleware,
-  roleMiddleware("officer", "admin"),
   getFieldReports
 );
 
 router.get(
   "/:id",
-  authMiddleware,
-  roleMiddleware("officer", "admin"),
   getFieldReport
+);
+
+router.post(
+  "/",
+  createFieldReport
 );
 
 router.put(
   "/:id",
-  authMiddleware,
-  roleMiddleware("officer", "admin"),
   updateFieldReport
 );
 
-// Admin only
 router.delete(
   "/:id",
-  authMiddleware,
-  roleMiddleware("admin"),
   deleteFieldReport
 );
 

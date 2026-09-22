@@ -1,66 +1,158 @@
-const Project = require("../models/Project");
-const Complaint = require("../models/Complaint");
-const FieldReport = require("../models/FieldReport");
-const Verification = require("../models/Verification");
+const Project =
+  require("../models/Project");
 
-const getProjectReport = async (req, res) => {
-  try {
-    const projects = await Project.find()
-      .populate("assignedOfficer", "-password");
+const getProjectReport =
+  async (req, res) => {
+    try {
+      const projects =
+        await Project.find();
 
-    const complaints = await Complaint.countDocuments();
+      const totalProjects =
+        projects.length;
 
-    const fieldReports =
-      await FieldReport.countDocuments();
+      const activeProjects =
+        projects.filter(
+          (project) =>
+            project.status ===
+            "Active"
+        ).length;
 
-    const verifications =
-      await Verification.countDocuments();
+      const delayedProjects =
+        projects.filter(
+          (project) =>
+            project.status ===
+            "Delayed"
+        ).length;
 
-    const totalBudget = projects.reduce(
-      (sum, project) => sum + (project.budget || 0),
-      0
-    );
+      const completedProjects =
+        projects.filter(
+          (project) =>
+            project.status ===
+            "Completed"
+        ).length;
 
-    const averageProgress =
-      projects.length > 0
-        ? projects.reduce(
-            (sum, project) =>
-              sum + (project.progress || 0),
-            0
-          ) / projects.length
-        : 0;
+      const criticalProjects =
+        projects.filter(
+          (project) =>
+            project.status ===
+              "Critical" ||
+            project.riskLevel ===
+              "Critical"
+        ).length;
 
-    res.json({
-      success: true,
+      const totalBudget =
+        projects.reduce(
+          (total, project) =>
+            total +
+            Number(
+              project.budget || 0
+            ),
+          0
+        );
 
-      report: {
-        generatedAt: new Date(),
+      const averageProgress =
+        totalProjects > 0
+          ? Math.round(
+              projects.reduce(
+                (
+                  total,
+                  project
+                ) =>
+                  total +
+                  Number(
+                    project.progress ||
+                      0
+                  ),
+                0
+              ) /
+                totalProjects
+            )
+          : 0;
 
-        totalProjects: projects.length,
+      const provinceSummary = {};
 
-        totalBudget,
+      projects.forEach(
+        (project) => {
+          const province =
+            project.province ||
+            "Unknown";
 
-        averageProgress:
-          Number(averageProgress.toFixed(2)),
+          if (
+            !provinceSummary[
+              province
+            ]
+          ) {
+            provinceSummary[
+              province
+            ] = {
+              province,
+              total: 0,
+              budget: 0,
+              progress: 0
+            };
+          }
 
-        complaints,
+          provinceSummary[
+            province
+          ].total += 1;
 
-        fieldReports,
+          provinceSummary[
+            province
+          ].budget += Number(
+            project.budget || 0
+          );
 
-        verifications,
+          provinceSummary[
+            province
+          ].progress += Number(
+            project.progress || 0
+          );
+        }
+      );
 
-        projects
-      }
-    });
-  } catch (error) {
-    console.error("Report error:", error);
+      const provinces =
+        Object.values(
+          provinceSummary
+        ).map(
+          (item) => ({
+            ...item,
+            averageProgress:
+              item.total > 0
+                ? Math.round(
+                    item.progress /
+                      item.total
+                  )
+                : 0
+          })
+        );
 
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-};
+      res.json({
+        success: true,
+
+        report: {
+          totalProjects,
+          activeProjects,
+          delayedProjects,
+          completedProjects,
+          criticalProjects,
+          totalBudget,
+          averageProgress,
+          provinces
+        }
+      });
+    } catch (error) {
+      console.error(
+        "Project report error:",
+        error
+      );
+
+      res.status(500).json({
+        success: false,
+        message:
+          "Unable to generate project report"
+      });
+    }
+  };
 
 module.exports = {
   getProjectReport

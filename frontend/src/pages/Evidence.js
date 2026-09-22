@@ -1,523 +1,324 @@
-import React, { useMemo, useState } from "react";
+import React, {
+  useEffect,
+  useState
+} from "react";
 
-const EVIDENCE_DATA = [
-  {
-    id: "EV-2026-00481",
-    project: "Kathmandu Ring Road Expansion",
-    projectId: "PW-BAG-00124",
-    type: "Photo",
-    officer: "Rajesh Thapa",
-    date: "08 Sep 2026, 10:42 AM",
-    location: "Kalanki, Kathmandu",
-    gps: "27.6939, 85.2815",
-    progress: 42,
-    verification: "Flagged",
-    aiMessage: "Potential discrepancy detected",
-    files: 4
-  },
-  {
-    id: "EV-2026-00480",
-    project: "Pokhara Regional Bridge",
-    projectId: "PW-GAN-00087",
-    type: "Video",
-    officer: "Suman Gurung",
-    date: "08 Sep 2026, 09:18 AM",
-    location: "Pokhara, Kaski",
-    gps: "28.2096, 83.9856",
-    progress: 38,
-    verification: "Verified",
-    aiMessage: "Evidence appears consistent",
-    files: 2
-  },
-  {
-    id: "EV-2026-00479",
-    project: "District Hospital Upgrade",
-    projectId: "PW-KOS-00191",
-    type: "Photo",
-    officer: "Anil Rai",
-    date: "07 Sep 2026, 03:35 PM",
-    location: "Morang, Koshi",
-    gps: "26.4525, 87.2718",
-    progress: 56,
-    verification: "Verified",
-    aiMessage: "Evidence appears consistent",
-    files: 6
-  },
-  {
-    id: "EV-2026-00478",
-    project: "Terai Irrigation Network",
-    projectId: "PW-MAD-00214",
-    type: "Photo",
-    officer: "Bikash Yadav",
-    date: "07 Sep 2026, 11:06 AM",
-    location: "Dhanusha, Madhesh",
-    gps: "26.7288, 85.9263",
-    progress: 29,
-    verification: "Pending",
-    aiMessage: "AI verification in progress",
-    files: 3
-  },
-  {
-    id: "EV-2026-00477",
-    project: "Community School Reconstruction",
-    projectId: "PW-BAG-00203",
-    type: "Video",
-    officer: "Mina Shrestha",
-    date: "06 Sep 2026, 01:22 PM",
-    location: "Lalitpur, Bagmati",
-    gps: "27.6588, 85.3247",
-    progress: 81,
-    verification: "Verified",
-    aiMessage: "Evidence appears consistent",
-    files: 1
-  },
-  {
-    id: "EV-2026-00476",
-    project: "Mahakali Drinking Water Project",
-    projectId: "PW-SUD-00111",
-    type: "Photo",
-    officer: "Deepak Joshi",
-    date: "06 Sep 2026, 09:47 AM",
-    location: "Kanchanpur, Sudurpashchim",
-    gps: "28.8372, 80.3213",
-    progress: 63,
-    verification: "Flagged",
-    aiMessage: "Location verification recommended",
-    files: 5
-  }
-];
+import {
+  getEvidence,
+  uploadEvidence,
+  getProjects
+} from "../services/api";
 
-function Evidence() {
-  const [evidence, setEvidence] = useState(EVIDENCE_DATA);
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("All");
-  const [selected, setSelected] = useState(null);
+const Evidence = () => {
+  const [evidence, setEvidence] =
+    useState([]);
 
-  const filteredEvidence = useMemo(function () {
-    return evidence.filter(function (item) {
-      const matchesSearch =
-        item.project.toLowerCase().includes(search.toLowerCase()) ||
-        item.id.toLowerCase().includes(search.toLowerCase()) ||
-        item.officer.toLowerCase().includes(search.toLowerCase());
+  const [projects, setProjects] =
+    useState([]);
 
-      const matchesFilter =
-        filter === "All" || item.verification === filter;
+  const [loading, setLoading] =
+    useState(true);
 
-      return matchesSearch && matchesFilter;
-    });
-  }, [evidence, search, filter]);
+  const [uploading, setUploading] =
+    useState(false);
 
-  const total = evidence.length;
-  const verified = evidence.filter(
-    item => item.verification === "Verified"
-  ).length;
-  const flagged = evidence.filter(
-    item => item.verification === "Flagged"
-  ).length;
-  const pending = evidence.filter(
-    item => item.verification === "Pending"
-  ).length;
+  const [showForm, setShowForm] =
+    useState(false);
 
-  function verificationClass(status) {
-    return status.toLowerCase().replace(/\s+/g, "-");
-  }
+  const [error, setError] =
+    useState("");
 
-  function openMap(item) {
-    window.open(
-      "https://www.google.com/maps/search/?api=1&query=" +
-        encodeURIComponent(item.gps),
-      "_blank"
-    );
-  }
+  const [file, setFile] =
+    useState(null);
 
-  function markVerified(id) {
-    setEvidence(function (current) {
-      return current.map(function (item) {
-        if (item.id !== id) return item;
-
-        return {
-          ...item,
-          verification: "Verified",
-          aiMessage: "Human review completed — evidence verified"
-        };
-      });
+  const [form, setForm] =
+    useState({
+      project: "",
+      evidenceType: "Photo",
+      description: ""
     });
 
-    setSelected(function (current) {
-      if (!current || current.id !== id) return current;
+  const loadData = async () => {
+    try {
+      setLoading(true);
 
-      return {
-        ...current,
-        verification: "Verified",
-        aiMessage: "Human review completed — evidence verified"
-      };
-    });
-  }
+      const [
+        evidenceResponse,
+        projectResponse
+      ] = await Promise.all([
+        getEvidence(),
+        getProjects()
+      ]);
+
+      setEvidence(
+        evidenceResponse?.evidence ||
+          evidenceResponse?.data ||
+          []
+      );
+
+      setProjects(
+        projectResponse?.projects ||
+          projectResponse?.data ||
+          []
+      );
+    } catch (err) {
+      console.error(
+        "Evidence loading failed:",
+        err
+      );
+
+      setError(
+        err.message ||
+          "Unable to load evidence."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleChange = (
+    event
+  ) => {
+    const {
+      name,
+      value
+    } = event.target;
+
+    setForm((previous) => ({
+      ...previous,
+      [name]: value
+    }));
+  };
+
+  const handleUpload =
+    async (event) => {
+      event.preventDefault();
+
+      if (!file) {
+        setError(
+          "Please select a file."
+        );
+        return;
+      }
+
+      try {
+        setUploading(true);
+        setError("");
+
+        const formData =
+          new FormData();
+
+        formData.append(
+          "project",
+          form.project
+        );
+
+        formData.append(
+          "evidenceType",
+          form.evidenceType
+        );
+
+        formData.append(
+          "description",
+          form.description
+        );
+
+        formData.append(
+          "file",
+          file
+        );
+
+        await uploadEvidence(
+          formData
+        );
+
+        setFile(null);
+
+        setForm({
+          project: "",
+          evidenceType: "Photo",
+          description: ""
+        });
+
+        setShowForm(false);
+
+        await loadData();
+      } catch (err) {
+        console.error(
+          "Evidence upload failed:",
+          err
+        );
+
+        setError(
+          err.message ||
+            "Unable to upload evidence."
+        );
+      } finally {
+        setUploading(false);
+      }
+    };
 
   return React.createElement(
-    "main",
-    { className: "evidence-page" },
+    "div",
+    {
+      className:
+        "page-container"
+    },
 
     React.createElement(
       "div",
-      { className: "evidence-page-header" },
+      {
+        className:
+          "page-header"
+      },
+
       React.createElement(
         "div",
         null,
+
         React.createElement(
-          "div",
-          { className: "breadcrumb" },
-          "ProjectWatch Nepal",
-          React.createElement("span", null, "/"),
-          " Evidence"
+          "span",
+          {
+            className:
+              "page-eyebrow"
+          },
+          "PROJECT EVIDENCE"
         ),
-        React.createElement("h1", null, "Project Evidence"),
+
+        React.createElement(
+          "h1",
+          null,
+          "Evidence"
+        ),
+
         React.createElement(
           "p",
           null,
-          "Review field photos, videos, GPS records and AI verification results."
-        )
-      )
-    ),
-
-    React.createElement(
-      "div",
-      { className: "evidence-summary-grid" },
-
-      React.createElement(
-        "div",
-        { className: "evidence-summary-card" },
-        React.createElement("span", null, "📁"),
-        React.createElement(
-          "div",
-          null,
-          React.createElement("strong", null, total),
-          React.createElement("small", null, "Total Evidence")
+          "Manage photos, videos and documents collected from project sites."
         )
       ),
 
       React.createElement(
-        "div",
-        { className: "evidence-summary-card verified-card" },
-        React.createElement("span", null, "✓"),
-        React.createElement(
-          "div",
-          null,
-          React.createElement("strong", null, verified),
-          React.createElement("small", null, "Verified")
-        )
-      ),
-
-      React.createElement(
-        "div",
-        { className: "evidence-summary-card flagged-card" },
-        React.createElement("span", null, "⚠"),
-        React.createElement(
-          "div",
-          null,
-          React.createElement("strong", null, flagged),
-          React.createElement("small", null, "AI Flagged")
-        )
-      ),
-
-      React.createElement(
-        "div",
-        { className: "evidence-summary-card pending-card" },
-        React.createElement("span", null, "◷"),
-        React.createElement(
-          "div",
-          null,
-          React.createElement("strong", null, pending),
-          React.createElement("small", null, "Pending Review")
-        )
-      )
-    ),
-
-    React.createElement(
-      "section",
-      { className: "evidence-history-section" },
-
-      React.createElement(
-        "div",
-        { className: "evidence-history-header" },
-        React.createElement(
-          "div",
-          null,
-          React.createElement("h2", null, "Evidence Management"),
-          React.createElement(
-            "p",
-            null,
-            filteredEvidence.length + " evidence records found"
-          )
-        ),
-
-        React.createElement(
-          "div",
-          { className: "evidence-filters" },
-
-          React.createElement("input", {
-            type: "text",
-            placeholder: "Search project, officer or evidence ID...",
-            value: search,
-            onChange: function (e) {
-              setSearch(e.target.value);
-            }
-          }),
-
-          React.createElement(
-            "select",
-            {
-              value: filter,
-              onChange: function (e) {
-                setFilter(e.target.value);
-              }
-            },
-            React.createElement("option", { value: "All" }, "All Status"),
-            React.createElement("option", { value: "Verified" }, "Verified"),
-            React.createElement("option", { value: "Flagged" }, "Flagged"),
-            React.createElement("option", { value: "Pending" }, "Pending")
-          )
-        )
-      ),
-
-      React.createElement(
-        "div",
-        { className: "evidence-table-wrap" },
-
-        React.createElement(
-          "table",
-          { className: "evidence-table" },
-
-          React.createElement(
-            "thead",
-            null,
-            React.createElement(
-              "tr",
-              null,
-              React.createElement("th", null, "EVIDENCE"),
-              React.createElement("th", null, "PROJECT"),
-              React.createElement("th", null, "FIELD OFFICER"),
-              React.createElement("th", null, "LOCATION"),
-              React.createElement("th", null, "PROGRESS"),
-              React.createElement("th", null, "VERIFICATION"),
-              React.createElement("th", null, "DATE"),
-              React.createElement("th", null, "ACTION")
+        "button",
+        {
+          className:
+            "primary-button",
+          onClick: () =>
+            setShowForm(
+              !showForm
             )
-          ),
-
-          React.createElement(
-            "tbody",
-            null,
-
-            filteredEvidence.map(function (item) {
-              return React.createElement(
-                "tr",
-                { key: item.id },
-
-                React.createElement(
-                  "td",
-                  { className: "evidence-id-cell" },
-                  React.createElement(
-                    "strong",
-                    null,
-                    item.type === "Video" ? "🎥" : "📸",
-                    " ",
-                    item.id
-                  ),
-                  React.createElement(
-                    "small",
-                    null,
-                    item.files + " file" + (item.files > 1 ? "s" : "")
-                  )
-                ),
-
-                React.createElement(
-                  "td",
-                  { className: "evidence-project-cell" },
-                  React.createElement("strong", null, item.project),
-                  React.createElement("small", null, item.projectId)
-                ),
-
-                React.createElement("td", null, item.officer),
-
-                React.createElement(
-                  "td",
-                  null,
-                  React.createElement("strong", null, item.location),
-                  React.createElement("small", null, item.gps)
-                ),
-
-                React.createElement(
-                  "td",
-                  { className: "evidence-progress-cell" },
-                  React.createElement(
-                    "div",
-                    { className: "evidence-progress-label" },
-                    item.progress + "%"
-                  ),
-                  React.createElement(
-                    "div",
-                    { className: "evidence-progress-bar" },
-                    React.createElement("span", {
-                      style: { width: item.progress + "%" }
-                    })
-                  )
-                ),
-
-                React.createElement(
-                  "td",
-                  null,
-                  React.createElement(
-                    "span",
-                    {
-                      className:
-                        "evidence-verification " +
-                        verificationClass(item.verification)
-                    },
-                    item.verification
-                  )
-                ),
-
-                React.createElement(
-                  "td",
-                  { className: "evidence-date-cell" },
-                  item.date
-                ),
-
-                React.createElement(
-                  "td",
-                  null,
-                  React.createElement(
-                    "button",
-                    {
-                      className: "evidence-view-button",
-                      onClick: function () {
-                        setSelected(item);
-                      }
-                    },
-                    "View"
-                  )
-                )
-              );
-            })
-          )
-        ),
-
-        filteredEvidence.length === 0
-          ? React.createElement(
-              "div",
-              { className: "evidence-empty" },
-              React.createElement("div", null, "🔎"),
-              React.createElement("strong", null, "No evidence found"),
-              React.createElement(
-                "p",
-                null,
-                "Try changing your search or filter."
-              )
-            )
-          : null
+        },
+        showForm
+          ? "Close Upload"
+          : "+ Upload Evidence"
       )
     ),
 
-    selected
+    error
       ? React.createElement(
           "div",
           {
-            className: "evidence-modal-overlay",
-            onClick: function () {
-              setSelected(null);
-            }
+            className:
+              "form-error"
+          },
+          "⚠ ",
+          error
+        )
+      : null,
+
+    showForm
+      ? React.createElement(
+          "div",
+          {
+            className:
+              "report-form-card evidence-form-card"
           },
 
           React.createElement(
-            "div",
+            "span",
             {
-              className: "evidence-modal",
-              onClick: function (e) {
-                e.stopPropagation();
-              }
+              className:
+                "page-eyebrow"
+            },
+            "FIELD EVIDENCE"
+          ),
+
+          React.createElement(
+            "h2",
+            null,
+            "Upload Project Evidence"
+          ),
+
+          React.createElement(
+            "p",
+            null,
+            "Upload verified field evidence associated with a government project."
+          ),
+
+          React.createElement(
+            "form",
+            {
+              onSubmit:
+                handleUpload
             },
 
             React.createElement(
               "div",
-              { className: "evidence-modal-header" },
+              {
+                className:
+                  "form-grid"
+              },
+
               React.createElement(
                 "div",
-                null,
-                React.createElement("span", null, selected.type === "Video" ? "🎥" : "📸"),
-                React.createElement(
-                  "div",
-                  null,
-                  React.createElement("h2", null, selected.id),
-                  React.createElement("p", null, selected.project)
-                )
-              ),
-              React.createElement(
-                "button",
                 {
-                  onClick: function () {
-                    setSelected(null);
-                  }
+                  className:
+                    "form-group"
                 },
-                "×"
-              )
-            ),
 
-            React.createElement(
-              "div",
-              { className: "evidence-modal-body" },
-
-              React.createElement(
-                "div",
-                { className: "evidence-preview" },
                 React.createElement(
-                  "div",
-                  { className: "evidence-preview-icon" },
-                  selected.type === "Video" ? "🎥" : "📸"
-                ),
-                React.createElement(
-                  "strong",
+                  "label",
                   null,
-                  selected.type + " Evidence"
-                ),
-                React.createElement(
-                  "small",
-                  null,
-                  selected.files + " uploaded file" +
-                    (selected.files > 1 ? "s" : "")
-                )
-              ),
-
-              React.createElement(
-                "div",
-                { className: "evidence-detail-grid" },
-
-                React.createElement(
-                  "div",
-                  null,
-                  React.createElement("small", null, "Field Officer"),
-                  React.createElement("strong", null, selected.officer)
+                  "Project"
                 ),
 
                 React.createElement(
-                  "div",
-                  null,
-                  React.createElement("small", null, "Submitted"),
-                  React.createElement("strong", null, selected.date)
-                ),
+                  "select",
+                  {
+                    name:
+                      "project",
+                    value:
+                      form.project,
+                    onChange:
+                      handleChange,
+                    required: true
+                  },
 
-                React.createElement(
-                  "div",
-                  null,
-                  React.createElement("small", null, "Location"),
-                  React.createElement("strong", null, selected.location)
-                ),
+                  React.createElement(
+                    "option",
+                    {
+                      value: ""
+                    },
+                    "Select project"
+                  ),
 
-                React.createElement(
-                  "div",
-                  null,
-                  React.createElement("small", null, "GPS Coordinates"),
-                  React.createElement("strong", null, selected.gps)
+                  projects.map(
+                    (project) =>
+                      React.createElement(
+                        "option",
+                        {
+                          key:
+                            project._id,
+                          value:
+                            project._id
+                        },
+                        project.name
+                      )
+                  )
                 )
               ),
 
@@ -525,75 +326,283 @@ function Evidence() {
                 "div",
                 {
                   className:
-                    "evidence-ai-box " +
-                    (selected.verification === "Flagged"
-                      ? "warning"
-                      : selected.verification === "Verified"
-                      ? "success"
-                      : "pending")
+                    "form-group"
                 },
+
                 React.createElement(
-                  "div",
-                  { className: "evidence-ai-icon" },
-                  selected.verification === "Flagged"
-                    ? "⚠"
-                    : selected.verification === "Verified"
-                    ? "✓"
-                    : "◷"
-                ),
-                React.createElement(
-                  "div",
+                  "label",
                   null,
+                  "Evidence Type"
+                ),
+
+                React.createElement(
+                  "select",
+                  {
+                    name:
+                      "evidenceType",
+                    value:
+                      form.evidenceType,
+                    onChange:
+                      handleChange
+                  },
+
                   React.createElement(
-                    "strong",
-                    null,
-                    selected.aiMessage
+                    "option",
+                    {
+                      value:
+                        "Photo"
+                    },
+                    "Photo"
                   ),
+
                   React.createElement(
-                    "p",
-                    null,
-                    selected.verification === "Flagged"
-                      ? "Human review is recommended before taking further action."
-                      : selected.verification === "Verified"
-                      ? "Evidence has passed human review."
-                      : "Automated verification has not been completed yet."
+                    "option",
+                    {
+                      value:
+                        "Video"
+                    },
+                    "Video"
+                  ),
+
+                  React.createElement(
+                    "option",
+                    {
+                      value:
+                        "Document"
+                    },
+                    "Document"
                   )
                 )
               ),
 
               React.createElement(
                 "div",
-                { className: "evidence-modal-actions" },
+                {
+                  className:
+                    "form-group full"
+                },
 
                 React.createElement(
-                  "button",
-                  {
-                    className: "evidence-modal-secondary",
-                    onClick: function () {
-                      openMap(selected);
-                    }
-                  },
-                  "📍 Open Map"
+                  "label",
+                  null,
+                  "Evidence File"
                 ),
 
-                selected.verification !== "Verified"
-                  ? React.createElement(
-                      "button",
-                      {
-                        className: "evidence-modal-primary",
-                        onClick: function () {
-                          markVerified(selected.id);
-                        }
-                      },
-                      "✓ Mark as Verified"
+                React.createElement(
+                  "input",
+                  {
+                    type:
+                      "file",
+                    accept:
+                      "image/*,video/*,.pdf",
+                    onChange:
+                      (event) =>
+                        setFile(
+                          event
+                            .target
+                            .files?.[0] ||
+                          null
+                        ),
+                    required: true
+                  }
+                )
+              ),
+
+              React.createElement(
+                "div",
+                {
+                  className:
+                    "form-group full"
+                },
+
+                React.createElement(
+                  "label",
+                  null,
+                  "Description"
+                ),
+
+                React.createElement(
+                  "textarea",
+                  {
+                    name:
+                      "description",
+                    value:
+                      form.description,
+                    onChange:
+                      handleChange,
+                    rows: 5,
+                    placeholder:
+                      "Describe what this evidence shows..."
+                  }
+                )
+              )
+            ),
+
+            React.createElement(
+              "div",
+              {
+                className:
+                  "modal-footer"
+              },
+
+              React.createElement(
+                "button",
+                {
+                  type:
+                    "button",
+                  className:
+                    "secondary-button",
+                  onClick: () =>
+                    setShowForm(
+                      false
                     )
-                  : null
+                },
+                "Cancel"
+              ),
+
+              React.createElement(
+                "button",
+                {
+                  type:
+                    "submit",
+                  className:
+                    "primary-button",
+                  disabled:
+                    uploading
+                },
+                uploading
+                  ? "Uploading..."
+                  : "Upload Evidence"
               )
             )
           )
         )
-      : null
+      : null,
+
+    loading
+      ? React.createElement(
+          "div",
+          {
+            className:
+              "page-loading"
+          },
+          "Loading evidence..."
+        )
+      : evidence.length === 0
+      ? React.createElement(
+          "div",
+          {
+            className:
+              "empty-state"
+          },
+
+          React.createElement(
+            "h3",
+            null,
+            "No evidence uploaded"
+          ),
+
+          React.createElement(
+            "p",
+            null,
+            "Photos, videos and documents collected during field inspections will appear here."
+          ),
+
+          React.createElement(
+            "button",
+            {
+              className:
+                "primary-button",
+              onClick: () =>
+                setShowForm(
+                  true
+                )
+            },
+            "+ Upload First Evidence"
+          )
+        )
+      : React.createElement(
+          "div",
+          {
+            className:
+              "reports-list"
+          },
+
+          evidence.map(
+            (item) =>
+              React.createElement(
+                "div",
+                {
+                  className:
+                    "report-card",
+                  key:
+                    item._id ||
+                    item.id
+                },
+
+                React.createElement(
+                  "div",
+                  {
+                    className:
+                      "report-card-header"
+                  },
+
+                  React.createElement(
+                    "strong",
+                    null,
+                    item.project?.name ||
+                      item.project ||
+                      "Government Project"
+                  ),
+
+                  React.createElement(
+                    "span",
+                    {
+                      className:
+                        "status-badge"
+                    },
+                    item.evidenceType ||
+                      item.type ||
+                      "Evidence"
+                  )
+                ),
+
+                React.createElement(
+                  "p",
+                  null,
+                  item.description ||
+                    "Project evidence record."
+                ),
+
+                React.createElement(
+                  "div",
+                  {
+                    className:
+                      "report-meta"
+                  },
+
+                  React.createElement(
+                    "span",
+                    null,
+                    item.originalName ||
+                      item.filename ||
+                      "Uploaded file"
+                  ),
+
+                  React.createElement(
+                    "span",
+                    null,
+                    item.createdAt
+                      ? new Date(
+                          item.createdAt
+                        ).toLocaleDateString()
+                      : "Recent"
+                  )
+                )
+              )
+          )
+        )
   );
-}
+};
 
 export default Evidence;

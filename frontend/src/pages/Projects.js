@@ -1,253 +1,134 @@
-import React, { useMemo, useState } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useState
+} from "react";
+
+import {
+  getProjects
+} from "../services/api";
+
 import ProjectFilters from "../components/ProjectFilters";
 import ProjectTable from "../components/ProjectTable";
 import AddProjectModal from "../components/AddProjectModal";
 
-const INITIAL_PROJECTS = [
-  {
-    id: "PW-BAG-00124",
-    name: "Kathmandu Ring Road Expansion",
-    icon: "🛣️",
-    district: "Kathmandu",
-    province: "Bagmati",
-    budget: "NPR 8.4B",
-    progress: 42,
-    progressLabel: "Behind Schedule",
-    status: "Critical",
-    risk: "Critical",
-    updated: "2 hrs ago",
-    contractor: "ABC Infrastructure Pvt. Ltd.",
-    department: "Department of Roads",
-    startDate: "15 Jan 2025",
-    endDate: "14 Jan 2028",
-    location: "Kathmandu, Bagmati Province"
-  },
+const Projects = () => {
+  const [projects, setProjects] =
+    useState([]);
 
-  {
-    id: "PW-GAN-00087",
-    name: "Pokhara Regional Bridge",
-    icon: "🌉",
-    district: "Kaski",
-    province: "Gandaki",
-    budget: "NPR 3.8B",
-    progress: 38,
-    progressLabel: "Behind",
-    status: "Delayed",
-    risk: "High",
-    updated: "5 hrs ago",
-    contractor: "Gandaki Construction Group",
-    department: "Department of Roads",
-    startDate: "20 Feb 2025",
-    endDate: "20 Dec 2027",
-    location: "Pokhara, Gandaki Province"
-  },
+  const [loading, setLoading] =
+    useState(true);
 
-  {
-    id: "PW-KOS-00191",
-    name: "District Hospital Upgrade",
-    icon: "🏥",
-    district: "Morang",
-    province: "Koshi",
-    budget: "NPR 2.1B",
-    progress: 56,
-    progressLabel: "On Track",
-    status: "Active",
-    risk: "Medium",
-    updated: "1 day ago",
-    contractor: "Himalayan Builders Pvt. Ltd.",
-    department: "Ministry of Health",
-    startDate: "10 Apr 2025",
-    endDate: "30 Mar 2027",
-    location: "Morang, Koshi Province"
-  },
+  const [error, setError] =
+    useState("");
 
-  {
-    id: "PW-LUM-00076",
-    name: "Butwal-Bhairahawa Road",
-    icon: "🛣️",
-    district: "Rupandehi",
-    province: "Lumbini",
-    budget: "NPR 5.6B",
-    progress: 74,
-    progressLabel: "Good",
-    status: "Active",
-    risk: "Low",
-    updated: "1 day ago",
-    contractor: "National Road Builders",
-    department: "Department of Roads",
-    startDate: "5 Jan 2024",
-    endDate: "30 Dec 2026",
-    location: "Rupandehi, Lumbini Province"
-  },
+  const [search, setSearch] =
+    useState("");
 
-  {
-    id: "PW-MAD-00214",
-    name: "Terai Irrigation Network",
-    icon: "💧",
-    district: "Dhanusha",
-    province: "Madhesh",
-    budget: "NPR 4.2B",
-    progress: 29,
-    progressLabel: "Behind",
-    status: "Delayed",
-    risk: "High",
-    updated: "2 days ago",
-    contractor: "Terai Development Contractors",
-    department: "Department of Irrigation",
-    startDate: "12 Jun 2025",
-    endDate: "15 May 2028",
-    location: "Dhanusha, Madhesh Province"
-  },
+  const [province, setProvince] =
+    useState("");
 
-  {
-    id: "PW-KAR-00042",
-    name: "Karnali District Hospital",
-    icon: "🏥",
-    district: "Surkhet",
-    province: "Karnali",
-    budget: "NPR 1.7B",
-    progress: 91,
-    progressLabel: "Good",
-    status: "Completed",
-    risk: "Low",
-    updated: "3 days ago",
-    contractor: "Karnali Infrastructure Pvt. Ltd.",
-    department: "Ministry of Health",
-    startDate: "1 Feb 2023",
-    endDate: "30 Jan 2026",
-    location: "Surkhet, Karnali Province"
-  },
+  const [status, setStatus] =
+    useState("");
 
-  {
-    id: "PW-SUD-00111",
-    name: "Mahakali Drinking Water Project",
-    icon: "🚰",
-    district: "Kanchanpur",
-    province: "Sudurpashchim",
-    budget: "NPR 980M",
-    progress: 63,
-    progressLabel: "On Track",
-    status: "Active",
-    risk: "Medium",
-    updated: "3 days ago",
-    contractor: "Sudur Infrastructure Group",
-    department: "Department of Water Supply",
-    startDate: "18 Aug 2025",
-    endDate: "20 Jul 2027",
-    location: "Kanchanpur, Sudurpashchim Province"
-  },
+  const [risk, setRisk] =
+    useState("");
 
-  {
-    id: "PW-BAG-00203",
-    name: "Community School Reconstruction",
-    icon: "🏫",
-    district: "Lalitpur",
-    province: "Bagmati",
-    budget: "NPR 1.2B",
-    progress: 81,
-    progressLabel: "Good",
-    status: "Active",
-    risk: "Low",
-    updated: "4 days ago",
-    contractor: "Kathmandu Valley Builders",
-    department: "Ministry of Education",
-    startDate: "10 Mar 2025",
-    endDate: "15 Feb 2027",
-    location: "Lalitpur, Bagmati Province"
-  }
-];
+  const [showModal, setShowModal] =
+    useState(false);
 
-function Projects({ setPage, onViewProject }) {
-  const [projects, setProjects] = useState(INITIAL_PROJECTS);
+  const loadProjects = async () => {
+    setLoading(true);
+    setError("");
 
-  const [search, setSearch] = useState("");
-  const [province, setProvince] = useState("All Provinces");
-  const [status, setStatus] = useState("All Status");
-  const [risk, setRisk] = useState("All Risk");
+    try {
+      const response =
+        await getProjects();
 
-  const [showAddProject, setShowAddProject] = useState(false);
-
-  const filteredProjects = useMemo(function () {
-    return projects.filter(function (project) {
-      const searchText = search.toLowerCase().trim();
-
-      const matchesSearch =
-        searchText === "" ||
-        project.name.toLowerCase().includes(searchText) ||
-        project.id.toLowerCase().includes(searchText) ||
-        project.district.toLowerCase().includes(searchText);
-
-      const matchesProvince =
-        province === "All Provinces" ||
-        project.province === province;
-
-      const matchesStatus =
-        status === "All Status" ||
-        project.status === status;
-
-      const matchesRisk =
-        risk === "All Risk" ||
-        project.risk === risk;
-
-      return (
-        matchesSearch &&
-        matchesProvince &&
-        matchesStatus &&
-        matchesRisk
+      setProjects(
+        response.projects ||
+          response.data ||
+          []
       );
-    });
-  }, [projects, search, province, status, risk]);
-
-  function clearFilters() {
-    setSearch("");
-    setProvince("All Provinces");
-    setStatus("All Status");
-    setRisk("All Risk");
-  }
-
-  function addNewProject() {
-    console.log("Add New Project clicked");
-    setShowAddProject(true);
-  }
-
-  function closeAddProject() {
-    setShowAddProject(false);
-  }
-
-  function saveProject(newProject) {
-    setProjects(function (previousProjects) {
-      return [
-        newProject,
-        ...previousProjects
-      ];
-    });
-
-    setShowAddProject(false);
-  }
-
-  function openProject(project) {
-    if (onViewProject) {
-      onViewProject(project);
+    } catch (err) {
+      setError(
+        err.message ||
+          "Unable to load projects."
+      );
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
-  const criticalCount = projects.filter(function (project) {
-    return project.risk === "Critical";
-  }).length;
+  useEffect(() => {
+    loadProjects();
+  }, []);
 
-  const delayedCount = projects.filter(function (project) {
-    return project.status === "Delayed";
-  }).length;
+  const filteredProjects =
+    useMemo(() => {
+      return projects.filter(
+        (project) => {
+          const text =
+            `${project.name || ""} ${
+              project.projectId || ""
+            } ${
+              project.district || ""
+            } ${
+              project.municipality || ""
+            }`
+              .toLowerCase();
+
+          const matchesSearch =
+            !search ||
+            text.includes(
+              search.toLowerCase()
+            );
+
+          const matchesProvince =
+            !province ||
+            project.province ===
+              province;
+
+          const matchesStatus =
+            !status ||
+            project.status === status;
+
+          const matchesRisk =
+            !risk ||
+            project.riskLevel === risk;
+
+          return (
+            matchesSearch &&
+            matchesProvince &&
+            matchesStatus &&
+            matchesRisk
+          );
+        }
+      );
+    }, [
+      projects,
+      search,
+      province,
+      status,
+      risk
+    ]);
+
+  const resetFilters = () => {
+    setSearch("");
+    setProvince("");
+    setStatus("");
+    setRisk("");
+  };
+
+  const handleCreated = () => {
+    loadProjects();
+  };
 
   return React.createElement(
-    "main",
+    "div",
     {
-      className: "page-content projects-page"
+      className: "page-container projects-page"
     },
-
-    /* =========================
-       HEADER
-    ========================= */
 
     React.createElement(
       "div",
@@ -260,20 +141,11 @@ function Projects({ setPage, onViewProject }) {
         null,
 
         React.createElement(
-          "div",
+          "span",
           {
-            className: "breadcrumb"
+            className: "page-eyebrow"
           },
-
-          "Project Management",
-
-          React.createElement(
-            "span",
-            null,
-            "/"
-          ),
-
-          " All Projects"
+          "PROJECT MANAGEMENT"
         ),
 
         React.createElement(
@@ -289,165 +161,151 @@ function Projects({ setPage, onViewProject }) {
         )
       ),
 
-      /* ADD NEW PROJECT BUTTON */
-
       React.createElement(
         "button",
         {
           type: "button",
           className: "primary-button",
-          onClick: function (event) {
-            event.preventDefault();
-            event.stopPropagation();
-
-            console.log("ADD PROJECT BUTTON CLICKED");
-
-            setShowAddProject(true);
-          }
+          onClick: () =>
+            setShowModal(true)
         },
         "+ Add New Project"
       )
     ),
 
-    /* =========================
-       SUMMARY
-    ========================= */
-
     React.createElement(
       "div",
       {
-        className: "project-summary-row"
+        className: "projects-summary"
       },
 
       React.createElement(
         "div",
-        {
-          className: "project-summary-card"
-        },
-
-        React.createElement(
-          "span",
-          null,
-          "Total Projects"
-        ),
+        null,
 
         React.createElement(
           "strong",
           null,
           projects.length
+        ),
+
+        React.createElement(
+          "span",
+          null,
+          "Total Projects"
         )
       ),
 
       React.createElement(
         "div",
-        {
-          className: "project-summary-card"
-        },
-
-        React.createElement(
-          "span",
-          null,
-          "Filtered"
-        ),
+        null,
 
         React.createElement(
           "strong",
           null,
           filteredProjects.length
-        )
-      ),
-
-      React.createElement(
-        "div",
-        {
-          className: "project-summary-card"
-        },
+        ),
 
         React.createElement(
           "span",
           null,
-          "Critical"
-        ),
-
-        React.createElement(
-          "strong",
-          null,
-          criticalCount
-        )
-      ),
-
-      React.createElement(
-        "div",
-        {
-          className: "project-summary-card"
-        },
-
-        React.createElement(
-          "span",
-          null,
-          "Delayed"
-        ),
-
-        React.createElement(
-          "strong",
-          null,
-          delayedCount
+          "Filtered"
         )
       )
     ),
 
-    /* =========================
-       FILTERS
-    ========================= */
-
     React.createElement(
       ProjectFilters,
       {
-        search: search,
-        setSearch: setSearch,
-
-        province: province,
-        setProvince: setProvince,
-
-        status: status,
-        setStatus: setStatus,
-
-        risk: risk,
-        setRisk: setRisk,
-
-        onClear: clearFilters
+        search,
+        setSearch,
+        province,
+        setProvince,
+        status,
+        setStatus,
+        risk,
+        setRisk,
+        onReset: resetFilters
       }
     ),
 
-    /* =========================
-       PROJECT TABLE
-    ========================= */
+    error
+      ? React.createElement(
+          "div",
+          {
+            className: "page-error"
+          },
+          error
+        )
+      : null,
+
+    loading
+      ? React.createElement(
+          "div",
+          {
+            className: "page-loading"
+          },
+          "Loading projects..."
+        )
+      : React.createElement(
+          "div",
+          {
+            className: "project-registry-card"
+          },
+
+          React.createElement(
+            "div",
+            {
+              className:
+                "registry-header"
+            },
+
+            React.createElement(
+              "div",
+              null,
+
+              React.createElement(
+                "h2",
+                null,
+                "Project Registry"
+              ),
+
+              React.createElement(
+                "p",
+                null,
+                "Verified government development project registry"
+              )
+            ),
+
+            React.createElement(
+              "span",
+              {
+                className:
+                  "registry-count"
+              },
+              `${filteredProjects.length} Projects`
+            )
+          ),
+
+          React.createElement(
+            ProjectTable,
+            {
+              projects:
+                filteredProjects
+            }
+          )
+        ),
 
     React.createElement(
-      ProjectTable,
+      AddProjectModal,
       {
-        projects: Array.isArray(filteredProjects)
-          ? filteredProjects
-          : [],
-
-        onViewProject: openProject
+        isOpen: showModal,
+        onClose: () =>
+          setShowModal(false),
+        onCreated: handleCreated
       }
-    ),
-
-    /* =========================
-       ADD PROJECT MODAL
-    ========================= */
-
-    showAddProject
-      ? React.createElement(
-          AddProjectModal,
-          {
-            onClose: closeAddProject,
-            onSave: saveProject
-          }
-        )
-      : null
+    )
   );
-}
+};
 
 export default Projects;

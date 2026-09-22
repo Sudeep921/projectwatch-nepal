@@ -1,127 +1,60 @@
 const FieldReport = require("../models/FieldReport");
-const Project = require("../models/Project");
-const Alert = require("../models/Alert");
-
-
-// ==========================================
-// CREATE FIELD REPORT
-// ==========================================
-
-const createFieldReport = async (req, res) => {
-  try {
-    const {
-      project,
-      progress,
-      workStatus
-    } = req.body;
-
-    const projectExists = await Project.findById(project);
-
-    if (!projectExists) {
-      return res.status(404).json({
-        success: false,
-        message: "Project not found"
-      });
-    }
-
-    const report = await FieldReport.create({
-      ...req.body,
-      officer: req.user.id
-    });
-
-    // Update project progress
-    if (typeof progress === "number") {
-      projectExists.progress = progress;
-    }
-
-    // Update project status
-    if (workStatus === "Delayed") {
-      projectExists.status = "Delayed";
-    }
-
-    if (workStatus === "Critical") {
-      projectExists.status = "Critical";
-    }
-
-    await projectExists.save();
-
-    // Create alert for delayed/critical report
-    if (
-      workStatus === "Delayed" ||
-      workStatus === "Critical"
-    ) {
-      await Alert.create({
-        project: projectExists._id,
-        title: `Field Report: ${workStatus}`,
-        message: `${projectExists.projectName} has a ${workStatus.toLowerCase()} field report.`,
-        type: workStatus === "Delayed"
-          ? "Delay"
-          : "Critical Risk",
-        severity: workStatus === "Critical"
-          ? "Critical"
-          : "High"
-      });
-    }
-
-    res.status(201).json({
-      success: true,
-      message: "Field report created successfully",
-      report
-    });
-
-  } catch (error) {
-    console.error("Create field report error:", error);
-
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-};
-
-
-// ==========================================
-// GET ALL FIELD REPORTS
-// ==========================================
 
 const getFieldReports = async (req, res) => {
   try {
-    const reports = await FieldReport.find()
-      .populate("project")
-      .populate("officer", "-password")
-      .sort({ createdAt: -1 });
+    const reports =
+      await FieldReport.find()
+        .populate(
+          "project",
+          "name projectId province district municipality progress status"
+        )
+        .populate(
+          "officer",
+          "name email role"
+        )
+        .sort({
+          createdAt: -1
+        });
 
     res.json({
       success: true,
       count: reports.length,
       reports
     });
-
   } catch (error) {
-    console.error("Get field reports error:", error);
+    console.error(
+      "Get field reports error:",
+      error
+    );
 
     res.status(500).json({
       success: false,
-      message: error.message
+      message:
+        "Unable to fetch field reports"
     });
   }
 };
 
-
-// ==========================================
-// GET SINGLE FIELD REPORT
-// ==========================================
-
-const getFieldReport = async (req, res) => {
+const getFieldReport = async (
+  req,
+  res
+) => {
   try {
-    const report = await FieldReport.findById(req.params.id)
-      .populate("project")
-      .populate("officer", "-password");
+    const report =
+      await FieldReport.findById(
+        req.params.id
+      )
+        .populate("project")
+        .populate(
+          "officer",
+          "name email role"
+        );
 
     if (!report) {
       return res.status(404).json({
         success: false,
-        message: "Field report not found"
+        message:
+          "Field report not found"
       });
     }
 
@@ -129,89 +62,184 @@ const getFieldReport = async (req, res) => {
       success: true,
       report
     });
-
   } catch (error) {
-    console.error("Get field report error:", error);
+    console.error(
+      "Get field report error:",
+      error
+    );
 
     res.status(500).json({
       success: false,
-      message: error.message
+      message:
+        "Unable to fetch field report"
     });
   }
 };
 
-
-// ==========================================
-// UPDATE FIELD REPORT
-// ==========================================
-
-const updateFieldReport = async (req, res) => {
+const createFieldReport = async (
+  req,
+  res
+) => {
   try {
-    const report = await FieldReport.findById(req.params.id);
+    const {
+      project,
+      reportedProgress,
+      observation,
+      location,
+      latitude,
+      longitude
+    } = req.body;
+
+    if (
+      !project ||
+      reportedProgress === undefined ||
+      !observation
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Project, reported progress and observation are required"
+      });
+    }
+
+    const report =
+      await FieldReport.create({
+        project,
+        officer:
+          req.user?.id ||
+          req.user?._id,
+        reportedProgress:
+          Number(
+            reportedProgress
+          ),
+        observation,
+        location:
+          location || "",
+        latitude:
+          latitude !== undefined
+            ? Number(latitude)
+            : undefined,
+        longitude:
+          longitude !== undefined
+            ? Number(longitude)
+            : undefined,
+        status: "Submitted"
+      });
+
+    const populatedReport =
+      await FieldReport.findById(
+        report._id
+      ).populate(
+        "project",
+        "name projectId"
+      );
+
+    res.status(201).json({
+      success: true,
+      message:
+        "Field report created successfully",
+      report:
+        populatedReport
+    });
+  } catch (error) {
+    console.error(
+      "Create field report error:",
+      error
+    );
+
+    res.status(500).json({
+      success: false,
+      message:
+        error.message ||
+        "Unable to create field report"
+    });
+  }
+};
+
+const updateFieldReport = async (
+  req,
+  res
+) => {
+  try {
+    const report =
+      await FieldReport.findByIdAndUpdate(
+        req.params.id,
+        req.body,
+        {
+          new: true,
+          runValidators: true
+        }
+      );
 
     if (!report) {
       return res.status(404).json({
         success: false,
-        message: "Field report not found"
+        message:
+          "Field report not found"
       });
     }
 
-    Object.assign(report, req.body);
-
-    await report.save();
-
     res.json({
       success: true,
-      message: "Field report updated successfully",
+      message:
+        "Field report updated successfully",
       report
     });
-
   } catch (error) {
-    console.error("Update field report error:", error);
+    console.error(
+      "Update field report error:",
+      error
+    );
 
     res.status(500).json({
       success: false,
-      message: error.message
+      message:
+        "Unable to update field report"
     });
   }
 };
 
-
-// ==========================================
-// DELETE FIELD REPORT
-// ==========================================
-
-const deleteFieldReport = async (req, res) => {
+const deleteFieldReport = async (
+  req,
+  res
+) => {
   try {
-    const report = await FieldReport.findByIdAndDelete(req.params.id);
+    const report =
+      await FieldReport.findByIdAndDelete(
+        req.params.id
+      );
 
     if (!report) {
       return res.status(404).json({
         success: false,
-        message: "Field report not found"
+        message:
+          "Field report not found"
       });
     }
 
     res.json({
       success: true,
-      message: "Field report deleted successfully"
+      message:
+        "Field report deleted successfully"
     });
-
   } catch (error) {
-    console.error("Delete field report error:", error);
+    console.error(
+      "Delete field report error:",
+      error
+    );
 
     res.status(500).json({
       success: false,
-      message: error.message
+      message:
+        "Unable to delete field report"
     });
   }
 };
-
 
 module.exports = {
-  createFieldReport,
   getFieldReports,
   getFieldReport,
+  createFieldReport,
   updateFieldReport,
   deleteFieldReport
 };

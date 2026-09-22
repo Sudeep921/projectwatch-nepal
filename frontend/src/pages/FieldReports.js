@@ -1,223 +1,234 @@
 import React, {
+  useEffect,
   useState
 } from "react";
 
-const PROJECTS = [
-  {
-    id: "PW-BAG-00124",
-    name: "Kathmandu Ring Road Expansion",
-    district: "Kathmandu",
-    province: "Bagmati",
-    progress: 42,
-    status: "Critical"
-  },
-  {
-    id: "PW-GAN-00087",
-    name: "Pokhara Regional Bridge",
-    district: "Kaski",
-    province: "Gandaki",
-    progress: 38,
-    status: "Delayed"
-  },
-  {
-    id: "PW-KOS-00191",
-    name: "District Hospital Upgrade",
-    district: "Morang",
-    province: "Koshi",
-    progress: 56,
-    status: "Active"
-  },
-  {
-    id: "PW-LUM-00076",
-    name: "Butwal-Bhairahawa Road",
-    district: "Rupandehi",
-    province: "Lumbini",
-    progress: 74,
-    status: "Active"
-  },
-  {
-    id: "PW-MAD-00214",
-    name: "Terai Irrigation Network",
-    district: "Dhanusha",
-    province: "Madhesh",
-    progress: 29,
-    status: "Delayed"
-  },
-  {
-    id: "PW-KAR-00042",
-    name: "Karnali District Hospital",
-    district: "Surkhet",
-    province: "Karnali",
-    progress: 91,
-    status: "Completed"
-  },
-  {
-    id: "PW-SUD-00111",
-    name: "Mahakali Drinking Water Project",
-    district: "Kanchanpur",
-    province: "Sudurpashchim",
-    progress: 63,
-    status: "Active"
-  },
-  {
-    id: "PW-BAG-00203",
-    name: "Community School Reconstruction",
-    district: "Lalitpur",
-    province: "Bagmati",
-    progress: 81,
-    status: "Active"
-  }
-];
+import {
+  getFieldReports,
+  createFieldReport,
+  getProjects
+} from "../services/api";
 
-function FieldReports() {
-  const [
-    selectedProject,
-    setSelectedProject
-  ] = useState("");
+const FieldReports = () => {
+  const [reports, setReports] = useState([]);
+  const [projects, setProjects] = useState([]);
 
-  const [
-    progress,
-    setProgress
-  ] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [showForm, setShowForm] = useState(false);
 
-  const [
-    condition,
-    setCondition
-  ] = useState("Good");
+  const [gpsLoading, setGpsLoading] =
+    useState(false);
 
-  const [
-    remarks,
-    setRemarks
-  ] = useState("");
+  const [error, setError] = useState("");
 
-  const [
-    evidence,
-    setEvidence
-  ] = useState([]);
+  const [form, setForm] = useState({
+    project: "",
+    reportedProgress: "",
+    observation: "",
+    location: "",
+    latitude: "",
+    longitude: ""
+  });
 
-  const [
-    latitude,
-    setLatitude
-  ] = useState("");
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      setError("");
 
-  const [
-    longitude,
-    setLongitude
-  ] = useState("");
+      const [
+        reportResponse,
+        projectResponse
+      ] = await Promise.all([
+        getFieldReports(),
+        getProjects()
+      ]);
 
-  const [
-    locationLoading,
-    setLocationLoading
-  ] = useState(false);
-
-  const [
-    submitted,
-    setSubmitted
-  ] = useState(false);
-
-
-  function captureLocation() {
-    if (!navigator.geolocation) {
-      alert(
-        "Geolocation is not supported by this browser."
+      setReports(
+        reportResponse?.reports ||
+          reportResponse?.data ||
+          []
       );
 
+      setProjects(
+        projectResponse?.projects ||
+          projectResponse?.data ||
+          []
+      );
+    } catch (err) {
+      console.error(
+        "Field report loading failed:",
+        err
+      );
+
+      setError(
+        err.message ||
+          "Unable to load field reports."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleChange = (event) => {
+    const {
+      name,
+      value
+    } = event.target;
+
+    setForm((previous) => ({
+      ...previous,
+      [name]: value
+    }));
+  };
+
+  const getGPS = () => {
+    if (!navigator.geolocation) {
+      window.alert(
+        "Geolocation is not supported by this browser."
+      );
       return;
     }
 
-    setLocationLoading(true);
+    setGpsLoading(true);
 
     navigator.geolocation.getCurrentPosition(
-      function (position) {
-        setLatitude(
-          position.coords.latitude.toFixed(6)
-        );
+      (position) => {
+        const latitude =
+          position.coords.latitude;
 
-        setLongitude(
-          position.coords.longitude.toFixed(6)
-        );
+        const longitude =
+          position.coords.longitude;
 
-        setLocationLoading(false);
+        setForm((previous) => ({
+          ...previous,
+          latitude:
+            latitude.toFixed(6),
+          longitude:
+            longitude.toFixed(6),
+          location:
+            `${latitude.toFixed(
+              6
+            )}, ${longitude.toFixed(6)}`
+        }));
+
+        setGpsLoading(false);
       },
-
-      function () {
-        alert(
-          "Unable to get location. Please allow location access."
+      (error) => {
+        console.error(
+          "GPS error:",
+          error
         );
 
-        setLocationLoading(false);
-      },
+        setGpsLoading(false);
 
+        window.alert(
+          "Unable to get your current GPS location."
+        );
+      },
       {
         enableHighAccuracy: true,
         timeout: 10000,
         maximumAge: 0
       }
     );
-  }
+  };
 
+  const resetForm = () => {
+    setForm({
+      project: "",
+      reportedProgress: "",
+      observation: "",
+      location: "",
+      latitude: "",
+      longitude: ""
+    });
+  };
 
-  function handleEvidenceChange(event) {
-    const files = Array.from(
-      event.target.files || []
-    );
-
-    setEvidence(files);
-  }
-
-
-  function submitReport(event) {
+  const submitReport = async (event) => {
     event.preventDefault();
 
-    if (!selectedProject) {
-      alert(
-        "Please select a project."
+    try {
+      setSaving(true);
+      setError("");
+
+      await createFieldReport({
+        project: form.project,
+        reportedProgress:
+          Number(
+            form.reportedProgress
+          ),
+        observation:
+          form.observation,
+        location:
+          form.location,
+        latitude:
+          form.latitude
+            ? Number(form.latitude)
+            : undefined,
+        longitude:
+          form.longitude
+            ? Number(form.longitude)
+            : undefined
+      });
+
+      resetForm();
+      setShowForm(false);
+
+      await loadData();
+    } catch (err) {
+      console.error(
+        "Field report creation failed:",
+        err
       );
 
-      return;
-    }
-
-    if (!progress) {
-      alert(
-        "Please enter actual progress."
+      setError(
+        err.message ||
+          "Unable to submit field report."
       );
-
-      return;
+    } finally {
+      setSaving(false);
     }
+  };
 
-    if (!latitude || !longitude) {
-      alert(
-        "Please capture GPS location."
+  const getProjectName = (report) => {
+    if (
+      report.project &&
+      typeof report.project === "object"
+    ) {
+      return (
+        report.project.name ||
+        "Government Project"
       );
-
-      return;
     }
 
-    setSubmitted(true);
-
-    setTimeout(
-      function () {
-        setSubmitted(false);
-      },
-      4000
+    const project = projects.find(
+      (item) =>
+        item._id === report.project
     );
-  }
 
+    return (
+      project?.name ||
+      report.project ||
+      "Government Project"
+    );
+  };
 
   return React.createElement(
-    "main",
+    "div",
     {
       className:
-        "page-content field-reports-page"
+        "page-container field-reports-page"
     },
-
-    /* PAGE HEADER */
 
     React.createElement(
       "div",
       {
-        className:
-          "page-header"
+        className: "page-header"
       },
 
       React.createElement(
@@ -225,21 +236,12 @@ function FieldReports() {
         null,
 
         React.createElement(
-          "div",
+          "span",
           {
             className:
-              "breadcrumb"
+              "page-eyebrow"
           },
-
-          "ProjectWatch Nepal",
-
-          React.createElement(
-            "span",
-            null,
-            "/"
-          ),
-
-          " Field Reports"
+          "FIELD MONITORING"
         ),
 
         React.createElement(
@@ -251,693 +253,523 @@ function FieldReports() {
         React.createElement(
           "p",
           null,
-          "Submit real-time project progress and field verification reports."
+          "Review and submit field inspection reports from project sites."
         )
+      ),
+
+      React.createElement(
+        "button",
+        {
+          className:
+            "primary-button",
+          onClick: () =>
+            setShowForm(
+              !showForm
+            )
+        },
+        showForm
+          ? "Close Form"
+          : "+ New Field Report"
       )
     ),
 
-
-    /* SUCCESS */
-
-    submitted
+    error
       ? React.createElement(
           "div",
           {
             className:
-              "field-report-success"
+              "form-error"
+          },
+          "⚠ ",
+          error
+        )
+      : null,
+
+    showForm
+      ? React.createElement(
+          "div",
+          {
+            className:
+              "report-form-card"
           },
 
           React.createElement(
-            "span",
-            null,
-            "✓"
-          ),
-
-          React.createElement(
             "div",
-            null,
+            {
+              className:
+                "report-form-title"
+            },
 
             React.createElement(
-              "strong",
-              null,
-              "Field report submitted successfully"
+              "span",
+              {
+                className:
+                  "page-eyebrow"
+              },
+              "SITE INSPECTION"
             ),
 
             React.createElement(
-              "small",
+              "h2",
               null,
-              "The report has been recorded for verification."
+              "Submit Field Report"
+            ),
+
+            React.createElement(
+              "p",
+              null,
+              "Record the latest condition and progress observed at the project site."
+            )
+          ),
+
+          React.createElement(
+            "form",
+            {
+              onSubmit:
+                submitReport
+            },
+
+            React.createElement(
+              "div",
+              {
+                className:
+                  "form-grid"
+              },
+
+              React.createElement(
+                "div",
+                {
+                  className:
+                    "form-group"
+                },
+
+                React.createElement(
+                  "label",
+                  null,
+                  "Project"
+                ),
+
+                React.createElement(
+                  "select",
+                  {
+                    name: "project",
+                    value:
+                      form.project,
+                    onChange:
+                      handleChange,
+                    required: true
+                  },
+
+                  React.createElement(
+                    "option",
+                    {
+                      value: ""
+                    },
+                    "Select project"
+                  ),
+
+                  projects.map(
+                    (project) =>
+                      React.createElement(
+                        "option",
+                        {
+                          key:
+                            project._id,
+                          value:
+                            project._id
+                        },
+                        project.name ||
+                          "Government Project"
+                      )
+                  )
+                )
+              ),
+
+              React.createElement(
+                "div",
+                {
+                  className:
+                    "form-group"
+                },
+
+                React.createElement(
+                  "label",
+                  null,
+                  "Reported Progress (%)"
+                ),
+
+                React.createElement(
+                  "input",
+                  {
+                    type: "number",
+                    name:
+                      "reportedProgress",
+                    min: 0,
+                    max: 100,
+                    value:
+                      form.reportedProgress,
+                    onChange:
+                      handleChange,
+                    placeholder:
+                      "e.g. 45",
+                    required: true
+                  }
+                )
+              ),
+
+              React.createElement(
+                "div",
+                {
+                  className:
+                    "form-group full"
+                },
+
+                React.createElement(
+                  "label",
+                  null,
+                  "Site Location"
+                ),
+
+                React.createElement(
+                  "div",
+                  {
+                    className:
+                      "location-input-row"
+                  },
+
+                  React.createElement(
+                    "input",
+                    {
+                      name:
+                        "location",
+                      value:
+                        form.location,
+                      onChange:
+                        handleChange,
+                      placeholder:
+                        "GPS location or site address"
+                    }
+                  ),
+
+                  React.createElement(
+                    "button",
+                    {
+                      type: "button",
+                      className:
+                        "gps-button",
+                      onClick:
+                        getGPS,
+                      disabled:
+                        gpsLoading
+                    },
+                    gpsLoading
+                      ? "Getting GPS..."
+                      : "⌖ Get GPS"
+                  )
+                )
+              ),
+
+              React.createElement(
+                "div",
+                {
+                  className:
+                    "form-group"
+                },
+
+                React.createElement(
+                  "label",
+                  null,
+                  "Latitude"
+                ),
+
+                React.createElement(
+                  "input",
+                  {
+                    name:
+                      "latitude",
+                    value:
+                      form.latitude,
+                    onChange:
+                      handleChange,
+                    placeholder:
+                      "28.394900"
+                  }
+                )
+              ),
+
+              React.createElement(
+                "div",
+                {
+                  className:
+                    "form-group"
+                },
+
+                React.createElement(
+                  "label",
+                  null,
+                  "Longitude"
+                ),
+
+                React.createElement(
+                  "input",
+                  {
+                    name:
+                      "longitude",
+                    value:
+                      form.longitude,
+                    onChange:
+                      handleChange,
+                    placeholder:
+                      "84.124000"
+                  }
+                )
+              ),
+
+              React.createElement(
+                "div",
+                {
+                  className:
+                    "form-group full"
+                },
+
+                React.createElement(
+                  "label",
+                  null,
+                  "Site Observation"
+                ),
+
+                React.createElement(
+                  "textarea",
+                  {
+                    name:
+                      "observation",
+                    value:
+                      form.observation,
+                    onChange:
+                      handleChange,
+                    rows: 6,
+                    placeholder:
+                      "Describe the current site condition, work progress, materials, workers, delays or other observations...",
+                    required: true
+                  }
+                )
+              )
+            ),
+
+            React.createElement(
+              "div",
+              {
+                className:
+                  "modal-footer"
+              },
+
+              React.createElement(
+                "button",
+                {
+                  type: "button",
+                  className:
+                    "secondary-button",
+                  onClick: () => {
+                    resetForm();
+                    setShowForm(false);
+                  }
+                },
+                "Cancel"
+              ),
+
+              React.createElement(
+                "button",
+                {
+                  type: "submit",
+                  className:
+                    "primary-button",
+                  disabled:
+                    saving
+                },
+                saving
+                  ? "Submitting..."
+                  : "Submit Field Report"
+              )
             )
           )
         )
       : null,
 
-
-    /* FORM */
-
     React.createElement(
-      "form",
+      "div",
       {
         className:
-          "field-report-form",
-        onSubmit:
-          submitReport
+          "reports-section"
       },
-
-      /* PROJECT */
-
-      React.createElement(
-        "section",
-        {
-          className:
-            "field-report-card"
-        },
-
-        React.createElement(
-          "div",
-          {
-            className:
-              "field-card-header"
-          },
-
-          React.createElement(
-            "div",
-            {
-              className:
-                "field-card-number"
-            },
-            "01"
-          ),
-
-          React.createElement(
-            "div",
-            null,
-
-            React.createElement(
-              "h2",
-              null,
-              "Select Project"
-            ),
-
-            React.createElement(
-              "p",
-              null,
-              "Choose the government project you inspected."
-            )
-          )
-        ),
-
-        React.createElement(
-          "select",
-          {
-            className:
-              "field-select",
-            value:
-              selectedProject,
-            onChange:
-              function (event) {
-                setSelectedProject(
-                  event.target.value
-                );
-              }
-          },
-
-          React.createElement(
-            "option",
-            {
-              value: ""
-            },
-            "Select a project..."
-          ),
-
-          PROJECTS.map(
-            function (project) {
-              return React.createElement(
-                "option",
-                {
-                  key:
-                    project.id,
-                  value:
-                    project.id
-                },
-
-                project.id +
-                  " — " +
-                  project.name
-              );
-            }
-          )
-        ),
-
-        selectedProject
-          ? React.createElement(
-              "div",
-              {
-                className:
-                  "selected-project-preview"
-              },
-
-              React.createElement(
-                "strong",
-                null,
-
-                PROJECTS.find(
-                  function (project) {
-                    return (
-                      project.id ===
-                      selectedProject
-                    );
-                  }
-                )?.name
-              ),
-
-              React.createElement(
-                "span",
-                null,
-
-                PROJECTS.find(
-                  function (project) {
-                    return (
-                      project.id ===
-                      selectedProject
-                    );
-                  }
-                )?.district +
-
-                  ", " +
-
-                  PROJECTS.find(
-                    function (project) {
-                      return (
-                        project.id ===
-                        selectedProject
-                      );
-                    }
-                  )?.province
-              )
-            )
-          : null
-      ),
-
-
-      /* PROGRESS */
-
-      React.createElement(
-        "section",
-        {
-          className:
-            "field-report-card"
-        },
-
-        React.createElement(
-          "div",
-          {
-            className:
-              "field-card-header"
-          },
-
-          React.createElement(
-            "div",
-            {
-              className:
-                "field-card-number"
-            },
-            "02"
-          ),
-
-          React.createElement(
-            "div",
-            null,
-
-            React.createElement(
-              "h2",
-              null,
-              "Actual Field Progress"
-            ),
-
-            React.createElement(
-              "p",
-              null,
-              "Enter the progress observed at the site."
-            )
-          )
-        ),
-
-        React.createElement(
-          "div",
-          {
-            className:
-              "field-progress-input"
-          },
-
-          React.createElement(
-            "input",
-            {
-              type: "number",
-              min: "0",
-              max: "100",
-              placeholder: "0",
-              value:
-                progress,
-              onChange:
-                function (event) {
-                  setProgress(
-                    event.target.value
-                  );
-                }
-            }
-          ),
-
-          React.createElement(
-            "span",
-            null,
-            "%"
-          )
-        )
-      ),
-
-
-      /* CONDITION */
-
-      React.createElement(
-        "section",
-        {
-          className:
-            "field-report-card"
-        },
-
-        React.createElement(
-          "div",
-          {
-            className:
-              "field-card-header"
-          },
-
-          React.createElement(
-            "div",
-            {
-              className:
-                "field-card-number"
-            },
-            "03"
-          ),
-
-          React.createElement(
-            "div",
-            null,
-
-            React.createElement(
-              "h2",
-              null,
-              "Site Condition"
-            ),
-
-            React.createElement(
-              "p",
-              null,
-              "Record the current physical condition."
-            )
-          )
-        ),
-
-        React.createElement(
-          "div",
-          {
-            className:
-              "condition-options"
-          },
-
-          ["Good", "Fair", "Poor", "Critical"].map(
-            function (item) {
-              return React.createElement(
-                "button",
-                {
-                  type: "button",
-
-                  key: item,
-
-                  className:
-                    condition === item
-                      ? "condition-option active"
-                      : "condition-option",
-
-                  onClick:
-                    function () {
-                      setCondition(item);
-                    }
-                },
-
-                item
-              );
-            }
-          )
-        )
-      ),
-
-
-      /* GPS */
-
-      React.createElement(
-        "section",
-        {
-          className:
-            "field-report-card"
-        },
-
-        React.createElement(
-          "div",
-          {
-            className:
-              "field-card-header"
-          },
-
-          React.createElement(
-            "div",
-            {
-              className:
-                "field-card-number"
-            },
-            "04"
-          ),
-
-          React.createElement(
-            "div",
-            null,
-
-            React.createElement(
-              "h2",
-              null,
-              "GPS Location"
-            ),
-
-            React.createElement(
-              "p",
-              null,
-              "Capture the exact location where the inspection happened."
-            )
-          )
-        ),
-
-        React.createElement(
-          "div",
-          {
-            className:
-              "gps-section"
-          },
-
-          React.createElement(
-            "button",
-            {
-              type: "button",
-              className:
-                "capture-location-btn",
-              onClick:
-                captureLocation
-            },
-
-            locationLoading
-              ? "Getting Location..."
-              : "📍 Capture My Location"
-          ),
-
-          React.createElement(
-            "div",
-            {
-              className:
-                "gps-values"
-            },
-
-            React.createElement(
-              "div",
-              null,
-
-              React.createElement(
-                "span",
-                null,
-                "Latitude"
-              ),
-
-              React.createElement(
-                "strong",
-                null,
-
-                latitude ||
-                  "Not captured"
-              )
-            ),
-
-            React.createElement(
-              "div",
-              null,
-
-              React.createElement(
-                "span",
-                null,
-                "Longitude"
-              ),
-
-              React.createElement(
-                "strong",
-                null,
-
-                longitude ||
-                  "Not captured"
-              )
-            )
-          )
-        )
-      ),
-
-
-      /* EVIDENCE */
-
-      React.createElement(
-        "section",
-        {
-          className:
-            "field-report-card"
-        },
-
-        React.createElement(
-          "div",
-          {
-            className:
-              "field-card-header"
-          },
-
-          React.createElement(
-            "div",
-            {
-              className:
-                "field-card-number"
-            },
-            "05"
-          ),
-
-          React.createElement(
-            "div",
-            null,
-
-            React.createElement(
-              "h2",
-              null,
-              "Evidence"
-            ),
-
-            React.createElement(
-              "p",
-              null,
-              "Upload photos or videos from the project site."
-            )
-          )
-        ),
-
-        React.createElement(
-          "label",
-          {
-            className:
-              "evidence-upload"
-          },
-
-          React.createElement(
-            "input",
-            {
-              type: "file",
-              accept:
-                "image/*,video/*",
-              multiple: true,
-              onChange:
-                handleEvidenceChange
-            }
-          ),
-
-          React.createElement(
-            "div",
-            {
-              className:
-                "upload-icon"
-            },
-            "📸"
-          ),
-
-          React.createElement(
-            "strong",
-            null,
-            "Upload Site Evidence"
-          ),
-
-          React.createElement(
-            "span",
-            null,
-            "Photos and videos from the field"
-          )
-        ),
-
-        evidence.length > 0
-          ? React.createElement(
-              "div",
-              {
-                className:
-                  "evidence-file-list"
-              },
-
-              evidence.map(
-                function (file, index) {
-                  return React.createElement(
-                    "div",
-                    {
-                      key:
-                        index,
-                      className:
-                        "evidence-file"
-                    },
-
-                    React.createElement(
-                      "span",
-                      null,
-                      file.type.startsWith(
-                        "video/"
-                      )
-                        ? "🎥"
-                        : "📷"
-                    ),
-
-                    React.createElement(
-                      "div",
-                      null,
-
-                      React.createElement(
-                        "strong",
-                        null,
-                        file.name
-                      ),
-
-                      React.createElement(
-                        "small",
-                        null,
-
-                        (
-                          file.size /
-                          1024 /
-                          1024
-                        ).toFixed(2) +
-                          " MB"
-                      )
-                    )
-                  );
-                }
-              )
-            )
-          : null
-      ),
-
-
-      /* REMARKS */
-
-      React.createElement(
-        "section",
-        {
-          className:
-            "field-report-card"
-        },
-
-        React.createElement(
-          "div",
-          {
-            className:
-              "field-card-header"
-          },
-
-          React.createElement(
-            "div",
-            {
-              className:
-                "field-card-number"
-            },
-            "06"
-          ),
-
-          React.createElement(
-            "div",
-            null,
-
-            React.createElement(
-              "h2",
-              null,
-              "Field Remarks"
-            ),
-
-            React.createElement(
-              "p",
-              null,
-              "Describe what you observed at the project site."
-            )
-          )
-        ),
-
-        React.createElement(
-          "textarea",
-          {
-            className:
-              "field-textarea",
-            rows: 6,
-            placeholder:
-              "Example: Construction work is progressing normally. Materials were available at the site...",
-            value:
-              remarks,
-            onChange:
-              function (event) {
-                setRemarks(
-                  event.target.value
-                );
-              }
-          }
-        )
-      ),
-
-
-      /* SUBMIT */
 
       React.createElement(
         "div",
         {
           className:
-            "field-report-submit"
+            "section-heading"
         },
 
         React.createElement(
-          "button",
-          {
-            type: "submit",
-            className:
-              "submit-field-report"
-          },
+          "div",
+          null,
 
-          "Submit Field Report →"
+          React.createElement(
+            "span",
+            {
+              className:
+                "page-eyebrow"
+            },
+            "INSPECTION RECORDS"
+          ),
+
+          React.createElement(
+            "h2",
+            null,
+            "Inspection Reports"
+          ),
+
+          React.createElement(
+            "p",
+            null,
+            `${reports.length} field report${
+              reports.length === 1
+                ? ""
+                : "s"
+            } recorded`
+          )
         )
-      )
+      ),
+
+      loading
+        ? React.createElement(
+            "div",
+            {
+              className:
+                "page-loading"
+            },
+            "Loading field reports..."
+          )
+        : reports.length === 0
+        ? React.createElement(
+            "div",
+            {
+              className:
+                "empty-state"
+            },
+
+            React.createElement(
+              "h3",
+              null,
+              "No field reports yet"
+            ),
+
+            React.createElement(
+              "p",
+              null,
+              "Start monitoring a project by submitting your first field inspection report."
+            ),
+
+            React.createElement(
+              "button",
+              {
+                className:
+                  "primary-button",
+                onClick: () =>
+                  setShowForm(true)
+              },
+              "+ Create First Report"
+            )
+          )
+        : React.createElement(
+            "div",
+            {
+              className:
+                "reports-list"
+            },
+
+            reports.map(
+              (report) =>
+                React.createElement(
+                  "div",
+                  {
+                    className:
+                      "report-card",
+                    key:
+                      report._id ||
+                      report.id
+                  },
+
+                  React.createElement(
+                    "div",
+                    {
+                      className:
+                        "report-card-header"
+                    },
+
+                    React.createElement(
+                      "strong",
+                      null,
+                      getProjectName(
+                        report
+                      )
+                    ),
+
+                    React.createElement(
+                      "span",
+                      {
+                        className:
+                          "status-badge"
+                      },
+                      report.status ||
+                        "Submitted"
+                    )
+                  ),
+
+                  React.createElement(
+                    "p",
+                    null,
+                    report.observation ||
+                      "No observation available."
+                  ),
+
+                  React.createElement(
+                    "div",
+                    {
+                      className:
+                        "report-meta"
+                    },
+
+                    React.createElement(
+                      "span",
+                      null,
+                      `Progress: ${
+                        report.reportedProgress ??
+                        report.progress ??
+                        0
+                      }%`
+                    ),
+
+                    React.createElement(
+                      "span",
+                      null,
+                      report.location ||
+                        "Location not provided"
+                    ),
+
+                    report.latitude &&
+                    report.longitude
+                      ? React.createElement(
+                          "span",
+                          null,
+                          `GPS: ${report.latitude}, ${report.longitude}`
+                        )
+                      : null
+                  )
+                )
+            )
+          )
     )
   );
-}
+};
 
 export default FieldReports;

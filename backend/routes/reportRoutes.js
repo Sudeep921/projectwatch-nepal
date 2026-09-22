@@ -2,17 +2,22 @@ const express = require("express");
 
 const {
   getProjectReport
-} = require("../controllers/reportController");
+} = require(
+  "../controllers/reportController"
+);
 
-const authMiddleware = require("../middleware/authMiddleware");
-const roleMiddleware = require("../middleware/roleMiddleware");
+const authMiddleware =
+  require(
+    "../middleware/authMiddleware"
+  );
 
-const router = express.Router();
+const router =
+  express.Router();
+
+router.use(authMiddleware);
 
 router.get(
   "/projects",
-  authMiddleware,
-  roleMiddleware("admin", "officer"),
   getProjectReport
 );
 

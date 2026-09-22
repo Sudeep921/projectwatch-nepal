@@ -1,6 +1,6 @@
 import React from "react";
 
-function ProjectFilters({
+const ProjectFilters = ({
   search,
   setSearch,
   province,
@@ -9,29 +9,34 @@ function ProjectFilters({
   setStatus,
   risk,
   setRisk,
-  onClear
-}) {
+  onReset
+}) => {
   return React.createElement(
     "div",
-    { className: "project-filters" },
+    {
+      className: "project-filters"
+    },
 
     React.createElement(
       "div",
-      { className: "filter-search" },
+      {
+        className: "filter-search"
+      },
 
       React.createElement(
         "span",
-        { className: "filter-search-icon" },
+        {
+          className: "filter-search-icon"
+        },
         "⌕"
       ),
 
       React.createElement("input", {
         type: "text",
-        placeholder: "Search project name or ID...",
+        placeholder: "Search projects...",
         value: search,
-        onChange: function (e) {
-          setSearch(e.target.value);
-        }
+        onChange: (event) =>
+          setSearch(event.target.value)
       })
     ),
 
@@ -39,14 +44,13 @@ function ProjectFilters({
       "select",
       {
         value: province,
-        onChange: function (e) {
-          setProvince(e.target.value);
-        }
+        onChange: (event) =>
+          setProvince(event.target.value)
       },
 
       React.createElement(
         "option",
-        { value: "All Provinces" },
+        { value: "" },
         "All Provinces"
       ),
 
@@ -97,14 +101,13 @@ function ProjectFilters({
       "select",
       {
         value: status,
-        onChange: function (e) {
-          setStatus(e.target.value);
-        }
+        onChange: (event) =>
+          setStatus(event.target.value)
       },
 
       React.createElement(
         "option",
-        { value: "All Status" },
+        { value: "" },
         "All Status"
       ),
 
@@ -137,14 +140,13 @@ function ProjectFilters({
       "select",
       {
         value: risk,
-        onChange: function (e) {
-          setRisk(e.target.value);
-        }
+        onChange: (event) =>
+          setRisk(event.target.value)
       },
 
       React.createElement(
         "option",
-        { value: "All Risk" },
+        { value: "" },
         "All Risk"
       ),
 
@@ -176,12 +178,13 @@ function ProjectFilters({
     React.createElement(
       "button",
       {
-        className: "filter-clear-btn",
-        onClick: onClear
+        type: "button",
+        className: "filter-reset-button",
+        onClick: onReset
       },
-      "Clear"
+      "Reset"
     )
   );
-}
+};
 
 export default ProjectFilters;

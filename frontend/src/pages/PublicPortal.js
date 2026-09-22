@@ -1249,11 +1249,18 @@ function PublicPortal({ setPage }) {
      ADMIN
   ========================================= */
 
-  function openAdmin() {
-    alert(
-      "Admin Login will connect to the secure administrator authentication system."
-    );
-  }
+  React.createElement(
+  "button",
+  {
+    type: "button",
+    className: "primary-button",
+    onClick: () => {
+      window.location.href =
+        "/admin-login";
+    }
+  },
+  "Admin Login"
+)
 
   /* =========================================
      LIVE MAP
@@ -1272,6 +1279,13 @@ function PublicPortal({ setPage }) {
       });
     }
   }
+  /* =========================================
+   ADMIN LOGIN
+========================================= */
+
+function openAdmin() {
+  window.location.href = "/admin-login";
+}
 
   /* =========================================
      CLEAR FILTER
@@ -1429,8 +1443,8 @@ function PublicPortal({ setPage }) {
         React.createElement(
           "button",
           {
-            className:
-              "public-admin-button",
+            type: "button",
+            className: "public-admin-button",
             onClick: openAdmin
           },
           "🔐 Admin Login"
