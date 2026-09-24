@@ -1,28 +1,26 @@
 const express = require("express");
 
 const {
-  publicProjects,
-  publicProjectDetails,
-  publicSummary
+  getPublicProjects,
+  getPublicProject,
+  getPublicSummary
 } = require("../controllers/publicController");
 
 const router = express.Router();
 
-// No authentication required
+router.get(
+  "/summary",
+  getPublicSummary
+);
 
 router.get(
   "/projects",
-  publicProjects
+  getPublicProjects
 );
 
 router.get(
   "/projects/:id",
-  publicProjectDetails
-);
-
-router.get(
-  "/summary",
-  publicSummary
+  getPublicProject
 );
 
 module.exports = router;

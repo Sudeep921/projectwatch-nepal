@@ -1,7 +1,6 @@
 import React from "react";
 
 import {
-  useLocation,
   useNavigate
 } from "react-router-dom";
 
@@ -9,12 +8,12 @@ import {
   useAuth
 } from "../context/AuthContext";
 
+import NotificationBell from
+  "./NotificationBell";
+
+const h = React.createElement;
 
 const Header = () => {
-
-  const location =
-    useLocation();
-
   const navigate =
     useNavigate();
 
@@ -23,269 +22,113 @@ const Header = () => {
     logout
   } = useAuth();
 
-
-  const pageNames = {
-    "/dashboard": "Government Dashboard",
-    "/projects": "Project Management",
-    "/map": "Live Project Map",
-    "/field-reports": "Field Reports",
-    "/complaints": "Citizen Complaints",
-    "/evidence": "Evidence Management",
-    "/alerts": "Alerts & Notifications",
-    "/reports": "Reports & Analytics",
-    "/settings": "System Settings"
-  };
-
-
-  const currentPage =
-    pageNames[
-      location.pathname
-    ] || "Government Dashboard";
-
-
-  const handleLogout = () => {
-
+  const logoutNow = () => {
     logout();
-
-    navigate(
-      "/public",
-      {
-        replace: true
-      }
-    );
+    navigate("/admin-login");
   };
 
-
-  const openAlerts = () => {
-
-    navigate("/alerts");
-  };
-
-
-  const getUserName = () => {
-
-    if (user && user.name) {
-      return user.name;
-    }
-
-    return "Administrator";
-  };
-
-
-  const getUserRole = () => {
-
-    if (user && user.role) {
-
-      if (
-        user.role === "admin"
-      ) {
-        return "Super Admin";
-      }
-
-      if (
-        user.role === "officer"
-      ) {
-        return "Field Officer";
-      }
-
-      if (
-        user.role === "citizen"
-      ) {
-        return "Citizen";
-      }
-
-      return user.role;
-    }
-
-    return "Super Admin";
-  };
-
-
-  return React.createElement(
+  return h(
     "header",
     {
       className:
-        "projectwatch-header"
+        "dashboard-header"
     },
 
-    /* =====================================
-       LEFT
-    ===================================== */
-
-    React.createElement(
+    h(
       "div",
       {
         className:
           "header-left"
       },
 
-      React.createElement(
+      h(
         "div",
         {
           className:
             "header-title"
         },
 
-        React.createElement(
+        h(
           "h1",
           null,
-          currentPage
+          "Government Project Dashboard"
         ),
 
-        React.createElement(
-          "div",
-          {
-            className:
-              "header-breadcrumb"
-          },
-
-          React.createElement(
-            "span",
-            null,
-            "ProjectWatch Nepal"
-          ),
-
-          React.createElement(
-            "span",
-            {
-              className:
-                "breadcrumb-separator"
-            },
-            "/"
-          ),
-
-          React.createElement(
-            "strong",
-            null,
-            currentPage
-          )
+        h(
+          "span",
+          null,
+          "Monitor Nepal's public projects in real time"
         )
       )
     ),
 
-
-    /* =====================================
-       RIGHT
-    ===================================== */
-
-    React.createElement(
+    h(
       "div",
       {
         className:
           "header-right"
       },
 
-
-      /* Notification */
-
-      React.createElement(
-        "button",
-        {
-          type: "button",
-
-          className:
-            "header-notification",
-
-          onClick:
-            openAlerts,
-
-          title:
-            "View notifications"
-        },
-
-        React.createElement(
-          "span",
-          {
-            className:
-              "notification-icon"
-          },
-          "🔔"
-        ),
-
-        React.createElement(
-          "span",
-          {
-            className:
-              "notification-dot"
-          }
-        )
+      h(
+        NotificationBell
       ),
 
-
-      /* User */
-
-      React.createElement(
+      h(
         "div",
         {
           className:
             "header-user"
         },
 
-        React.createElement(
+        h(
           "div",
           {
             className:
-              "header-user-avatar"
+              "header-avatar"
           },
-
-          getUserName()
+          (
+            user?.name ||
+            "A"
+          )
             .charAt(0)
             .toUpperCase()
         ),
 
-
-        React.createElement(
+        h(
           "div",
           {
             className:
               "header-user-info"
           },
 
-          React.createElement(
+          h(
             "strong",
             null,
-            getUserName()
+            user?.name ||
+              "Administrator"
           ),
 
-          React.createElement(
+          h(
             "span",
             null,
-            getUserRole()
+            user?.role ||
+              "admin"
           )
         )
       ),
 
-
-      /* Logout */
-
-      React.createElement(
+      h(
         "button",
         {
-          type: "button",
-
           className:
-            "header-logout-button",
-
+            "header-logout",
           onClick:
-            handleLogout
+            logoutNow
         },
-
-        React.createElement(
-          "span",
-          null,
-          "↪"
-        ),
-
-        React.createElement(
-          "span",
-          null,
-          "Logout"
-        )
+        "Logout"
       )
-
     )
   );
 };
-
 
 export default Header;

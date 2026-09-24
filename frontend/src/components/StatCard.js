@@ -1,70 +1,51 @@
 import React from "react";
 
+const h = React.createElement;
+
 const StatCard = ({
   title,
   value,
-  subtitle,
   icon,
-  type,
-  onClick
-}) => {
-  return React.createElement(
+  variant = ""
+}) =>
+  h(
     "div",
     {
-      className: `stat-card ${
-        type || ""
-      }`,
-      onClick: onClick
+      className:
+        `stat-card ${variant}`
     },
 
-    React.createElement(
+    h(
       "div",
       {
-        className: "stat-card-top"
+        className:
+          "stat-card-top"
       },
 
-      React.createElement(
+      h(
         "div",
         {
-          className: "stat-card-icon"
+          className:
+            "stat-card-icon"
         },
-        icon || "▦"
+        icon || "▣"
       )
     ),
 
-    React.createElement(
-      "div",
+    h(
+      "strong",
+      null,
+      value ?? 0
+    ),
+
+    h(
+      "span",
       {
-        className: "stat-card-content"
+        className:
+          "stat-card-title"
       },
-
-      React.createElement(
-        "span",
-        {
-          className: "stat-card-title"
-        },
-        title
-      ),
-
-      React.createElement(
-        "strong",
-        {
-          className: "stat-card-value"
-        },
-        value ?? 0
-      ),
-
-      subtitle
-        ? React.createElement(
-            "span",
-            {
-              className: "stat-card-subtitle"
-            },
-            subtitle
-          )
-        : null
+      title
     )
   );
-};
 
 export default StatCard;

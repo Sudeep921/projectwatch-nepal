@@ -1,80 +1,60 @@
-// ==========================================
-// PROJECT RISK CALCULATION SERVICE
-// ==========================================
-
 const calculateRisk = (project) => {
+  const progress = Number(project.progress || 0);
 
-  let riskScore = 0;
+  let score = 0;
 
-
-  // ----------------------------------------
-  // PROGRESS
-  // ----------------------------------------
-
-  if (project.progress < 25) {
-
-    riskScore += 3;
-
-  } else if (project.progress < 50) {
-
-    riskScore += 2;
-
-  } else if (project.progress < 75) {
-
-    riskScore += 1;
+  if (progress < 25) {
+    score += 3;
+  } else if (progress < 50) {
+    score += 2;
+  } else if (progress < 75) {
+    score += 1;
   }
 
-
-  // ----------------------------------------
-  // PROJECT STATUS
-  // ----------------------------------------
-
   if (project.status === "Delayed") {
-    riskScore += 2;
+    score += 2;
   }
 
   if (project.status === "Critical") {
-    riskScore += 4;
+    score += 4;
   }
 
-
-  // ----------------------------------------
-  // EXISTING RISK
-  // ----------------------------------------
-
-  if (project.riskLevel === "Medium") {
-    riskScore += 1;
-  }
-
-  if (project.riskLevel === "High") {
-    riskScore += 2;
-  }
-
-  if (project.riskLevel === "Critical") {
-    riskScore += 4;
-  }
-
-
-  // ----------------------------------------
-  // FINAL RISK
-  // ----------------------------------------
-
-  if (riskScore >= 7) {
+  if (score >= 7) {
     return "Critical";
   }
 
-  if (riskScore >= 5) {
+  if (score >= 5) {
     return "High";
   }
 
-  if (riskScore >= 3) {
+  if (score >= 3) {
     return "Medium";
   }
 
   return "Low";
 };
 
+const getRiskMessage = (risk) => {
+  const messages = {
+    Low: "Project is currently operating within normal risk levels.",
+
+    Medium:
+      "Project requires regular monitoring.",
+
+    High:
+      "Project requires attention and closer monitoring.",
+
+    Critical:
+      "Project requires immediate administrative review."
+  };
+
+  return (
+    messages[risk] ||
+    messages.Low
+  );
+};
 
 module.exports = {
-  calculateRisk
+  calculateRisk,
+  getRiskMessage
 };

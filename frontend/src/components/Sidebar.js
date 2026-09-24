@@ -1,188 +1,232 @@
 import React from "react";
-import { NavLink } from "react-router-dom";
 
-const menuItems = [
-  {
-    label: "Dashboard",
-    path: "/dashboard",
-    icon: "▦"
-  },
-  {
-    label: "Projects",
-    path: "/projects",
-    icon: "▤"
-  },
-  {
-    label: "Live Map",
-    path: "/map",
-    icon: "⌖"
-  },
-  {
-    label: "Field Reports",
-    path: "/field-reports",
-    icon: "◫"
-  },
-  {
-    label: "Complaints",
-    path: "/complaints",
-    icon: "⚠"
-  },
-  {
-    label: "Evidence",
-    path: "/evidence",
-    icon: "▣"
-  },
-  {
-    label: "Alerts",
-    path: "/alerts",
-    icon: "!"
-  },
-  {
-    label: "Reports",
-    path: "/reports",
-    icon: "▥"
-  }
-];
+import {
+  NavLink
+} from "react-router-dom";
 
-const bottomItems = [
-  {
-    label: "Settings",
-    path: "/settings",
-    icon: "⚙"
-  }
-];
+import {
+  useAuth
+} from "../context/AuthContext";
+
+const h = React.createElement;
 
 const Sidebar = () => {
-  const renderItem = (item) => {
-    return React.createElement(
-      NavLink,
-      {
-        key: item.path,
-        to: item.path,
-        className: ({ isActive }) =>
-          `sidebar-link ${
-            isActive ? "active" : ""
-          }`
-      },
+  const {
+    user
+  } = useAuth();
 
-      React.createElement(
-        "span",
-        {
-          className: "sidebar-icon"
-        },
-        item.icon
-      ),
+  const links = [
+    [
+      "/admin/dashboard",
+      "Dashboard",
+      "▦"
+    ],
+    [
+      "/admin/projects",
+      "Projects",
+      "▤"
+    ],
+    [
+      "/admin/map",
+      "Live Map",
+      "⌖"
+    ],
+    [
+      "/admin/field-reports",
+      "Field Reports",
+      "◉"
+    ],
+    [
+      "/admin/evidence",
+      "Evidence",
+      "▣"
+    ],
+    [
+      "/admin/complaints",
+      "Complaints",
+      "◌"
+    ],
+    [
+      "/admin/alerts",
+      "Alerts",
+      "⚠"
+    ],
+    [
+      "/admin/reports",
+      "Reports",
+      "▥"
+    ],
+    [
+      "/admin/notifications",
+      "Notifications",
+      "🔔"
+    ]
+  ];
 
-      React.createElement(
-        "span",
-        null,
-        item.label
-      )
-    );
-  };
-
-  return React.createElement(
+  return h(
     "aside",
     {
-      className: "sidebar"
+      className:
+        "dashboard-sidebar"
     },
 
-    React.createElement(
+    h(
       "div",
       {
-        className: "sidebar-brand"
+        className:
+          "sidebar-brand"
       },
 
-      React.createElement(
+      h(
         "div",
         {
-          className: "brand-logo"
+          className:
+            "sidebar-logo"
         },
         "PW"
       ),
 
-      React.createElement(
+      h(
         "div",
-        {
-          className: "brand-text"
-        },
-
-        React.createElement(
+        null,
+        h(
           "strong",
           null,
           "ProjectWatch"
         ),
-
-        React.createElement(
+        h(
           "span",
           null,
-          "Nepal"
+          "NEPAL"
         )
       )
     ),
 
-    React.createElement(
+    h(
       "div",
       {
-        className: "sidebar-section-title"
+        className:
+          "sidebar-section-title"
       },
-      "MAIN MENU"
+      "MONITORING"
     ),
 
-    React.createElement(
+    h(
       "nav",
       {
-        className: "sidebar-nav"
+        className:
+          "sidebar-nav"
       },
-      menuItems.map(renderItem)
+
+      links.map(
+        ([path, label, icon]) =>
+          h(
+            NavLink,
+            {
+              key: path,
+              to: path,
+              className:
+                ({ isActive }) =>
+                  `sidebar-link ${
+                    isActive
+                      ? "active"
+                      : ""
+                  }`
+            },
+
+            h(
+              "span",
+              {
+                className:
+                  "sidebar-icon"
+              },
+              icon
+            ),
+
+            h(
+              "span",
+              null,
+              label
+            )
+          )
+      )
     ),
 
-    React.createElement(
+    h(
       "div",
       {
-        className: "sidebar-section-title sidebar-bottom-title"
-      },
-      "SYSTEM"
-    ),
-
-    React.createElement(
-      "nav",
-      {
-        className: "sidebar-nav"
-      },
-      bottomItems.map(renderItem)
-    ),
-
-    React.createElement(
-      "div",
-      {
-        className: "sidebar-footer"
+        className:
+          "sidebar-bottom"
       },
 
-      React.createElement(
-        "div",
+      h(
+        NavLink,
         {
-          className: "sidebar-footer-status"
+          to: "/admin/settings",
+          className:
+            ({ isActive }) =>
+              `sidebar-link ${
+                isActive
+                  ? "active"
+                  : ""
+              }`
         },
 
-        React.createElement(
+        h(
           "span",
           {
-            className: "status-dot"
-          }
+            className:
+              "sidebar-icon"
+          },
+          "⚙"
         ),
 
-        React.createElement(
+        h(
           "span",
           null,
-          "System Operational"
+          "Settings"
         )
       ),
 
-      React.createElement(
-        "small",
-        null,
-        "ProjectWatch Nepal v1.0"
+      h(
+        "div",
+        {
+          className:
+            "sidebar-user"
+        },
+
+        h(
+          "div",
+          {
+            className:
+              "sidebar-user-avatar"
+          },
+          (
+            user?.name ||
+            "A"
+          )
+            .charAt(0)
+            .toUpperCase()
+        ),
+
+        h(
+          "div",
+          null,
+
+          h(
+            "strong",
+            null,
+            user?.name ||
+              "Administrator"
+          ),
+
+          h(
+            "span",
+            null,
+            user?.role ||
+              "admin"
+          )
+        )
       )
     )
   );

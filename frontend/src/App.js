@@ -1,4 +1,5 @@
 import React from "react";
+import "./App.css";
 
 import {
   BrowserRouter,
@@ -22,7 +23,16 @@ import Alerts from "./pages/Alerts";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import PublicPortal from "./pages/PublicPortal";
+import PublicProjectDetails from "./pages/PublicProjectDetails";
+import PublicComplaintForm from "./pages/PublicComplaintForm";
 import AdminLogin from "./pages/AdminLogin";
+import Notifications from "./pages/Notifications";
+import AddProjectPage from "./pages/AddProjectPage";
+import PublicComplaint from "./pages/PublicComplaint";
+import PublicMap from "./pages/PublicMap";
+
+
+const h = React.createElement;
 
 
 /* =========================================
@@ -35,9 +45,8 @@ const ProtectedRoutes = () => {
     loading
   } = useAuth();
 
-  /* Loading */
   if (loading) {
-    return React.createElement(
+    return h(
       "div",
       {
         className: "app-loading"
@@ -46,19 +55,17 @@ const ProtectedRoutes = () => {
     );
   }
 
-  /* User not logged in */
   if (!user) {
-    return React.createElement(
+    return h(
       Navigate,
       {
-        to: "/public",
+        to: "/admin-login",
         replace: true
       }
     );
   }
 
-  /* Logged in */
-  return React.createElement(
+  return h(
     DashboardLayout
   );
 };
@@ -69,25 +76,62 @@ const ProtectedRoutes = () => {
 ========================================= */
 
 const App = () => {
-
-  return React.createElement(
+  return h(
     BrowserRouter,
     null,
 
-    React.createElement(
+    h(
       Routes,
       null,
 
       /* =====================================
          PUBLIC PORTAL
+         This is the site's HOME page — normal
+         citizens land here, no login required.
       ===================================== */
+
+      h(
+        Route,
+        {
+          path: "/",
+          element:
+            h(PublicPortal)
+        }
+      ),
+
+      h(
+        Route,
+        {
+          path: "/public",
+          element:
+            h(PublicPortal)
+        }
+      ),
+
+      h(
+        Route,
+        {
+          path: "/public/projects/:id",
+          element:
+            h(PublicProjectDetails)
+        }
+      ),
+
+      h(
+        Route,
+        {
+          path: "/public/report",
+          element:
+            h(PublicComplaintForm)
+        }
+      ),
 
       React.createElement(
         Route,
         {
-          path: "/public",
+          path: "/public/projects/:id",
           element: React.createElement(
-            PublicPortal
+            PublicProjectDetails
           )
         }
       ),
@@ -97,185 +141,238 @@ const App = () => {
          ADMIN LOGIN
       ===================================== */
 
-      React.createElement(
+      h(
         Route,
         {
           path: "/admin-login",
-          element: React.createElement(
-            AdminLogin
-          )
+          element:
+            h(AdminLogin)
         }
       ),
 
 
       /* =====================================
-         PROTECTED DASHBOARD
+         PROTECTED ADMIN AREA
       ===================================== */
 
-      React.createElement(
+      h(
         Route,
         {
-          path: "/",
-          element: React.createElement(
-            ProtectedRoutes
-          )
+          path: "/admin",
+          element:
+            h(ProtectedRoutes)
         },
 
-        /* Dashboard default */
-        React.createElement(
+
+        /* ===================================
+           DEFAULT
+        =================================== */
+
+        h(
           Route,
           {
             index: true,
-            element: React.createElement(
-              Navigate,
-              {
-                to: "/dashboard",
-                replace: true
-              }
-            )
+            element:
+              h(
+                Navigate,
+                {
+                  to: "/admin/dashboard",
+                  replace: true
+                }
+              )
           }
         ),
 
 
-        /* Dashboard */
-        React.createElement(
+        /* ===================================
+           DASHBOARD
+        =================================== */
+
+        h(
           Route,
           {
             path: "dashboard",
-            element: React.createElement(
-              Dashboard
-            )
+            element:
+              h(Dashboard)
           }
         ),
 
 
-        /* Projects */
-        React.createElement(
+        /* ===================================
+           PROJECTS
+        =================================== */
+
+        h(
           Route,
           {
             path: "projects",
-            element: React.createElement(
-              Projects
-            )
+            element:
+              h(Projects)
           }
         ),
 
 
-        /* Project Details */
-        React.createElement(
+        /* ===================================
+           ADD PROJECT
+        =================================== */
+
+        h(
+          Route,
+          {
+            path: "projects/new",
+            element:
+              h(AddProjectPage)
+          }
+        ),
+
+
+        /* ===================================
+           PROJECT DETAILS
+        =================================== */
+
+        h(
           Route,
           {
             path: "projects/:id",
-            element: React.createElement(
-              ProjectDetails
-            )
+            element:
+              h(ProjectDetails)
           }
         ),
 
 
-        /* Map */
-        React.createElement(
+        /* ===================================
+           MAP
+        =================================== */
+
+        h(
           Route,
           {
             path: "map",
-            element: React.createElement(
-              Map
-            )
+            element:
+              h(Map)
           }
         ),
 
 
-        /* Field Reports */
-        React.createElement(
+        /* ===================================
+           FIELD REPORTS
+        =================================== */
+
+        h(
           Route,
           {
             path: "field-reports",
-            element: React.createElement(
-              FieldReports
-            )
+            element:
+              h(FieldReports)
           }
         ),
 
 
-        /* Complaints */
-        React.createElement(
+        /* ===================================
+           COMPLAINTS
+        =================================== */
+
+        h(
           Route,
           {
             path: "complaints",
-            element: React.createElement(
-              Complaints
-            )
+            element:
+              h(Complaints)
           }
         ),
 
 
-        /* Evidence */
-        React.createElement(
+        /* ===================================
+           EVIDENCE
+        =================================== */
+
+        h(
           Route,
           {
             path: "evidence",
-            element: React.createElement(
-              Evidence
-            )
+            element:
+              h(Evidence)
           }
         ),
 
 
-        /* Alerts */
-        React.createElement(
+        /* ===================================
+           ALERTS
+        =================================== */
+
+        h(
           Route,
           {
             path: "alerts",
-            element: React.createElement(
-              Alerts
-            )
+            element:
+              h(Alerts)
           }
         ),
 
 
-        /* Reports */
-        React.createElement(
+        /* ===================================
+           REPORTS
+        =================================== */
+
+        h(
           Route,
           {
             path: "reports",
-            element: React.createElement(
-              Reports
-            )
+            element:
+              h(Reports)
           }
         ),
 
 
-        /* Settings */
-        React.createElement(
+        /* ===================================
+           NOTIFICATIONS
+        =================================== */
+
+        h(
+          Route,
+          {
+            path: "notifications",
+            element:
+              React.createElement(
+                Notifications
+              )
+          }
+        ),
+
+
+        /* ===================================
+           SETTINGS
+        =================================== */
+
+        h(
           Route,
           {
             path: "settings",
-            element: React.createElement(
-              Settings
-            )
+            element:
+              h(Settings)
           }
         )
       ),
 
 
       /* =====================================
-         UNKNOWN URL
+         404 / UNKNOWN ROUTE
       ===================================== */
 
-      React.createElement(
+      h(
         Route,
         {
           path: "*",
-          element: React.createElement(
-            Navigate,
-            {
-              to: "/public",
-              replace: true
-            }
-          )
+          element:
+            h(
+              Navigate,
+              {
+                to: "/",
+                replace: true
+              }
+            )
         }
       )
-
     )
   );
 };

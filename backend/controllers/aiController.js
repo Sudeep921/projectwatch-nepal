@@ -1,16 +1,26 @@
 const Evidence = require("../models/Evidence");
 const Project = require("../models/Project");
-const Alert = require("../models/Alert");
+const Verification = require("../models/Verification");
 
 const {
   analyzeEvidence
-} = require("../services/aiVerificationService");
+} = require("../services/aiService");
 
-const analyzeEvidenceWithAI = async (req, res) => {
+const analyzeProjectEvidence = async (
+  req,
+  res
+) => {
   try {
-    const evidence = await Evidence.findById(
-      req.params.id
-    );
+    const { evidenceId } = req.params;
+
+    const {
+      reportedProgress
+    } = req.body;
+
+    const evidence =
+      await Evidence.findById(
+        evidenceId
+      );
 
     if (!evidence) {
       return res.status(404).json({
@@ -19,9 +29,10 @@ const analyzeEvidenceWithAI = async (req, res) => {
       });
     }
 
-    const project = await Project.findById(
-      evidence.project
-    );
+    const project =
+      await Project.findById(
+        evidence.project
+      );
 
     if (!project) {
       return res.status(404).json({
@@ -30,74 +41,86 @@ const analyzeEvidenceWithAI = async (req, res) => {
       });
     }
 
-    evidence.aiStatus = "Processing";
-
-    await evidence.save();
-
-    const result = await analyzeEvidence({
-      projectProgress: project.progress,
-      reportedProgress: req.body.reportedProgress,
-      evidenceType: evidence.fileType
-    });
-
-    if (result.status === "Potential Discrepancy") {
-      evidence.aiStatus =
-        "Potential Discrepancy";
-
-      evidence.verificationStatus =
-        "Needs Human Review";
-
-      evidence.verificationNote =
-        result.message;
-
-      await Alert.create({
-        project: project._id,
-
-        title:
-          "Potential Discrepancy Detected",
-
-        message:
-          result.message,
-
-        type: "Verification",
-
-        severity: "High"
+    const result =
+      await analyzeEvidence({
+        projectProgress:
+          project.progress,
+        reportedProgress:
+          reportedProgress,
+        evidenceType:
+          evidence.evidenceType
       });
-    } else {
-      evidence.aiStatus = "Verified";
 
-      evidence.verificationStatus =
-        "Verified";
+    const verification =
+      await Verification.create({
+        project: project._id,
+        evidence: evidence._id,
+        reportedProgress:
+          Number(
+            reportedProgress || 0
+          ),
+        verificationStatus:
+          result.status,
+        notes: result.message
+      });
 
-      evidence.verificationNote =
-        result.message;
-    }
-
-    await evidence.save();
-
-    res.json({
+    res.status(201).json({
       success: true,
-
       message:
-        "Evidence AI analysis completed",
-
-      result,
-
-      evidence
+        "Evidence analysis completed",
+      analysis: result,
+      verification
     });
   } catch (error) {
     console.error(
-      "AI verification error:",
+      "AI analysis error:",
       error
     );
 
     res.status(500).json({
       success: false,
-      message: error.message
+      message:
+        "Failed to analyze evidence"
     });
   }
 };
 
+const getVerificationResults =
+  async (req, res) => {
+    try {
+      const results =
+        await Verification.find()
+          .populate(
+            "project",
+            "name projectCode progress status"
+          )
+          .populate(
+            "evidence"
+          )
+          .sort({
+            createdAt: -1
+          });
+
+      res.json({
+        success: true,
+        count: results.length,
+        results
+      });
+    } catch (error) {
+      console.error(
+        "Verification results error:",
+        error
+      );
+
+      res.status(500).json({
+        success: false,
+        message:
+          "Failed to fetch verification results"
+      });
+    }
+  };
+
 module.exports = {
-  analyzeEvidenceWithAI
+  analyzeProjectEvidence,
+  getVerificationResults
 };

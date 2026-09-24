@@ -1,6 +1,14 @@
 const Alert =
   require("../models/Alert");
 
+const Project =
+  require("../models/Project");
+
+const {
+  calculateRisk,
+  getRiskMessage
+} = require("../services/riskService");
+
 const getAlerts =
   async (req, res) => {
     try {
@@ -8,7 +16,7 @@ const getAlerts =
         await Alert.find()
           .populate(
             "project",
-            "name projectId progress status riskLevel"
+            "name projectCode status progress riskLevel"
           )
           .sort({
             createdAt: -1
@@ -16,20 +24,15 @@ const getAlerts =
 
       res.json({
         success: true,
-        count:
-          alerts.length,
         alerts
       });
     } catch (error) {
-      console.error(
-        "Get alerts error:",
-        error
-      );
+      console.error(error);
 
       res.status(500).json({
         success: false,
         message:
-          "Unable to fetch alerts"
+          "Failed to load alerts"
       });
     }
   };
@@ -37,31 +40,37 @@ const getAlerts =
 const createAlert =
   async (req, res) => {
     try {
+      const {
+        project,
+        type,
+        title,
+        message,
+        severity
+      } = req.body;
+
       const alert =
         await Alert.create({
-          ...req.body,
-          createdBy:
-            req.user?.id ||
-            req.user?._id
+          project,
+          type:
+            type || "Risk",
+          title,
+          message,
+          severity:
+            severity || "Medium",
+          status: "Open"
         });
 
       res.status(201).json({
         success: true,
-        message:
-          "Alert created successfully",
         alert
       });
     } catch (error) {
-      console.error(
-        "Create alert error:",
-        error
-      );
+      console.error(error);
 
       res.status(500).json({
         success: false,
         message:
-          error.message ||
-          "Unable to create alert"
+          "Failed to create alert"
       });
     }
   };
@@ -89,20 +98,120 @@ const updateAlert =
 
       res.json({
         success: true,
-        message:
-          "Alert updated successfully",
         alert
       });
     } catch (error) {
-      console.error(
-        "Update alert error:",
-        error
-      );
+      res.status(500).json({
+        success: false,
+        message:
+          "Failed to update alert"
+      });
+    }
+  };
+
+const generateProjectAlerts =
+  async (req, res) => {
+    try {
+      const projects =
+        await Project.find();
+
+      const generated = [];
+
+      for (const project of projects) {
+        const risk =
+          calculateRisk(project);
+
+        project.riskLevel = risk;
+
+        await project.save();
+
+        if (
+          risk === "High" ||
+          risk === "Critical"
+        ) {
+          const exists =
+            await Alert.findOne({
+              project:
+                project._id,
+              status: "Open",
+              type: "Risk"
+            });
+
+          if (!exists) {
+            const alert =
+              await Alert.create({
+                project:
+                  project._id,
+
+                type: "Risk",
+
+                title:
+                  `${risk} Risk Project`,
+
+                message:
+                  getRiskMessage(risk),
+
+                severity: risk,
+
+                status: "Open"
+              });
+
+            generated.push(alert);
+          }
+        }
+      }
+
+      res.json({
+        success: true,
+        count:
+          generated.length,
+        alerts:
+          generated
+      });
+    } catch (error) {
+      console.error(error);
 
       res.status(500).json({
         success: false,
         message:
-          "Unable to update alert"
+          "Failed to generate project alerts"
+      });
+    }
+  };
+
+const resolveAlert =
+  async (req, res) => {
+    try {
+      const alert =
+        await Alert.findByIdAndUpdate(
+          req.params.id,
+          {
+            status: "Resolved",
+            resolvedAt:
+              new Date()
+          },
+          {
+            new: true
+          }
+        );
+
+      if (!alert) {
+        return res.status(404).json({
+          success: false,
+          message:
+            "Alert not found"
+        });
+      }
+
+      res.json({
+        success: true,
+        alert
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message:
+          "Failed to resolve alert"
       });
     }
   };
@@ -110,5 +219,7 @@ const updateAlert =
 module.exports = {
   getAlerts,
   createAlert,
-  updateAlert
+  updateAlert,
+  generateProjectAlerts,
+  resolveAlert
 };

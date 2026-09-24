@@ -1,14 +1,8 @@
-const API_BASE_URL =
-  "http://localhost:8000/api";
+const API_BASE_URL = "http://localhost:8000/api";
 
-const apiRequest = async (
-  endpoint,
-  options = {}
-) => {
+const apiRequest = async (endpoint, options = {}) => {
   const token =
-    localStorage.getItem(
-      "projectwatch_token"
-    );
+    localStorage.getItem("projectwatch_token");
 
   const headers = {
     ...(options.headers || {})
@@ -18,8 +12,7 @@ const apiRequest = async (
     options.body &&
     !(options.body instanceof FormData)
   ) {
-    headers["Content-Type"] =
-      "application/json";
+    headers["Content-Type"] = "application/json";
   }
 
   if (token) {
@@ -27,77 +20,382 @@ const apiRequest = async (
       `Bearer ${token}`;
   }
 
-  const response = await fetch(
-    `${API_BASE_URL}${endpoint}`,
-    {
-      ...options,
-      headers
-    }
-  );
-
-  let data;
-
   try {
-    data = await response.json();
-  } catch (error) {
-    data = {};
-  }
-
-  if (!response.ok) {
-    throw new Error(
-      data.message ||
-        "Something went wrong"
+    const response = await fetch(
+      `${API_BASE_URL}${endpoint}`,
+      {
+        ...options,
+        headers
+      }
     );
-  }
 
-  return data;
+    let data = {};
+
+    try {
+      data = await response.json();
+    } catch (error) {
+      data = {};
+    }
+
+    if (!response.ok) {
+      throw new Error(
+        data.message ||
+        `Server error: ${response.status}`
+      );
+    }
+
+    return data;
+
+  } catch (error) {
+    console.error(
+      "API REQUEST ERROR:",
+      error
+    );
+
+    if (
+      error.message ===
+      "Failed to fetch"
+    ) {
+      throw new Error(
+        "Backend server is not running. Please start ProjectWatch backend on port 8000."
+      );
+    }
+
+    throw error;
+  }
 };
 
 
-/* =========================
-   AUTH
-========================= */
+// ================================
+// AUTH
+// ================================
 
 export const loginUser = (
   email,
   password
-) => {
-  return apiRequest(
-    "/auth/login",
-    {
-      method: "POST",
-
-      body: JSON.stringify({
-        email,
-        password
-      })
-    }
-  );
-};
+) =>
+  apiRequest("/auth/login", {
+    method: "POST",
+    body: JSON.stringify({
+      email,
+      password
+    })
+  });
 
 
 export const registerUser = (
   userData
-) => {
-  return apiRequest(
-    "/auth/register",
-    {
-      method: "POST",
+) =>
+  apiRequest("/auth/register", {
+    method: "POST",
+    body: JSON.stringify(userData)
+  });
 
-      body: JSON.stringify(userData)
+
+export const getCurrentUser = () =>
+  apiRequest("/auth/me");
+
+
+// ================================
+// PROJECTS
+// ================================
+
+export const getProjects = () =>
+  apiRequest("/projects");
+
+
+export const getProject = (id) =>
+  apiRequest(`/projects/${id}`);
+
+
+export const createProject = (
+  projectData
+) =>
+  apiRequest("/projects", {
+    method: "POST",
+    body: JSON.stringify(projectData)
+  });
+
+
+export const updateProject = (
+  id,
+  projectData
+) =>
+  apiRequest(`/projects/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(projectData)
+  });
+
+
+export const deleteProject = (id) =>
+  apiRequest(`/projects/${id}`, {
+    method: "DELETE"
+  });
+
+
+// ================================
+// DASHBOARD
+// ================================
+
+export const getDashboardStats = () =>
+  apiRequest("/dashboard/stats");
+
+
+export const getProjectStatusSummary =
+  () =>
+    apiRequest(
+      "/dashboard/project-status"
+    );
+
+
+export const getProvinceSummary = () =>
+  apiRequest(
+    "/dashboard/provinces"
+  );
+
+
+// ================================
+// FIELD REPORTS
+// ================================
+
+export const getFieldReports = () =>
+  apiRequest("/field-reports");
+
+
+export const createFieldReport = (
+  data
+) =>
+  apiRequest("/field-reports", {
+    method: "POST",
+    body: JSON.stringify(data)
+  });
+
+
+// ================================
+// COMPLAINTS (admin/officer view)
+// ================================
+
+export const getComplaints = () =>
+  apiRequest("/complaints");
+
+
+export const createComplaint = (
+  data
+) =>
+  apiRequest("/complaints", {
+    method: "POST",
+    body: JSON.stringify(data)
+  });
+
+
+export const updateComplaint = (
+  id,
+  data
+) =>
+  apiRequest(`/complaints/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data)
+  });
+
+
+// ================================
+// PUBLIC COMPLAINT SUBMISSION
+// (no login — citizen facing)
+// ================================
+
+export const submitPublicComplaint = (
+  data
+) =>
+  apiRequest("/complaints", {
+    method: "POST",
+    body: JSON.stringify(data)
+  });
+
+
+// ================================
+// EVIDENCE
+// ================================
+
+export const getEvidence = () =>
+  apiRequest("/evidence");
+
+
+export const uploadEvidence = (
+  formData
+) =>
+  apiRequest("/evidence/upload", {
+    method: "POST",
+    body: formData
+  });
+
+
+export const createEvidence = (
+  data
+) =>
+  apiRequest("/evidence", {
+    method: "POST",
+    body: JSON.stringify(data)
+  });
+
+
+// ================================
+// VERIFICATION
+// ================================
+
+export const getVerifications = () =>
+  apiRequest("/verifications");
+
+
+export const createVerification = (
+  data
+) =>
+  apiRequest("/verifications", {
+    method: "POST",
+    body: JSON.stringify(data)
+  });
+
+
+// ================================
+// NOTIFICATIONS
+// ================================
+
+export const getNotifications = () =>
+  apiRequest("/notifications");
+
+
+export const getMyNotifications = () =>
+  apiRequest("/notifications/mine");
+
+
+export const createNotification = (
+  data
+) =>
+  apiRequest("/notifications", {
+    method: "POST",
+    body: JSON.stringify(data)
+  });
+
+
+export const markNotificationAsRead = (
+  id
+) =>
+  apiRequest(
+    `/notifications/${id}/read`,
+    {
+      method: "PUT"
     }
   );
-};
 
 
-export const getCurrentUser = () => {
-  return apiRequest("/auth/me");
-};
+export const markNotificationRead = (
+  id
+) =>
+  apiRequest(
+    `/notifications/${id}/read`,
+    {
+      method: "PUT"
+    }
+  );
 
 
-/* =========================
-   LOGOUT
-========================= */
+export const markAllNotificationsAsRead = () =>
+  apiRequest(
+    "/notifications/read-all",
+    {
+      method: "PUT"
+    }
+  );
+
+
+export const deleteNotification = (
+  id
+) =>
+  apiRequest(
+    `/notifications/${id}`,
+    {
+      method: "DELETE"
+    }
+  );
+
+
+// ================================
+// ALERTS
+// ================================
+
+export const getAlerts = () =>
+  apiRequest("/alerts");
+export const resolveAlert =
+  (id) =>
+    apiRequest(
+      `/alerts/${id}/resolve`,
+      {
+        method: "PUT"
+      }
+    );
+
+export const generateAlerts =
+  () =>
+    apiRequest(
+      "/alerts/generate",
+      {
+        method: "POST"
+      }
+    );
+
+// ================================
+// PUBLIC  (citizen facing, no login)
+// ================================
+
+export const getPublicProjects = (
+  query = ""
+) =>
+  apiRequest(
+    `/public/projects${query}`
+  );
+
+
+export const getPublicProject = (
+  id
+) =>
+  apiRequest(
+    `/public/projects/${id}`
+  );
+
+
+export const getPublicSummary = () =>
+  apiRequest("/public/summary");
+
+
+// ================================
+// REPORTS
+// ================================
+
+export const getProjectReport = () =>
+  apiRequest("/reports/projects");
+
+
+// ================================
+// AI
+// ================================
+
+export const analyzeEvidence = (
+  evidenceId,
+  reportedProgress
+) =>
+  apiRequest(
+    `/ai/evidence/${evidenceId}`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        reportedProgress
+      })
+    }
+  );
+
+
+// ================================
+// LOGOUT
+// ================================
 
 export const logoutUser = () => {
   localStorage.removeItem(
@@ -107,249 +405,4 @@ export const logoutUser = () => {
   localStorage.removeItem(
     "projectwatch_user"
   );
-};
-
-
-/* =========================
-   PROJECTS
-========================= */
-
-export const getProjects = () => {
-  return apiRequest("/projects");
-};
-
-
-export const getProject = (
-  id
-) => {
-  return apiRequest(
-    `/projects/${id}`
-  );
-};
-
-
-export const createProject = (
-  projectData
-) => {
-  return apiRequest(
-    "/projects",
-    {
-      method: "POST",
-
-      body: JSON.stringify(
-        projectData
-      )
-    }
-  );
-};
-
-
-export const updateProject = (
-  id,
-  projectData
-) => {
-  return apiRequest(
-    `/projects/${id}`,
-    {
-      method: "PUT",
-
-      body: JSON.stringify(
-        projectData
-      )
-    }
-  );
-};
-
-
-export const deleteProject = (
-  id
-) => {
-  return apiRequest(
-    `/projects/${id}`,
-    {
-      method: "DELETE"
-    }
-  );
-};
-
-
-/* =========================
-   DASHBOARD
-========================= */
-
-export const getDashboardStats = () => {
-  return apiRequest(
-    "/dashboard/stats"
-  );
-};
-
-
-export const getProjectStatusSummary =
-  () => {
-    return apiRequest(
-      "/dashboard/project-status"
-    );
-  };
-
-
-export const getProvinceSummary = () => {
-  return apiRequest(
-    "/dashboard/provinces"
-  );
-};
-
-
-/* =========================
-   FIELD REPORTS
-========================= */
-
-export const getFieldReports = () => {
-  return apiRequest(
-    "/field-reports"
-  );
-};
-
-
-export const createFieldReport = (
-  report
-) => {
-  return apiRequest(
-    "/field-reports",
-    {
-      method: "POST",
-
-      body: JSON.stringify(
-        report
-      )
-    }
-  );
-};
-
-
-/* =========================
-   COMPLAINTS
-========================= */
-
-export const getComplaints = () => {
-  return apiRequest(
-    "/complaints"
-  );
-};
-
-
-export const createComplaint = (
-  complaint
-) => {
-  return apiRequest(
-    "/complaints",
-    {
-      method: "POST",
-
-      body: JSON.stringify(
-        complaint
-      )
-    }
-  );
-};
-
-
-/* =========================
-   ALERTS
-========================= */
-
-export const getAlerts = () => {
-  return apiRequest(
-    "/alerts"
-  );
-};
-
-
-/* =========================
-   NOTIFICATIONS
-========================= */
-
-export const getNotifications = () => {
-  return apiRequest(
-    "/notifications"
-  );
-};
-
-
-/* =========================
-   PUBLIC
-========================= */
-
-export const getPublicProjects = () => {
-  return apiRequest(
-    "/public/projects"
-  );
-};
-
-
-export const getPublicSummary = () => {
-  return apiRequest(
-    "/public/summary"
-  );
-};
-
-
-/* =========================
-   REPORTS
-========================= */
-
-export const getProjectReport = () => {
-  return apiRequest(
-    "/reports/projects"
-  );
-};
-
-
-/* =========================
-   AI
-========================= */
-
-export const analyzeEvidence = (
-  evidenceId,
-  reportedProgress
-) => {
-  return apiRequest(
-    `/ai/evidence/${evidenceId}`,
-    {
-      method: "POST",
-
-      body: JSON.stringify({
-        reportedProgress
-      })
-    }
-  );
-};
-
-// ==========================================
-// EVIDENCE API
-// ==========================================
-
-export const getEvidence = async (projectId) => {
-  return apiRequest(`/evidence/project/${projectId}`, {
-    method: "GET",
-  });
-};
-
-export const uploadEvidence = async (formData) => {
-  return apiRequest("/evidence", {
-    method: "POST",
-    body: formData,
-  });
-};
-
-export const createEvidence = async (data) => {
-  return apiRequest("/evidence", {
-    method: "POST",
-    body: JSON.stringify(data),
-  });
-};
-
-export const deleteEvidence = async (evidenceId) => {
-  return apiRequest(`/evidence/${evidenceId}`, {
-    method: "DELETE",
-  });
 };

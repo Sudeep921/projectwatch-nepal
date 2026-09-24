@@ -44,17 +44,87 @@ const Dashboard = () => {
         getProvinceSummary()
       ]);
 
+      /* =========================
+         STATS
+      ========================= */
+
       setStats(
-        statsResponse.stats || {}
+        statsResponse?.stats ||
+        statsResponse ||
+        {}
       );
+
+
+      /* =========================
+         STATUS DATA
+      ========================= */
+
+      const rawStatus =
+        statusResponse?.summary;
+
+      let normalizedStatus = [];
+
+      if (Array.isArray(rawStatus)) {
+        normalizedStatus = rawStatus;
+      }
+
+      else if (
+        rawStatus &&
+        typeof rawStatus === "object"
+      ) {
+        normalizedStatus =
+          Object.entries(rawStatus).map(
+            ([status, count]) => ({
+              status,
+              count:
+                typeof count === "number"
+                  ? count
+                  : Number(count) || 0
+            })
+          );
+      }
 
       setStatusData(
-        statusResponse.summary || []
+        normalizedStatus
       );
 
+
+      /* =========================
+         PROVINCE DATA
+      ========================= */
+
+      const rawProvince =
+        provinceResponse?.summary ||
+        provinceResponse?.provinces ||
+        [];
+
+      let normalizedProvince = [];
+
+      if (Array.isArray(rawProvince)) {
+        normalizedProvince = rawProvince;
+      }
+
+      else if (
+        rawProvince &&
+        typeof rawProvince === "object"
+      ) {
+        normalizedProvince =
+          Object.entries(rawProvince).map(
+            ([province, value]) => ({
+              province,
+
+              count:
+                typeof value === "number"
+                  ? value
+                  : Number(value) || 0
+            })
+          );
+      }
+
       setProvinceData(
-        provinceResponse.summary || []
+        normalizedProvince
       );
+
     } catch (err) {
       console.error(
         "Dashboard loading error:",
@@ -65,10 +135,12 @@ const Dashboard = () => {
         err.message ||
         "Failed to load dashboard"
       );
+
     } finally {
       setLoading(false);
     }
   };
+
 
   /* =========================
      LOADING
@@ -83,6 +155,7 @@ const Dashboard = () => {
       "Loading dashboard..."
     );
   }
+
 
   /* =========================
      ERROR
@@ -116,6 +189,7 @@ const Dashboard = () => {
       )
     );
   }
+
 
   /* =========================
      HEADER
@@ -155,6 +229,7 @@ const Dashboard = () => {
       )
     );
 
+
   /* =========================
      STATS
   ========================= */
@@ -162,20 +237,28 @@ const Dashboard = () => {
   const statItems = [
     {
       label: "Total Projects",
-      value: stats?.totalProjects || 0
+      value:
+        stats?.totalProjects || 0
     },
+
     {
       label: "Active Projects",
-      value: stats?.activeProjects || 0
+      value:
+        stats?.activeProjects || 0
     },
+
     {
       label: "Delayed Projects",
-      value: stats?.delayedProjects || 0
+      value:
+        stats?.delayedProjects || 0
     },
+
     {
       label: "Critical Projects",
-      value: stats?.criticalProjects || 0
+      value:
+        stats?.criticalProjects || 0
     },
+
     {
       label: "Total Budget",
       value:
@@ -184,20 +267,26 @@ const Dashboard = () => {
           stats?.totalBudget || 0
         ).toLocaleString()
     },
+
     {
       label: "Average Progress",
       value:
         `${stats?.averageProgress || 0}%`
     },
+
     {
       label: "Field Reports",
-      value: stats?.fieldReports || 0
+      value:
+        stats?.fieldReports || 0
     },
+
     {
       label: "Complaints",
-      value: stats?.complaints || 0
+      value:
+        stats?.complaints || 0
     }
   ];
+
 
   const statsGrid =
     React.createElement(
@@ -230,23 +319,27 @@ const Dashboard = () => {
       )
     );
 
+
   /* =========================
      STATUS PANEL
   ========================= */
 
   const statusRows =
     statusData.length === 0
+
       ? React.createElement(
           "p",
           null,
           "No project data available."
         )
+
       : statusData.map(
           (item, index) =>
             React.createElement(
               "div",
               {
                 className: "status-row",
+
                 key:
                   item._id ||
                   item.status ||
@@ -268,6 +361,7 @@ const Dashboard = () => {
               )
             )
         );
+
 
   const statusPanel =
     React.createElement(
@@ -305,9 +399,11 @@ const Dashboard = () => {
         {
           className: "status-list"
         },
+
         statusRows
       )
     );
+
 
   /* =========================
      PROVINCE PANEL
@@ -315,17 +411,20 @@ const Dashboard = () => {
 
   const provinceRows =
     provinceData.length === 0
+
       ? React.createElement(
           "p",
           null,
           "No province data available."
         )
+
       : provinceData.map(
           (item, index) =>
             React.createElement(
               "div",
               {
                 className: "province-row",
+
                 key:
                   item._id ||
                   item.province ||
@@ -343,10 +442,13 @@ const Dashboard = () => {
               React.createElement(
                 "strong",
                 null,
-                item.count || 0
+                item.count ||
+                  item.projects ||
+                  0
               )
             )
         );
+
 
   const provincePanel =
     React.createElement(
@@ -384,9 +486,11 @@ const Dashboard = () => {
         {
           className: "province-list"
         },
+
         provinceRows
       )
     );
+
 
   /* =========================
      DASHBOARD GRID
@@ -398,9 +502,12 @@ const Dashboard = () => {
       {
         className: "dashboard-grid"
       },
+
       statusPanel,
+
       provincePanel
     );
+
 
   /* =========================
      FINAL PAGE
@@ -413,7 +520,9 @@ const Dashboard = () => {
     },
 
     pageHeader,
+
     statsGrid,
+
     dashboardGrid
   );
 };

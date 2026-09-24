@@ -5,216 +5,188 @@ import React, {
 } from "react";
 
 import {
+  useNavigate
+} from "react-router-dom";
+
+import {
   getProjects
 } from "../services/api";
 
-import ProjectFilters from "../components/ProjectFilters";
-import ProjectTable from "../components/ProjectTable";
-import AddProjectModal from "../components/AddProjectModal";
+import ProjectFilters from
+  "../components/ProjectFilters";
+
+import ProjectTable from
+  "../components/ProjectTable";
+
+const h = React.createElement;
 
 const Projects = () => {
-  const [projects, setProjects] =
-    useState([]);
+  const navigate =
+    useNavigate();
 
-  const [loading, setLoading] =
-    useState(true);
+  const [
+    projects,
+    setProjects
+  ] = useState([]);
 
-  const [error, setError] =
-    useState("");
+  const [
+    loading,
+    setLoading
+  ] = useState(true);
 
-  const [search, setSearch] =
-    useState("");
+  const [
+    search,
+    setSearch
+  ] = useState("");
 
-  const [province, setProvince] =
-    useState("");
+  const [
+    province,
+    setProvince
+  ] = useState(
+    "All Provinces"
+  );
 
-  const [status, setStatus] =
-    useState("");
+  const [
+    status,
+    setStatus
+  ] = useState(
+    "All Status"
+  );
 
-  const [risk, setRisk] =
-    useState("");
+  const [
+    risk,
+    setRisk
+  ] = useState(
+    "All Risk"
+  );
 
-  const [showModal, setShowModal] =
-    useState(false);
+  const load =
+    async () => {
+      try {
+        setLoading(true);
 
-  const loadProjects = async () => {
-    setLoading(true);
-    setError("");
+        const data =
+          await getProjects();
 
-    try {
-      const response =
-        await getProjects();
-
-      setProjects(
-        response.projects ||
-          response.data ||
-          []
-      );
-    } catch (err) {
-      setError(
-        err.message ||
-          "Unable to load projects."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+        setProjects(
+          data.projects ||
+            data.data ||
+            []
+        );
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
   useEffect(() => {
-    loadProjects();
+    load();
   }, []);
 
-  const filteredProjects =
-    useMemo(() => {
-      return projects.filter(
-        (project) => {
-          const text =
-            `${project.name || ""} ${
-              project.projectId || ""
-            } ${
-              project.district || ""
-            } ${
-              project.municipality || ""
-            }`
-              .toLowerCase();
+  const filtered =
+    useMemo(
+      () =>
+        projects.filter(
+          (p) => {
+            const text =
+              `${p.name || ""} ${
+                p.projectCode ||
+                ""
+              } ${
+                p.district || ""
+              }`.toLowerCase();
 
-          const matchesSearch =
-            !search ||
-            text.includes(
-              search.toLowerCase()
+            return (
+              (!search ||
+                text.includes(
+                  search.toLowerCase()
+                )) &&
+              (
+                province ===
+                  "All Provinces" ||
+                p.province ===
+                  province
+              ) &&
+              (
+                status ===
+                  "All Status" ||
+                p.status ===
+                  status
+              ) &&
+              (
+                risk ===
+                  "All Risk" ||
+                p.riskLevel ===
+                  risk
+              )
             );
+          }
+        ),
+      [
+        projects,
+        search,
+        province,
+        status,
+        risk
+      ]
+    );
 
-          const matchesProvince =
-            !province ||
-            project.province ===
-              province;
-
-          const matchesStatus =
-            !status ||
-            project.status === status;
-
-          const matchesRisk =
-            !risk ||
-            project.riskLevel === risk;
-
-          return (
-            matchesSearch &&
-            matchesProvince &&
-            matchesStatus &&
-            matchesRisk
-          );
-        }
-      );
-    }, [
-      projects,
-      search,
-      province,
-      status,
-      risk
-    ]);
-
-  const resetFilters = () => {
-    setSearch("");
-    setProvince("");
-    setStatus("");
-    setRisk("");
-  };
-
-  const handleCreated = () => {
-    loadProjects();
-  };
-
-  return React.createElement(
+  return h(
     "div",
     {
-      className: "page-container projects-page"
+      className:
+        "page projects-page"
     },
 
-    React.createElement(
-      "div",
+   h(
+  "div",
+  {
+    className:
+      "page-heading projects-heading"
+  },
+
+  h(
+    "div",
+    null,
+
+    h(
+      "span",
       {
-        className: "page-header"
+        className:
+          "eyebrow"
       },
-
-      React.createElement(
-        "div",
-        null,
-
-        React.createElement(
-          "span",
-          {
-            className: "page-eyebrow"
-          },
-          "PROJECT MANAGEMENT"
-        ),
-
-        React.createElement(
-          "h1",
-          null,
-          "Government Projects"
-        ),
-
-        React.createElement(
-          "p",
-          null,
-          "Monitor, verify and manage government development projects across Nepal."
-        )
-      ),
-
-      React.createElement(
-        "button",
-        {
-          type: "button",
-          className: "primary-button",
-          onClick: () =>
-            setShowModal(true)
-        },
-        "+ Add New Project"
-      )
+      "PROJECT MANAGEMENT"
     ),
 
-    React.createElement(
-      "div",
-      {
-        className: "projects-summary"
-      },
-
-      React.createElement(
-        "div",
-        null,
-
-        React.createElement(
-          "strong",
-          null,
-          projects.length
-        ),
-
-        React.createElement(
-          "span",
-          null,
-          "Total Projects"
-        )
-      ),
-
-      React.createElement(
-        "div",
-        null,
-
-        React.createElement(
-          "strong",
-          null,
-          filteredProjects.length
-        ),
-
-        React.createElement(
-          "span",
-          null,
-          "Filtered"
-        )
-      )
+    h(
+      "h1",
+      null,
+      "Government Projects"
     ),
 
-    React.createElement(
+    h(
+      "p",
+      null,
+      "Monitor, verify and manage government development projects across Nepal."
+    )
+  ),
+
+  h(
+    "button",
+    {
+      className:
+        "primary-button",
+      onClick: () =>
+        navigate(
+          "/admin/projects/new"
+        )
+    },
+    "+ Add New Project"
+  )
+),
+
+    h(
       ProjectFilters,
       {
         search,
@@ -225,86 +197,36 @@ const Projects = () => {
         setStatus,
         risk,
         setRisk,
-        onReset: resetFilters
+        onClear: () => {
+          setSearch("");
+          setProvince(
+            "All Provinces"
+          );
+          setStatus(
+            "All Status"
+          );
+          setRisk(
+            "All Risk"
+          );
+        }
       }
     ),
 
-    error
-      ? React.createElement(
-          "div",
-          {
-            className: "page-error"
-          },
-          error
-        )
-      : null,
-
     loading
-      ? React.createElement(
+      ? h(
           "div",
           {
-            className: "page-loading"
+            className:
+              "page-loading"
           },
           "Loading projects..."
         )
-      : React.createElement(
-          "div",
+      : h(
+          ProjectTable,
           {
-            className: "project-registry-card"
-          },
-
-          React.createElement(
-            "div",
-            {
-              className:
-                "registry-header"
-            },
-
-            React.createElement(
-              "div",
-              null,
-
-              React.createElement(
-                "h2",
-                null,
-                "Project Registry"
-              ),
-
-              React.createElement(
-                "p",
-                null,
-                "Verified government development project registry"
-              )
-            ),
-
-            React.createElement(
-              "span",
-              {
-                className:
-                  "registry-count"
-              },
-              `${filteredProjects.length} Projects`
-            )
-          ),
-
-          React.createElement(
-            ProjectTable,
-            {
-              projects:
-                filteredProjects
-            }
-          )
-        ),
-
-    React.createElement(
-      AddProjectModal,
-      {
-        isOpen: showModal,
-        onClose: () =>
-          setShowModal(false),
-        onCreated: handleCreated
-      }
-    )
+            projects: filtered
+          }
+        )
   );
 };
 

@@ -14,72 +14,34 @@ const Alerts = () => {
   const [loading, setLoading] =
     useState(true);
 
-  const [error, setError] =
-    useState("");
+  const loadAlerts =
+    async () => {
+      try {
+        const data =
+          await getAlerts();
 
-  const loadAlerts = async () => {
-    try {
-      setLoading(true);
-      setError("");
-
-      const response =
-        await getAlerts();
-
-      setAlerts(
-        response?.alerts ||
-          response?.data ||
-          []
-      );
-    } catch (err) {
-      console.error(
-        "Alert loading failed:",
-        err
-      );
-
-      setError(
-        err.message ||
-          "Unable to load alerts."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+        setAlerts(
+          data.alerts || []
+        );
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
   useEffect(() => {
     loadAlerts();
   }, []);
 
-  const getAlertClass = (
-    alert
-  ) => {
-    const level =
-      String(
-        alert.level ||
-          alert.severity ||
-          alert.type ||
-          ""
-      ).toLowerCase();
-
-    if (
-      level.includes("critical")
-    ) {
-      return "alert-critical";
-    }
-
-    if (
-      level.includes("high")
-    ) {
-      return "alert-high";
-    }
-
-    if (
-      level.includes("medium")
-    ) {
-      return "alert-medium";
-    }
-
-    return "alert-low";
-  };
+  const getClass =
+    (severity) => {
+      return (
+        `alert-item alert-${String(
+          severity || "Medium"
+        ).toLowerCase()}`
+      );
+    };
 
   return React.createElement(
     "div",
@@ -100,24 +62,21 @@ const Alerts = () => {
         null,
 
         React.createElement(
-          "span",
+          "h1",
           {
             className:
-              "page-eyebrow"
+              "page-title"
           },
-          "RISK & ALERTS"
-        ),
-
-        React.createElement(
-          "h1",
-          null,
-          "Alerts"
+          "Project Alerts"
         ),
 
         React.createElement(
           "p",
-          null,
-          "Monitor project risks, verification issues and operational alerts."
+          {
+            className:
+              "page-description"
+          },
+          "Monitor project risks, delays and critical issues."
         )
       ),
 
@@ -129,28 +88,16 @@ const Alerts = () => {
           onClick:
             loadAlerts
         },
-        "↻ Refresh Alerts"
+        "Refresh"
       )
     ),
-
-    error
-      ? React.createElement(
-          "div",
-          {
-            className:
-              "form-error"
-          },
-          "⚠ ",
-          error
-        )
-      : null,
 
     loading
       ? React.createElement(
           "div",
           {
             className:
-              "page-loading"
+              "empty-state"
           },
           "Loading alerts..."
         )
@@ -161,18 +108,7 @@ const Alerts = () => {
             className:
               "empty-state"
           },
-
-          React.createElement(
-            "h3",
-            null,
-            "No active alerts"
-          ),
-
-          React.createElement(
-            "p",
-            null,
-            "Project risks and system alerts will appear here when detected."
-          )
+          "No active alerts."
         )
       : React.createElement(
           "div",
@@ -186,79 +122,72 @@ const Alerts = () => {
               React.createElement(
                 "div",
                 {
-                  className:
-                    `alert-card ${
-                      getAlertClass(
-                        alert
-                      )
-                    }`,
                   key:
-                    alert._id ||
-                    alert.id
+                    alert._id,
+                  className:
+                    getClass(
+                      alert.severity
+                    )
                 },
 
                 React.createElement(
                   "div",
                   {
                     className:
-                      "alert-icon"
-                  },
-                  alert.severity ===
-                  "Critical"
-                    ? "!"
-                    : "⚠"
-                ),
-
-                React.createElement(
-                  "div",
-                  {
-                    className:
-                      "alert-content"
+                      "alert-item-top"
                   },
 
                   React.createElement(
                     "div",
                     {
                       className:
-                        "alert-card-header"
+                        "alert-icon"
                     },
+                    alert.severity ===
+                    "Critical"
+                      ? "🚨"
+                      : alert.severity ===
+                        "High"
+                      ? "⚠️"
+                      : "ℹ️"
+                  ),
+
+                  React.createElement(
+                    "div",
+                    null,
 
                     React.createElement(
-                      "strong",
+                      "h3",
                       null,
-                      alert.title ||
-                        alert.message ||
-                        "Project Alert"
+                      alert.title
                     ),
 
                     React.createElement(
-                      "span",
-                      {
-                        className:
-                          "status-badge"
-                      },
-                      alert.severity ||
-                        alert.level ||
-                        "Alert"
+                      "p",
+                      null,
+                      alert.message
                     )
+                  )
+                ),
+
+                React.createElement(
+                  "div",
+                  {
+                    className:
+                      "alert-item-bottom"
+                  },
+
+                  React.createElement(
+                    "span",
+                    null,
+                    alert.project?.name ||
+                      "Project"
                   ),
 
                   React.createElement(
-                    "p",
+                    "strong",
                     null,
-                    alert.description ||
-                      alert.message ||
-                      "Project monitoring alert."
-                  ),
-
-                  React.createElement(
-                    "small",
-                    null,
-                    alert.createdAt
-                      ? new Date(
-                          alert.createdAt
-                        ).toLocaleString()
-                      : "Recent"
+                    alert.status
                   )
                 )
               )

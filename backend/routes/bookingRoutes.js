@@ -8,7 +8,11 @@ const {
   deleteBooking
 } = require("../controllers/bookingController");
 
-const authMiddleware = require("../middleware/authMiddleware");
+const authMiddleware =
+  require("../middleware/authMiddleware");
+
+const roleMiddleware =
+  require("../middleware/roleMiddleware");
 
 const router = express.Router();
 
@@ -33,12 +37,14 @@ router.post(
 router.put(
   "/:id",
   authMiddleware,
+  roleMiddleware("admin"),
   updateBooking
 );
 
 router.delete(
   "/:id",
   authMiddleware,
+  roleMiddleware("admin"),
   deleteBooking
 );
 

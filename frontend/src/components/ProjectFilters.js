@@ -1,5 +1,7 @@
 import React from "react";
 
+const h = React.createElement;
+
 const ProjectFilters = ({
   search,
   setSearch,
@@ -9,182 +11,126 @@ const ProjectFilters = ({
   setStatus,
   risk,
   setRisk,
-  onReset
-}) => {
-  return React.createElement(
+  onClear
+}) =>
+  h(
     "div",
     {
-      className: "project-filters"
+      className:
+        "project-filter-bar"
     },
 
-    React.createElement(
-      "div",
+    h(
+      "input",
       {
-        className: "filter-search"
-      },
-
-      React.createElement(
-        "span",
-        {
-          className: "filter-search-icon"
-        },
-        "⌕"
-      ),
-
-      React.createElement("input", {
-        type: "text",
-        placeholder: "Search projects...",
+        className:
+          "project-search-input",
         value: search,
-        onChange: (event) =>
-          setSearch(event.target.value)
-      })
+        onChange: (e) =>
+          setSearch(
+            e.target.value
+          ),
+        placeholder:
+          "Search projects..."
+      }
     ),
 
-    React.createElement(
+    h(
       "select",
       {
         value: province,
-        onChange: (event) =>
-          setProvince(event.target.value)
+        onChange: (e) =>
+          setProvince(
+            e.target.value
+          )
       },
 
-      React.createElement(
-        "option",
-        { value: "" },
-        "All Provinces"
-      ),
-
-      React.createElement(
-        "option",
-        { value: "Bagmati" },
-        "Bagmati"
-      ),
-
-      React.createElement(
-        "option",
-        { value: "Gandaki" },
-        "Gandaki"
-      ),
-
-      React.createElement(
-        "option",
-        { value: "Koshi" },
-        "Koshi"
-      ),
-
-      React.createElement(
-        "option",
-        { value: "Lumbini" },
-        "Lumbini"
-      ),
-
-      React.createElement(
-        "option",
-        { value: "Madhesh" },
-        "Madhesh"
-      ),
-
-      React.createElement(
-        "option",
-        { value: "Karnali" },
-        "Karnali"
-      ),
-
-      React.createElement(
-        "option",
-        { value: "Sudurpashchim" },
+      [
+        "All Provinces",
+        "Bagmati",
+        "Gandaki",
+        "Koshi",
+        "Lumbini",
+        "Madhesh",
+        "Karnali",
         "Sudurpashchim"
+      ].map(
+        (x) =>
+          h(
+            "option",
+            {
+              key: x
+            },
+            x
+          )
       )
     ),
 
-    React.createElement(
+    h(
       "select",
       {
         value: status,
-        onChange: (event) =>
-          setStatus(event.target.value)
+        onChange: (e) =>
+          setStatus(
+            e.target.value
+          )
       },
 
-      React.createElement(
-        "option",
-        { value: "" },
-        "All Status"
-      ),
-
-      React.createElement(
-        "option",
-        { value: "Active" },
-        "Active"
-      ),
-
-      React.createElement(
-        "option",
-        { value: "Delayed" },
-        "Delayed"
-      ),
-
-      React.createElement(
-        "option",
-        { value: "Completed" },
-        "Completed"
-      ),
-
-      React.createElement(
-        "option",
-        { value: "Critical" },
+      [
+        "All Status",
+        "Active",
+        "Delayed",
+        "Completed",
         "Critical"
+      ].map(
+        (x) =>
+          h(
+            "option",
+            {
+              key: x
+            },
+            x
+          )
       )
     ),
 
-    React.createElement(
+    h(
       "select",
       {
         value: risk,
-        onChange: (event) =>
-          setRisk(event.target.value)
+        onChange: (e) =>
+          setRisk(
+            e.target.value
+          )
       },
 
-      React.createElement(
-        "option",
-        { value: "" },
-        "All Risk"
-      ),
-
-      React.createElement(
-        "option",
-        { value: "Low" },
-        "Low"
-      ),
-
-      React.createElement(
-        "option",
-        { value: "Medium" },
-        "Medium"
-      ),
-
-      React.createElement(
-        "option",
-        { value: "High" },
-        "High"
-      ),
-
-      React.createElement(
-        "option",
-        { value: "Critical" },
+      [
+        "All Risk",
+        "Low",
+        "Medium",
+        "High",
         "Critical"
+      ].map(
+        (x) =>
+          h(
+            "option",
+            {
+              key: x
+            },
+            x
+          )
       )
     ),
 
-    React.createElement(
+    h(
       "button",
       {
-        type: "button",
-        className: "filter-reset-button",
-        onClick: onReset
+        className:
+          "filter-clear",
+        onClick: onClear
       },
-      "Reset"
+      "Clear"
     )
   );
-};
 
 export default ProjectFilters;

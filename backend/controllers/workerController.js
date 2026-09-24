@@ -7,22 +7,22 @@ const getWorkers = async (req, res) => {
 
     res.json({
       success: true,
-      count: workers.length,
       workers
     });
   } catch (error) {
+    console.error(error);
+
     res.status(500).json({
       success: false,
-      message: error.message
+      message: "Failed to fetch workers"
     });
   }
 };
 
 const getWorker = async (req, res) => {
   try {
-    const worker = await Worker.findById(
-      req.params.id
-    );
+    const worker =
+      await Worker.findById(req.params.id);
 
     if (!worker) {
       return res.status(404).json({
@@ -38,26 +38,66 @@ const getWorker = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message
+      message: "Failed to fetch worker"
     });
   }
 };
 
 const createWorker = async (req, res) => {
   try {
-    const worker = await Worker.create({
-      name: req.body.name,
-      email: req.body.email,
-      phone: req.body.phone,
-      address: req.body.address,
-      specialization: req.body.specialization,
-      province: req.body.province,
-      district: req.body.district,
-      municipality: req.body.municipality,
-      experience: req.body.experience,
-      status: req.body.status || "Available",
-      isVerified: req.body.isVerified || false
-    });
+    const {
+      name,
+      email,
+      phone,
+      address,
+      specialization,
+      province,
+      district,
+      municipality,
+      experience,
+      status,
+      isVerified
+    } = req.body;
+
+    if (!name || !email) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Worker name and email are required"
+      });
+    }
+
+    const existing =
+      await Worker.findOne({
+        email: email.toLowerCase()
+      });
+
+    if (existing) {
+      return res.status(409).json({
+        success: false,
+        message: "Worker already exists"
+      });
+    }
+
+    const worker =
+      await Worker.create({
+        name,
+        email: email.toLowerCase(),
+        phone: phone || "",
+        address: address || "",
+        specialization:
+          specialization || "",
+        province: province || "",
+        district: district || "",
+        municipality:
+          municipality || "",
+        experience:
+          Number(experience || 0),
+        status:
+          status || "Available",
+        isVerified:
+          Boolean(isVerified)
+      });
 
     res.status(201).json({
       success: true,
@@ -65,9 +105,13 @@ const createWorker = async (req, res) => {
       worker
     });
   } catch (error) {
-    res.status(400).json({
+    console.error(error);
+
+    res.status(500).json({
       success: false,
-      message: error.message
+      message:
+        error.message ||
+        "Failed to create worker"
     });
   }
 };
@@ -97,9 +141,11 @@ const updateWorker = async (req, res) => {
       worker
     });
   } catch (error) {
-    res.status(400).json({
+    res.status(500).json({
       success: false,
-      message: error.message
+      message:
+        error.message ||
+        "Failed to update worker"
     });
   }
 };
@@ -125,7 +171,8 @@ const deleteWorker = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message
+      message:
+        "Failed to delete worker"
     });
   }
 };

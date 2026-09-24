@@ -508,9 +508,14 @@ const Complaints = () => {
                   React.createElement(
                     "span",
                     null,
-                    complaint.project?.name ||
-                      complaint.project ||
-                      "General"
+                    typeof complaint.project ===
+                      "object"
+                      ? complaint.project?.name ||
+                        complaint.project?.projectName ||
+                        complaint.project?.projectCode ||
+                        "General"
+                      : complaint.project ||
+                        "General"
                   ),
 
                   React.createElement(

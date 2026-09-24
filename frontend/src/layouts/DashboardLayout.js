@@ -1,35 +1,52 @@
 import React from "react";
-import { Outlet } from "react-router-dom";
 
-import Sidebar from "../components/Sidebar";
-import Header from "../components/Header";
+import {
+  Outlet
+} from "react-router-dom";
 
-const DashboardLayout = () => {
-  return React.createElement(
+import Sidebar from
+  "../components/Sidebar";
+
+import Header from
+  "../components/Header";
+
+const h = React.createElement;
+
+const DashboardLayout = () =>
+  h(
     "div",
     {
-      className: "dashboard-layout"
+      className:
+        "dashboard-shell"
     },
 
-    React.createElement(Sidebar),
+    h(
+      Sidebar
+    ),
 
-    React.createElement(
+    h(
       "div",
       {
-        className: "main-layout"
+        className:
+          "dashboard-main"
       },
 
-      React.createElement(Header),
+      h(
+        Header
+      ),
 
-      React.createElement(
+      h(
         "main",
         {
-          className: "main-content"
+          className:
+            "dashboard-content"
         },
-        React.createElement(Outlet)
+
+        h(
+          Outlet
+        )
       )
     )
   );
-};
 
 export default DashboardLayout;

@@ -12,344 +12,227 @@ import {
   getProject
 } from "../services/api";
 
+const h = React.createElement;
+
 const ProjectDetails = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
+  const {
+    id
+  } = useParams();
 
-  const [project, setProject] =
-    useState(null);
+  const navigate =
+    useNavigate();
 
-  const [loading, setLoading] =
-    useState(true);
+  const [
+    project,
+    setProject
+  ] = useState(null);
 
-  const [error, setError] =
-    useState("");
+  const [
+    loading,
+    setLoading
+  ] = useState(true);
 
   useEffect(() => {
-    const loadProject = async () => {
-      setLoading(true);
-
-      try {
-        const response =
-          await getProject(id);
-
+    getProject(id)
+      .then((data) =>
         setProject(
-          response.project ||
-            response.data ||
-            response
-        );
-      } catch (err) {
-        setError(
-          err.message ||
-            "Unable to load project."
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (id) {
-      loadProject();
-    }
+          data.project ||
+            data.data
+        )
+      )
+      .catch(
+        console.error
+      )
+      .finally(() =>
+        setLoading(false)
+      );
   }, [id]);
 
   if (loading) {
-    return React.createElement(
+    return h(
       "div",
       {
-        className: "page-loading"
+        className:
+          "page-loading"
       },
       "Loading project..."
     );
   }
 
-  if (error || !project) {
-    return React.createElement(
+  if (!project) {
+    return h(
       "div",
       {
-        className: "page-container"
+        className:
+          "page-error"
       },
-
-      React.createElement(
-        "div",
-        {
-          className: "page-error"
-        },
-        error || "Project not found."
-      ),
-
-      React.createElement(
-        "button",
-        {
-          className:
-            "secondary-button",
-          onClick: () =>
-            navigate("/projects")
-        },
-        "← Back to Projects"
-      )
+      "Project not found."
     );
   }
 
-  const progress =
-    Number(project.progress || 0);
-
-  return React.createElement(
+  return h(
     "div",
     {
       className:
-        "page-container project-details-page"
+        "page project-details-page"
     },
 
-    React.createElement(
+    h(
       "button",
       {
         className:
           "back-button",
         onClick: () =>
-          navigate("/projects")
+          navigate(
+            "/admin/projects"
+          )
       },
       "← Back to Projects"
     ),
 
-    React.createElement(
+    h(
       "div",
       {
         className:
-          "project-detail-header"
+          "detail-hero"
       },
 
-      React.createElement(
+      h(
         "div",
         null,
 
-        React.createElement(
+        h(
           "span",
           {
             className:
-              "page-eyebrow"
+              "eyebrow"
           },
-          "PROJECT DETAILS"
+          project.projectCode ||
+            "PROJECT"
         ),
 
-        React.createElement(
+        h(
           "h1",
           null,
-          project.name ||
-            "Government Project"
+          project.name
         ),
 
-        React.createElement(
+        h(
           "p",
           null,
-          project.projectId ||
-            project.code ||
-            project._id
+          project.description ||
+            "Government development project."
         )
       ),
 
-      React.createElement(
+      h(
         "span",
         {
           className:
             "status-badge"
         },
-        project.status ||
-          "Active"
+        project.status
       )
     ),
 
-    React.createElement(
+    h(
       "div",
       {
         className:
-          "project-detail-grid"
+          "detail-grid"
       },
 
-      React.createElement(
-        "section",
-        {
-          className:
-            "detail-card"
-        },
-
-        React.createElement(
-          "h2",
-          null,
-          "Project Overview"
-        ),
-
-        React.createElement(
-          "p",
-          {
-            className:
-              "detail-description"
-          },
-          project.description ||
-            "No project description has been provided."
-        ),
-
-        React.createElement(
-          "div",
-          {
-            className:
-              "detail-info-grid"
-          },
-
-          React.createElement(
-            "div",
-            null,
-            React.createElement(
-              "span",
-              null,
-              "Province"
-            ),
-            React.createElement(
-              "strong",
-              null,
-              project.province ||
-                "N/A"
-            )
-          ),
-
-          React.createElement(
-            "div",
-            null,
-            React.createElement(
-              "span",
-              null,
-              "District"
-            ),
-            React.createElement(
-              "strong",
-              null,
-              project.district ||
-                "N/A"
-            )
-          ),
-
-          React.createElement(
-            "div",
-            null,
-            React.createElement(
-              "span",
-              null,
-              "Municipality"
-            ),
-            React.createElement(
-              "strong",
-              null,
-              project.municipality ||
-                "N/A"
-            )
-          ),
-
-          React.createElement(
-            "div",
-            null,
-            React.createElement(
-              "span",
-              null,
-              "Budget"
-            ),
-            React.createElement(
-              "strong",
-              null,
-              project.budget ||
-                "N/A"
-            )
-          ),
-
-          React.createElement(
-            "div",
-            null,
-            React.createElement(
-              "span",
-              null,
-              "Contractor"
-            ),
-            React.createElement(
-              "strong",
-              null,
-              project.contractor ||
-                "N/A"
-            )
-          ),
-
-          React.createElement(
-            "div",
-            null,
-            React.createElement(
-              "span",
-              null,
-              "Risk Level"
-            ),
-            React.createElement(
-              "strong",
-              null,
-              project.riskLevel ||
-                "Low"
-            )
-          )
-        )
-      ),
-
-      React.createElement(
-        "section",
-        {
-          className:
-            "detail-card"
-        },
-
-        React.createElement(
-          "h2",
-          null,
-          "Project Progress"
-        ),
-
-        React.createElement(
-          "div",
-          {
-            className:
-              "large-progress"
-          },
-
-          React.createElement(
-            "strong",
-            null,
-            `${progress}%`
-          ),
-
-          React.createElement(
-            "span",
-            null,
-            "Overall Completion"
-          )
-        ),
-
-        React.createElement(
-          "div",
-          {
-            className:
-              "progress-bar large"
-          },
-
-          React.createElement(
+      [
+        [
+          "Province",
+          project.province
+        ],
+        [
+          "District",
+          project.district
+        ],
+        [
+          "Municipality",
+          project.municipality
+        ],
+        [
+          "Contractor",
+          project.contractor
+        ],
+        [
+          "Risk Level",
+          project.riskLevel
+        ],
+        [
+          "Budget",
+          `NPR ${Number(
+            project.budget || 0
+          ).toLocaleString()}`
+        ]
+      ].map(
+        ([label, value]) =>
+          h(
             "div",
             {
+              key: label,
               className:
-                "progress-bar-fill",
-              style: {
-                width: `${Math.min(
-                  Math.max(
-                    progress,
-                    0
-                  ),
-                  100
-                )}%`
-              }
-            }
+                "detail-card"
+            },
+
+            h(
+              "span",
+              null,
+              label
+            ),
+
+            h(
+              "strong",
+              null,
+              value || "-"
+            )
           )
+      )
+    ),
+
+    h(
+      "div",
+      {
+        className:
+          "detail-card progress-card"
+      },
+
+      h(
+        "h2",
+        null,
+        "Project Progress"
+      ),
+
+      h(
+        "strong",
+        {
+          className:
+            "detail-big-number"
+        },
+        `${project.progress || 0}%`
+      ),
+
+      h(
+        "div",
+        {
+          className:
+            "progress-track"
+        },
+
+        h(
+          "div",
+          {
+            className:
+              "progress-fill",
+            style: {
+              width:
+                `${project.progress || 0}%`
+            }
+          }
         )
       )
     )

@@ -1,88 +1,90 @@
 const Project = require("../models/Project");
-const Complaint = require("../models/Complaint");
 
-
-// ==========================================
-// PUBLIC PROJECT LIST
-// ==========================================
-
-const publicProjects = async (req, res) => {
+const getPublicProjects = async (req, res) => {
   try {
+    const {
+      search,
+      province,
+      status,
+      riskLevel
+    } = req.query;
 
     const filter = {
-      isPublished: true
+      isPublic: {
+        $ne: false
+      }
     };
 
-    // Search
-    if (req.query.search) {
+    if (search) {
       filter.$or = [
         {
-          projectName: {
-            $regex: req.query.search,
+          name: {
+            $regex: search,
             $options: "i"
           }
         },
         {
           projectCode: {
-            $regex: req.query.search,
+            $regex: search,
+            $options: "i"
+          }
+        },
+        {
+          district: {
+            $regex: search,
+            $options: "i"
+          }
+        },
+        {
+          municipality: {
+            $regex: search,
             $options: "i"
           }
         }
       ];
     }
 
-    // Province filter
-    if (req.query.province) {
-      filter.province = req.query.province;
+    if (province && province !== "All Provinces") {
+      filter.province = province;
     }
 
-    // Status filter
-    if (req.query.status) {
-      filter.status = req.query.status;
+    if (status && status !== "All Status") {
+      filter.status = status;
+    }
+
+    if (riskLevel && riskLevel !== "All Risk") {
+      filter.riskLevel = riskLevel;
     }
 
     const projects = await Project.find(filter)
       .select(
-        "projectName projectCode province district municipality contractor budget progress status riskLevel description startDate endDate"
+        "name projectCode province district municipality budget progress status riskLevel description startDate expectedEndDate contractor location latitude longitude updatedAt"
       )
-      .sort({
-        createdAt: -1
-      });
+      .sort({ updatedAt: -1 });
 
     res.json({
       success: true,
       count: projects.length,
       projects
     });
-
   } catch (error) {
-
-    console.error(
-      "Public projects error:",
-      error
-    );
+    console.error("Public projects error:", error);
 
     res.status(500).json({
       success: false,
-      message: "Failed to load public projects"
+      message: "Failed to fetch public projects"
     });
   }
 };
 
-
-// ==========================================
-// PUBLIC PROJECT DETAILS
-// ==========================================
-
-const publicProjectDetails = async (req, res) => {
+const getPublicProject = async (req, res) => {
   try {
-
     const project = await Project.findOne({
       _id: req.params.id,
-      isPublished: true
-    }).select(
-      "projectName projectCode province district municipality contractor budget progress status riskLevel description startDate endDate"
-    );
+      isPublic: {
+        $ne: false
+      }
+    }).select("-__v");
 
     if (!project) {
       return res.status(404).json({
@@ -95,87 +97,130 @@ const publicProjectDetails = async (req, res) => {
       success: true,
       project
     });
-
   } catch (error) {
+    console.error("Public project error:", error);
 
     res.status(500).json({
       success: false,
-      message: "Failed to load project"
+      message: "Failed to fetch public project"
     });
   }
 };
 
-
-// ==========================================
-// PUBLIC SUMMARY
-// ==========================================
-
-const publicSummary = async (req, res) => {
+const getPublicSummary = async (req, res) => {
   try {
+    const projects = await Project.find({
+      isPublic: {
+        $ne: false
+      }
+    }).select(
+      "status riskLevel budget progress province"
+    );
 
-    const totalProjects =
-      await Project.countDocuments({
-        isPublished: true
-      });
+    const totalProjects = projects.length;
 
-    const activeProjects =
-      await Project.countDocuments({
-        isPublished: true,
-        status: "Active"
-      });
+    const activeProjects = projects.filter(
+      (project) =>
+        project.status === "Active"
+    ).length;
 
-    const delayedProjects =
-      await Project.countDocuments({
-        isPublished: true,
-        status: "Delayed"
-      });
+    const delayedProjects = projects.filter(
+      (project) =>
+        project.status === "Delayed"
+    ).length;
 
-    const completedProjects =
-      await Project.countDocuments({
-        isPublished: true,
-        status: "Completed"
-      });
+    const completedProjects = projects.filter(
+      (project) =>
+        project.status === "Completed"
+    ).length;
 
-    const criticalProjects =
-      await Project.countDocuments({
-        isPublished: true,
-        status: "Critical"
-      });
+    const criticalProjects = projects.filter(
+      (project) =>
+        project.status === "Critical" ||
+        project.riskLevel === "Critical"
+    ).length;
 
-    const complaintCount =
-      await Complaint.countDocuments();
+    const totalBudget = projects.reduce(
+      (sum, project) =>
+        sum + Number(project.budget || 0),
+      0
+    );
 
+    const averageProgress =
+      totalProjects > 0
+        ? projects.reduce(
+            (sum, project) =>
+              sum +
+              Number(project.progress || 0),
+            0
+          ) / totalProjects
+        : 0;
+
+    const provinceMap = {};
+
+    projects.forEach((project) => {
+      const province =
+        project.province || "Unknown";
+
+      if (!provinceMap[province]) {
+        provinceMap[province] = {
+          province,
+          projects: 0,
+          budget: 0,
+          progress: 0
+        };
+      }
+
+      provinceMap[province].projects += 1;
+
+      provinceMap[province].budget +=
+        Number(project.budget || 0);
+
+      provinceMap[province].progress +=
+        Number(project.progress || 0);
+    });
+
+    const provinces = Object.values(
+      provinceMap
+    ).map((item) => ({
+      ...item,
+      averageProgress:
+        item.projects > 0
+          ? Number(
+              (
+                item.progress /
+                item.projects
+              ).toFixed(2)
+            )
+          : 0
+    }));
 
     res.json({
       success: true,
-
       summary: {
         totalProjects,
         activeProjects,
         delayedProjects,
         completedProjects,
         criticalProjects,
-        complaintCount
+        totalBudget,
+        averageProgress:
+          Number(averageProgress.toFixed(2)),
+        provinces
       }
     });
-
   } catch (error) {
-
-    console.error(
-      "Public summary error:",
-      error
-    );
+    console.error("Public summary error:", error);
 
     res.status(500).json({
       success: false,
-      message: "Failed to load public summary"
+      message: "Failed to generate public summary"
     });
   }
 };
 
-
 module.exports = {
-  publicProjects,
-  publicProjectDetails,
-  publicSummary
+  getPublicProjects,
+  getPublicProject,
+  getPublicSummary
 };

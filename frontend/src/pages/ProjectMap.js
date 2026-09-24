@@ -18,6 +18,7 @@ import "leaflet/dist/leaflet.css";
 
 import { getProjects } from "../services/api";
 
+
 /* =========================================
    LEAFLET DEFAULT ICON FIX
 ========================================= */
@@ -35,6 +36,7 @@ L.Icon.Default.mergeOptions({
     "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png"
 });
 
+
 /* =========================================
    NEPAL CENTER
 ========================================= */
@@ -43,6 +45,7 @@ const NEPAL_CENTER = [
   28.3949,
   84.124
 ];
+
 
 /* =========================================
    MAP FLY COMPONENT
@@ -94,6 +97,7 @@ function MapController({
 
   return null;
 }
+
 
 /* =========================================
    HELPERS
@@ -162,8 +166,10 @@ const normalizeProject = (item) => {
   };
 };
 
+
 const formatBudget = (budget) => {
-  const value = Number(budget || 0);
+  const value =
+    Number(budget || 0);
 
   if (!value) {
     return "NPR 0";
@@ -193,128 +199,185 @@ const formatBudget = (budget) => {
     );
   }
 
-  return "NPR " + value.toLocaleString();
+  return (
+    "NPR " +
+    value.toLocaleString()
+  );
 };
 
+
 /* =========================================
-   MAIN MAP PAGE
+   MAIN PROJECT MAP
 ========================================= */
 
-const Map = () => {
-  const [projects, setProjects] = useState([]);
+const ProjectMap = () => {
+  const [
+    projects,
+    setProjects
+  ] = useState([]);
 
-  const [loading, setLoading] =
-    useState(true);
+  const [
+    loading,
+    setLoading
+  ] = useState(true);
 
-  const [error, setError] =
-    useState("");
+  const [
+    error,
+    setError
+  ] = useState("");
 
   /* Project search */
-  const [projectSearch, setProjectSearch] =
-    useState("");
+
+  const [
+    projectSearch,
+    setProjectSearch
+  ] = useState("");
 
   /* Location search */
-  const [locationSearch, setLocationSearch] =
-    useState("");
 
-  const [locationResults, setLocationResults] =
-    useState([]);
+  const [
+    locationSearch,
+    setLocationSearch
+  ] = useState("");
 
-  const [locationLoading, setLocationLoading] =
-    useState(false);
+  const [
+    locationResults,
+    setLocationResults
+  ] = useState([]);
 
-  const [locationError, setLocationError] =
-    useState("");
+  const [
+    locationLoading,
+    setLocationLoading
+  ] = useState(false);
 
-  const [searchedLocation, setSearchedLocation] =
-    useState(null);
+  const [
+    locationError,
+    setLocationError
+  ] = useState("");
+
+  const [
+    searchedLocation,
+    setSearchedLocation
+  ] = useState(null);
 
   /* Filters */
-  const [province, setProvince] =
-    useState("All Provinces");
 
-  const [status, setStatus] =
-    useState("All Status");
+  const [
+    province,
+    setProvince
+  ] = useState(
+    "All Provinces"
+  );
 
-  const [risk, setRisk] =
-    useState("All Risk");
+  const [
+    status,
+    setStatus
+  ] = useState(
+    "All Status"
+  );
 
-  const [selectedProject, setSelectedProject] =
-    useState(null);
+  const [
+    risk,
+    setRisk
+  ] = useState(
+    "All Risk"
+  );
 
-  const [refreshing, setRefreshing] =
-    useState(false);
+  const [
+    selectedProject,
+    setSelectedProject
+  ] = useState(null);
+
+  const [
+    refreshing,
+    setRefreshing
+  ] = useState(false);
 
   const searchTimer =
     useRef(null);
 
-    
 
   /* =========================================
      LOAD PROJECTS
   ========================================= */
 
-  const loadProjects = async () => {
-    try {
-      setError("");
+  const loadProjects =
+    async () => {
+      try {
+        setError("");
 
-      if (!refreshing) {
-        setLoading(true);
+        if (!refreshing) {
+          setLoading(true);
+        }
+
+        const data =
+          await getProjects();
+
+        let list = [];
+
+        if (Array.isArray(data)) {
+          list = data;
+        } else if (
+          Array.isArray(
+            data.projects
+          )
+        ) {
+          list =
+            data.projects;
+        } else if (
+          Array.isArray(
+            data.data
+          )
+        ) {
+          list =
+            data.data;
+        }
+
+        setProjects(
+          list.map(
+            normalizeProject
+          )
+        );
+      } catch (err) {
+        console.error(
+          "Map projects error:",
+          err
+        );
+
+        setError(
+          err.message ||
+          "Unable to load projects"
+        );
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
       }
-
-      const data =
-        await getProjects();
-
-      let list = [];
-
-      if (Array.isArray(data)) {
-        list = data;
-      } else if (Array.isArray(data.projects)) {
-        list = data.projects;
-      } else if (Array.isArray(data.data)) {
-        list = data.data;
-      }
-
-      setProjects(
-        list.map(normalizeProject)
-      );
-    } catch (err) {
-      console.error(
-        "Map projects error:",
-        err
-      );
-
-      setError(
-        err.message ||
-        "Unable to load projects"
-      );
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+    };
 
   useEffect(() => {
     loadProjects();
   }, []);
 
+
   /* =========================================
      PROVINCES
   ========================================= */
 
-  const provinces = useMemo(() => {
-    const values =
-      projects
-        .map(
-          (project) =>
-            project.province
-        )
-        .filter(Boolean);
+  const provinces =
+    useMemo(() => {
+      const values =
+        projects
+          .map(
+            (project) =>
+              project.province
+          )
+          .filter(Boolean);
 
-    return [
-      ...new Set(values)
-    ];
-  }, [projects]);
+      return [
+        ...new Set(values)
+      ];
+    }, [projects]);
+
 
   /* =========================================
      FILTER PROJECTS
@@ -354,12 +417,15 @@ const Map = () => {
               province;
 
           const matchesStatus =
-            status === "All Status" ||
-            project.status === status;
+            status ===
+              "All Status" ||
+            project.status ===
+              status;
 
           const matchesRisk =
             risk === "All Risk" ||
-            project.riskLevel === risk;
+            project.riskLevel ===
+              risk;
 
           return (
             matchesSearch &&
@@ -377,6 +443,7 @@ const Map = () => {
       risk
     ]);
 
+
   /* =========================================
      GPS PROJECTS
   ========================================= */
@@ -385,12 +452,17 @@ const Map = () => {
     useMemo(() => {
       return filteredProjects.filter(
         (project) =>
-          project.latitude !== null &&
-          project.longitude !== null &&
-          project.latitude !== "" &&
-          project.longitude !== ""
+          project.latitude !==
+            null &&
+          project.longitude !==
+            null &&
+          project.latitude !==
+            "" &&
+          project.longitude !==
+            ""
       );
     }, [filteredProjects]);
+
 
   /* =========================================
      STATISTICS
@@ -402,17 +474,23 @@ const Map = () => {
   const gpsProjects =
     projects.filter(
       (project) =>
-        project.latitude !== null &&
-        project.longitude !== null &&
-        project.latitude !== "" &&
-        project.longitude !== ""
+        project.latitude !==
+          null &&
+        project.longitude !==
+          null &&
+        project.latitude !==
+          "" &&
+        project.longitude !==
+          ""
     ).length;
 
   const criticalProjects =
     projects.filter(
       (project) =>
-        project.riskLevel === "Critical"
+        project.riskLevel ===
+        "Critical"
     ).length;
+
 
   /* =========================================
      CLEAR FILTERS
@@ -420,129 +498,175 @@ const Map = () => {
 
   const clearFilters = () => {
     setProjectSearch("");
+
     setLocationSearch("");
-    setProvince("All Provinces");
-    setStatus("All Status");
-    setRisk("All Risk");
+
+    setProvince(
+      "All Provinces"
+    );
+
+    setStatus(
+      "All Status"
+    );
+
+    setRisk(
+      "All Risk"
+    );
 
     setLocationResults([]);
+
     setLocationError("");
-    setSearchedLocation(null);
-    setSelectedProject(null);
+
+    setSearchedLocation(
+      null
+    );
+
+    setSelectedProject(
+      null
+    );
   };
+
 
   /* =========================================
      LOCATION SEARCH
   ========================================= */
 
-  const searchLocation = async (
-    event
-  ) => {
-    if (event) {
-      event.preventDefault();
-    }
-
-    const query =
-      locationSearch.trim();
-
-    if (!query) {
-      setLocationResults([]);
-      setLocationError(
-        "Type a location to search."
-      );
-      return;
-    }
-
-    try {
-      setLocationLoading(true);
-      setLocationError("");
-
-      const url =
-        "https://nominatim.openstreetmap.org/search" +
-        "?format=json" +
-        "&limit=5" +
-        "&countrycodes=np" +
-        "&q=" +
-        encodeURIComponent(query);
-
-      const response =
-        await fetch(url, {
-          headers: {
-            Accept:
-              "application/json"
-          }
-        });
-
-      if (!response.ok) {
-        throw new Error(
-          "Location search failed"
-        );
+  const searchLocation =
+    async (event) => {
+      if (event) {
+        event.preventDefault();
       }
 
-      const data =
-        await response.json();
+      const query =
+        locationSearch.trim();
 
-      setLocationResults(data);
+      if (!query) {
+        setLocationResults([]);
 
-      if (!data.length) {
         setLocationError(
-          "No Nepal location found."
+          "Type a location to search."
+        );
+
+        return;
+      }
+
+      try {
+        setLocationLoading(
+          true
+        );
+
+        setLocationError("");
+
+        const url =
+          "https://nominatim.openstreetmap.org/search" +
+          "?format=json" +
+          "&limit=5" +
+          "&countrycodes=np" +
+          "&q=" +
+          encodeURIComponent(
+            query
+          );
+
+        const response =
+          await fetch(
+            url,
+            {
+              headers: {
+                Accept:
+                  "application/json"
+              }
+            }
+          );
+
+        if (!response.ok) {
+          throw new Error(
+            "Location search failed"
+          );
+        }
+
+        const data =
+          await response.json();
+
+        setLocationResults(
+          data
+        );
+
+        if (!data.length) {
+          setLocationError(
+            "No Nepal location found."
+          );
+        }
+      } catch (err) {
+        console.error(
+          "Location search:",
+          err
+        );
+
+        setLocationError(
+          "Unable to search location."
+        );
+      } finally {
+        setLocationLoading(
+          false
         );
       }
-    } catch (err) {
-      console.error(
-        "Location search:",
-        err
-      );
+    };
 
-      setLocationError(
-        "Unable to search location."
-      );
-    } finally {
-      setLocationLoading(false);
-    }
-  };
 
   /* =========================================
      SELECT LOCATION
   ========================================= */
 
-  const selectLocation = (
-    location
-  ) => {
-    setSearchedLocation({
-      lat: location.lat,
-      lon: location.lon,
-      displayName:
-        location.display_name
-    });
+  const selectLocation =
+    (location) => {
+      setSearchedLocation({
+        lat:
+          location.lat,
 
-    setLocationResults([]);
-    setLocationSearch(
-      location.display_name
-    );
-  };
+        lon:
+          location.lon,
+
+        displayName:
+          location.display_name
+      });
+
+      setLocationResults([]);
+
+      setLocationSearch(
+        location.display_name
+      );
+    };
+
 
   /* =========================================
      PROJECT SELECT
   ========================================= */
 
-  const selectProject = (
-    project
-  ) => {
-    setSelectedProject(project);
-    setSearchedLocation(null);
-  };
+  const selectProject =
+    (project) => {
+      setSelectedProject(
+        project
+      );
+
+      setSearchedLocation(
+        null
+      );
+    };
+
 
   /* =========================================
      REFRESH
   ========================================= */
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
+  const handleRefresh =
+    async () => {
+      setRefreshing(
+        true
+      );
 
-    await loadProjects();
-  };
+      await loadProjects();
+    };
+
 
   /* =========================================
      SEARCH PROJECT LIVE
@@ -569,21 +693,36 @@ const Map = () => {
     };
   }, [projectSearch]);
 
+
   /* =========================================
      STATUS CLASS
   ========================================= */
 
-  const statusClass = (value) => {
-    return String(value || "")
-      .toLowerCase()
-      .replace(/\s+/g, "-");
-  };
+  const statusClass =
+    (value) => {
+      return String(
+        value || ""
+      )
+        .toLowerCase()
+        .replace(
+          /\s+/g,
+          "-"
+        );
+    };
 
-  const riskClass = (value) => {
-    return String(value || "")
-      .toLowerCase()
-      .replace(/\s+/g, "-");
-  };
+
+  const riskClass =
+    (value) => {
+      return String(
+        value || ""
+      )
+        .toLowerCase()
+        .replace(
+          /\s+/g,
+          "-"
+        );
+    };
+
 
   /* =========================================
      RENDER
@@ -597,10 +736,12 @@ const Map = () => {
     },
 
     /* PAGE HEADER */
+
     React.createElement(
       "div",
       {
-        className: "page-header"
+        className:
+          "page-header"
       },
 
       React.createElement(
@@ -634,11 +775,14 @@ const Map = () => {
         {
           className:
             "primary-button",
+
           onClick:
             handleRefresh,
+
           disabled:
             refreshing
         },
+
         refreshing
           ? "Refreshing..."
           : "↻ Refresh Map"
@@ -646,6 +790,7 @@ const Map = () => {
     ),
 
     /* STATS */
+
     React.createElement(
       "div",
       {
@@ -659,6 +804,7 @@ const Map = () => {
           className:
             "map-stat-card"
         },
+
         React.createElement(
           "div",
           {
@@ -667,14 +813,17 @@ const Map = () => {
           },
           "◉"
         ),
+
         React.createElement(
           "div",
           null,
+
           React.createElement(
             "strong",
             null,
             totalProjects
           ),
+
           React.createElement(
             "span",
             null,
@@ -689,6 +838,7 @@ const Map = () => {
           className:
             "map-stat-card"
         },
+
         React.createElement(
           "div",
           {
@@ -697,14 +847,17 @@ const Map = () => {
           },
           "⌖"
         ),
+
         React.createElement(
           "div",
           null,
+
           React.createElement(
             "strong",
             null,
             gpsProjects
           ),
+
           React.createElement(
             "span",
             null,
@@ -719,6 +872,7 @@ const Map = () => {
           className:
             "map-stat-card"
         },
+
         React.createElement(
           "div",
           {
@@ -727,14 +881,17 @@ const Map = () => {
           },
           "⚠"
         ),
+
         React.createElement(
           "div",
           null,
+
           React.createElement(
             "strong",
             null,
             criticalProjects
           ),
+
           React.createElement(
             "span",
             null,
@@ -749,6 +906,7 @@ const Map = () => {
           className:
             "map-stat-card"
         },
+
         React.createElement(
           "div",
           {
@@ -757,14 +915,17 @@ const Map = () => {
           },
           "◎"
         ),
+
         React.createElement(
           "div",
           null,
+
           React.createElement(
             "strong",
             null,
             filteredProjects.length
           ),
+
           React.createElement(
             "span",
             null,
@@ -775,6 +936,7 @@ const Map = () => {
     ),
 
     /* FILTER AREA */
+
     React.createElement(
       "div",
       {
@@ -788,14 +950,17 @@ const Map = () => {
           className:
             "map-filter-heading"
         },
+
         React.createElement(
           "div",
           null,
+
           React.createElement(
             "h2",
             null,
             "Map Search & Filters"
           ),
+
           React.createElement(
             "p",
             null,
@@ -808,6 +973,7 @@ const Map = () => {
           {
             className:
               "clear-filter-button",
+
             onClick:
               clearFilters
           },
@@ -816,6 +982,7 @@ const Map = () => {
       ),
 
       /* PROJECT SEARCH */
+
       React.createElement(
         "div",
         {
@@ -852,21 +1019,27 @@ const Map = () => {
             React.createElement(
               "input",
               {
-                type: "text",
+                type:
+                  "text",
+
                 placeholder:
                   "Project name, ID, district...",
+
                 value:
                   projectSearch,
-                onChange: (event) =>
-                  setProjectSearch(
-                    event.target.value
-                  )
+
+                onChange:
+                  (event) =>
+                    setProjectSearch(
+                      event.target.value
+                    )
               }
             )
           )
         ),
 
         /* LOCATION SEARCH */
+
         React.createElement(
           "div",
           {
@@ -885,6 +1058,7 @@ const Map = () => {
             {
               className:
                 "map-location-search",
+
               onSubmit:
                 searchLocation
             },
@@ -892,25 +1066,33 @@ const Map = () => {
             React.createElement(
               "input",
               {
-                type: "text",
+                type:
+                  "text",
+
                 placeholder:
                   "Kathmandu, Pokhara, Biratnagar...",
+
                 value:
                   locationSearch,
-                onChange: (event) =>
-                  setLocationSearch(
-                    event.target.value
-                  )
+
+                onChange:
+                  (event) =>
+                    setLocationSearch(
+                      event.target.value
+                    )
               }
             ),
 
             React.createElement(
               "button",
               {
-                type: "submit",
+                type:
+                  "submit",
+
                 disabled:
                   locationLoading
               },
+
               locationLoading
                 ? "..."
                 : "Search"
@@ -919,6 +1101,7 @@ const Map = () => {
         ),
 
         /* PROVINCE */
+
         React.createElement(
           "div",
           {
@@ -937,10 +1120,12 @@ const Map = () => {
             {
               value:
                 province,
-              onChange: (event) =>
-                setProvince(
-                  event.target.value
-                )
+
+              onChange:
+                (event) =>
+                  setProvince(
+                    event.target.value
+                  )
             },
 
             React.createElement(
@@ -954,8 +1139,11 @@ const Map = () => {
                 React.createElement(
                   "option",
                   {
-                    key: item,
-                    value: item
+                    key:
+                      item,
+
+                    value:
+                      item
                   },
                   item
                 )
@@ -964,6 +1152,7 @@ const Map = () => {
         ),
 
         /* STATUS */
+
         React.createElement(
           "div",
           {
@@ -982,10 +1171,12 @@ const Map = () => {
             {
               value:
                 status,
-              onChange: (event) =>
-                setStatus(
-                  event.target.value
-                )
+
+              onChange:
+                (event) =>
+                  setStatus(
+                    event.target.value
+                  )
             },
 
             React.createElement(
@@ -1021,6 +1212,7 @@ const Map = () => {
         ),
 
         /* RISK */
+
         React.createElement(
           "div",
           {
@@ -1039,10 +1231,12 @@ const Map = () => {
             {
               value:
                 risk,
-              onChange: (event) =>
-                setRisk(
-                  event.target.value
-                )
+
+              onChange:
+                (event) =>
+                  setRisk(
+                    event.target.value
+                  )
             },
 
             React.createElement(
@@ -1079,6 +1273,7 @@ const Map = () => {
       ),
 
       /* LOCATION RESULTS */
+
       locationResults.length > 0 &&
         React.createElement(
           "div",
@@ -1097,19 +1292,25 @@ const Map = () => {
           ),
 
           locationResults.map(
-            (location, index) =>
+            (
+              location,
+              index
+            ) =>
               React.createElement(
                 "button",
                 {
                   key:
                     location.place_id ||
                     index,
+
                   className:
                     "location-result-item",
-                  onClick: () =>
-                    selectLocation(
-                      location
-                    )
+
+                  onClick:
+                    () =>
+                      selectLocation(
+                        location
+                      )
                 },
 
                 React.createElement(
@@ -1121,11 +1322,13 @@ const Map = () => {
                 React.createElement(
                   "div",
                   null,
+
                   React.createElement(
                     "strong",
                     null,
                     location.display_name
                   ),
+
                   React.createElement(
                     "small",
                     null,
@@ -1163,11 +1366,13 @@ const Map = () => {
           React.createElement(
             "div",
             null,
+
             React.createElement(
               "strong",
               null,
               "Location selected"
             ),
+
             React.createElement(
               "small",
               null,
@@ -1178,12 +1383,16 @@ const Map = () => {
           React.createElement(
             "button",
             {
-              onClick: () => {
-                setSearchedLocation(
-                  null
-                );
-                setLocationSearch("");
-              }
+              onClick:
+                () => {
+                  setSearchedLocation(
+                    null
+                  );
+
+                  setLocationSearch(
+                    ""
+                  );
+                }
             },
             "×"
           )
@@ -1191,6 +1400,7 @@ const Map = () => {
     ),
 
     /* ERROR */
+
     error &&
       React.createElement(
         "div",
@@ -1198,11 +1408,13 @@ const Map = () => {
           className:
             "page-error"
         },
+
         React.createElement(
           "strong",
           null,
           "Unable to load map data"
         ),
+
         React.createElement(
           "span",
           null,
@@ -1211,6 +1423,7 @@ const Map = () => {
       ),
 
     /* MAP + PROJECT LIST */
+
     React.createElement(
       "div",
       {
@@ -1219,6 +1432,7 @@ const Map = () => {
       },
 
       /* MAP */
+
       React.createElement(
         "div",
         {
@@ -1236,11 +1450,13 @@ const Map = () => {
           React.createElement(
             "div",
             null,
+
             React.createElement(
               "h2",
               null,
               "Nepal Project Map"
             ),
+
             React.createElement(
               "p",
               null,
@@ -1280,8 +1496,13 @@ const Map = () => {
                 {
                   center:
                     NEPAL_CENTER,
-                  zoom: 7,
-                  scrollWheelZoom: true,
+
+                  zoom:
+                    7,
+
+                  scrollWheelZoom:
+                    true,
+
                   className:
                     "leaflet-map"
                 },
@@ -1290,7 +1511,8 @@ const Map = () => {
                   TileLayer,
                   {
                     attribution:
-                      '&copy; OpenStreetMap contributors',
+                      "&copy; OpenStreetMap contributors",
+
                     url:
                       "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   }
@@ -1301,6 +1523,7 @@ const Map = () => {
                   {
                     selectedProject:
                       selectedProject,
+
                     searchedLocation:
                       searchedLocation
                   }
@@ -1313,19 +1536,23 @@ const Map = () => {
                       {
                         key:
                           project.id,
+
                         position: [
                           Number(
                             project.latitude
                           ),
+
                           Number(
                             project.longitude
                           )
                         ],
+
                         eventHandlers: {
-                          click: () =>
-                            setSelectedProject(
-                              project
-                            )
+                          click:
+                            () =>
+                              setSelectedProject(
+                                project
+                              )
                         }
                       },
 
@@ -1389,6 +1616,7 @@ const Map = () => {
       ),
 
       /* PROJECT LIST */
+
       React.createElement(
         "div",
         {
@@ -1406,11 +1634,13 @@ const Map = () => {
           React.createElement(
             "div",
             null,
+
             React.createElement(
               "h2",
               null,
               "Project Registry"
             ),
+
             React.createElement(
               "p",
               null,
@@ -1428,28 +1658,33 @@ const Map = () => {
           },
 
           filteredProjects.length === 0
+
             ? React.createElement(
                 "div",
                 {
                   className:
                     "map-empty-state"
                 },
+
                 React.createElement(
                   "div",
                   null,
                   "⌕"
                 ),
+
                 React.createElement(
                   "h3",
                   null,
                   "No projects found"
                 ),
+
                 React.createElement(
                   "p",
                   null,
                   "Try changing your search or filters."
                 )
               )
+
             : filteredProjects.map(
                 (project) =>
                   React.createElement(
@@ -1457,17 +1692,22 @@ const Map = () => {
                     {
                       key:
                         project.id,
+
                       className:
                         "mapped-project-item" +
-                        (selectedProject &&
-                        selectedProject.id ===
-                          project.id
-                          ? " selected"
-                          : ""),
-                      onClick: () =>
-                        selectProject(
-                          project
-                        )
+                        (
+                          selectedProject &&
+                          selectedProject.id ===
+                            project.id
+                            ? " selected"
+                            : ""
+                        ),
+
+                      onClick:
+                        () =>
+                          selectProject(
+                            project
+                          )
                     },
 
                     React.createElement(
@@ -1513,6 +1753,7 @@ const Map = () => {
                         className:
                           "mapped-project-location"
                       },
+
                       project.district +
                         ", " +
                         project.province
@@ -1564,4 +1805,4 @@ const Map = () => {
   );
 };
 
-export default Map;
+export default ProjectMap;

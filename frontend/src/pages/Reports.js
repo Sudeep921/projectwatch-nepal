@@ -7,378 +7,201 @@ import {
   getProjectReport
 } from "../services/api";
 
+const h = React.createElement;
+
 const Reports = () => {
-  const [report, setReport] =
-    useState(null);
+  const [
+    report,
+    setReport
+  ] = useState(null);
 
-  const [loading, setLoading] =
-    useState(true);
+  const [
+    loading,
+    setLoading
+  ] = useState(true);
 
-  const [error, setError] =
-    useState("");
+  const load =
+    async () => {
+      try {
+        setLoading(true);
 
-  const loadReport = async () => {
-    try {
-      setLoading(true);
-      setError("");
+        const data =
+          await getProjectReport();
 
-      const response =
-        await getProjectReport();
-
-      setReport(
-        response?.report ||
-          response?.data ||
-          response ||
-          null
-      );
-    } catch (err) {
-      console.error(
-        "Project report loading failed:",
-        err
-      );
-
-      setError(
-        err.message ||
-          "Unable to load project report."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+        setReport(
+          data.report ||
+            data.data ||
+            data
+        );
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
   useEffect(() => {
-    loadReport();
+    load();
   }, []);
 
-  const getValue = (
-    object,
-    keys,
-    fallback = 0
-  ) => {
-    if (!object) {
-      return fallback;
-    }
-
-    for (const key of keys) {
-      if (
-        object[key] !==
-        undefined
-      ) {
-        return object[key];
-      }
-    }
-
-    return fallback;
-  };
-
-  const total =
-    getValue(
-      report,
-      [
-        "totalProjects",
-        "total"
-      ]
-    );
-
-  const active =
-    getValue(
-      report,
-      [
-        "activeProjects",
-        "active"
-      ]
-    );
-
-  const delayed =
-    getValue(
-      report,
-      [
-        "delayedProjects",
-        "delayed"
-      ]
-    );
-
-  const completed =
-    getValue(
-      report,
-      [
-        "completedProjects",
-        "completed"
-      ]
-    );
-
-  const critical =
-    getValue(
-      report,
-      [
-        "criticalProjects",
-        "critical"
-      ]
-    );
-
-  const budget =
-    getValue(
-      report,
-      [
-        "totalBudget",
-        "budget"
-      ]
-    );
-
-  return React.createElement(
-    "div",
-    {
-      className:
-        "page-container"
-    },
-
-    React.createElement(
+  if (loading) {
+    return h(
       "div",
       {
         className:
-          "page-header"
+          "page-loading"
+      },
+      "Generating report..."
+    );
+  }
+
+  const r =
+    report || {};
+
+  return h(
+    "div",
+    {
+      className:
+        "page reports-page"
+    },
+
+    h(
+      "div",
+      {
+        className:
+          "page-heading"
       },
 
-      React.createElement(
+      h(
         "div",
         null,
 
-        React.createElement(
+        h(
           "span",
           {
             className:
-              "page-eyebrow"
+              "eyebrow"
           },
           "ANALYTICS & REPORTING"
         ),
 
-        React.createElement(
+        h(
           "h1",
           null,
           "Project Reports"
         ),
 
-        React.createElement(
+        h(
           "p",
           null,
           "Government project performance and monitoring summary."
         )
       ),
 
-      React.createElement(
+      h(
         "button",
         {
           className:
-            "primary-button",
-          onClick:
-            loadReport
+            "secondary-button",
+          onClick: load
         },
         "↻ Refresh Report"
       )
     ),
 
-    loading
-      ? React.createElement(
-          "div",
-          {
-            className:
-              "page-loading"
-          },
-          "Generating project report..."
-        )
-      : error
-      ? React.createElement(
-          "div",
-          {
-            className:
-              "form-error"
-          },
-          "⚠ ",
-          error
-        )
-      : React.createElement(
-          React.Fragment,
-          null,
+    h(
+      "div",
+      {
+        className:
+          "report-stat-grid"
+      },
 
-          React.createElement(
+      [
+        [
+          "Total Projects",
+          r.totalProjects
+        ],
+        [
+          "Active Projects",
+          r.activeProjects
+        ],
+        [
+          "Delayed Projects",
+          r.delayedProjects
+        ],
+        [
+          "Completed Projects",
+          r.completedProjects
+        ],
+        [
+          "Critical Projects",
+          r.criticalProjects
+        ],
+        [
+          "Total Budget",
+          `NPR ${Number(
+            r.totalBudget || 0
+          ).toLocaleString()}`
+        ]
+      ].map(
+        ([label, value]) =>
+          h(
             "div",
             {
+              key: label,
               className:
-                "report-stat-grid"
+                "report-stat-card"
             },
 
-            React.createElement(
-              "div",
-              {
-                className:
-                  "report-stat-card"
-              },
-
-              React.createElement(
-                "span",
-                null,
-                "Total Projects"
-              ),
-
-              React.createElement(
-                "strong",
-                null,
-                total
-              )
-            ),
-
-            React.createElement(
-              "div",
-              {
-                className:
-                  "report-stat-card"
-              },
-
-              React.createElement(
-                "span",
-                null,
-                "Active Projects"
-              ),
-
-              React.createElement(
-                "strong",
-                null,
-                active
-              )
-            ),
-
-            React.createElement(
-              "div",
-              {
-                className:
-                  "report-stat-card"
-              },
-
-              React.createElement(
-                "span",
-                null,
-                "Delayed Projects"
-              ),
-
-              React.createElement(
-                "strong",
-                null,
-                delayed
-              )
-            ),
-
-            React.createElement(
-              "div",
-              {
-                className:
-                  "report-stat-card"
-              },
-
-              React.createElement(
-                "span",
-                null,
-                "Completed Projects"
-              ),
-
-              React.createElement(
-                "strong",
-                null,
-                completed
-              )
-            ),
-
-            React.createElement(
-              "div",
-              {
-                className:
-                  "report-stat-card"
-              },
-
-              React.createElement(
-                "span",
-                null,
-                "Critical Projects"
-              ),
-
-              React.createElement(
-                "strong",
-                null,
-                critical
-              )
-            ),
-
-            React.createElement(
-              "div",
-              {
-                className:
-                  "report-stat-card"
-              },
-
-              React.createElement(
-                "span",
-                null,
-                "Total Budget"
-              ),
-
-              React.createElement(
-                "strong",
-                null,
-                `NPR ${Number(
-                  budget
-                ).toLocaleString()}`
-              )
-            )
-          ),
-
-          React.createElement(
-            "div",
-            {
-              className:
-                "report-summary-card"
-            },
-
-            React.createElement(
+            h(
               "span",
-              {
-                className:
-                  "page-eyebrow"
-              },
-              "SYSTEM SUMMARY"
-            ),
-
-            React.createElement(
-              "h2",
               null,
-              "Project Monitoring Overview"
+              label
             ),
 
-            React.createElement(
-              "p",
+            h(
+              "strong",
               null,
-              "This report summarizes the current government project monitoring data available in ProjectWatch Nepal."
-            ),
-
-            React.createElement(
-              "div",
-              {
-                className:
-                  "report-summary-row"
-              },
-
-              React.createElement(
-                "span",
-                null,
-                "Report generated"
-              ),
-
-              React.createElement(
-                "strong",
-                null,
-                new Date().toLocaleString()
-              )
+              value || 0
             )
           )
-        )
+      )
+    ),
+
+    h(
+      "div",
+      {
+        className:
+          "report-overview"
+      },
+
+      h(
+        "span",
+        {
+          className:
+            "eyebrow"
+        },
+        "SYSTEM SUMMARY"
+      ),
+
+      h(
+        "h2",
+        null,
+        "Project Monitoring Overview"
+      ),
+
+      h(
+        "p",
+        null,
+        "This report summarizes the current government project monitoring data available in ProjectWatch Nepal."
+      ),
+
+      h(
+        "small",
+        null,
+        `Report generated ${new Date().toLocaleString()}`
+      )
+    )
   );
 };
 

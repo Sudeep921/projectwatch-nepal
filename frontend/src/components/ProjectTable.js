@@ -1,306 +1,179 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+
+import {
+  useNavigate
+} from "react-router-dom";
+
+const h = React.createElement;
 
 const ProjectTable = ({
   projects = []
 }) => {
-  const navigate = useNavigate();
-
-  const getStatusClass = (value) => {
-    return String(value || "")
-      .toLowerCase()
-      .replace(/\s+/g, "-");
-  };
-
-  const openProject = (project) => {
-    const id =
-      project._id || project.id;
-
-    if (id) {
-      navigate(`/projects/${id}`);
-    }
-  };
+  const navigate =
+    useNavigate();
 
   if (!projects.length) {
-    return React.createElement(
+    return h(
       "div",
       {
-        className: "empty-state"
+        className:
+          "empty-state"
       },
-
-      React.createElement(
-        "div",
-        {
-          className: "empty-state-icon"
-        },
-        "▤"
-      ),
-
-      React.createElement(
-        "h3",
-        null,
-        "No projects found"
-      ),
-
-      React.createElement(
-        "p",
-        null,
-        "There are no projects matching the current filters."
-      )
+      "No projects found."
     );
   }
 
-  return React.createElement(
+  return h(
     "div",
     {
-      className: "project-table-wrapper"
+      className:
+        "project-table-wrapper"
     },
 
-    React.createElement(
+    h(
       "table",
       {
-        className: "project-table"
+        className:
+          "project-table"
       },
 
-      React.createElement(
+      h(
         "thead",
         null,
 
-        React.createElement(
+        h(
           "tr",
           null,
 
-          React.createElement(
+          h(
             "th",
             null,
-            "PROJECT"
+            "Project"
           ),
 
-          React.createElement(
+          h(
             "th",
             null,
-            "LOCATION"
+            "Location"
           ),
 
-          React.createElement(
+          h(
             "th",
             null,
-            "BUDGET"
+            "Budget"
           ),
 
-          React.createElement(
+          h(
             "th",
             null,
-            "PROGRESS"
+            "Progress"
           ),
 
-          React.createElement(
+          h(
             "th",
             null,
-            "STATUS"
+            "Status"
           ),
 
-          React.createElement(
+          h(
             "th",
             null,
-            "RISK"
+            "Risk"
           ),
 
-          React.createElement(
+          h(
             "th",
             null,
-            "ACTION"
+            "Action"
           )
         )
       ),
 
-      React.createElement(
+      h(
         "tbody",
         null,
 
-        projects.map((project) => {
-          const progress =
-            Number(
-              project.progress || 0
-            );
+        projects.map(
+          (p) =>
+            h(
+              "tr",
+              {
+                key: p._id
+              },
 
-          const status =
-            project.status ||
-            "Active";
+              h(
+                "td",
+                null,
 
-          const risk =
-            project.riskLevel ||
-            "Low";
-
-          return React.createElement(
-            "tr",
-            {
-              key:
-                project._id ||
-                project.id ||
-                project.name
-            },
-
-            React.createElement(
-              "td",
-              null,
-
-              React.createElement(
-                "div",
-                {
-                  className:
-                    "table-project-name"
-                },
-
-                React.createElement(
+                h(
                   "strong",
                   null,
-                  project.name ||
-                    "Unnamed Project"
+                  p.name
                 ),
 
-                React.createElement(
-                  "span",
+                h(
+                  "small",
                   null,
-                  project.projectId ||
-                    project.code ||
-                    project._id ||
-                    "N/A"
+                  p.projectCode ||
+                    "-"
                 )
-              )
-            ),
+              ),
 
-            React.createElement(
-              "td",
-              null,
+              h(
+                "td",
+                null,
+                `${p.district || "-"}, ${
+                  p.province || "-"
+                }`
+              ),
 
-              React.createElement(
-                "div",
-                {
-                  className:
-                    "table-location"
-                },
+              h(
+                "td",
+                null,
+                `NPR ${Number(
+                  p.budget || 0
+                ).toLocaleString()}`
+              ),
 
-                project.district ||
-                  "N/A",
+              h(
+                "td",
+                null,
+                `${p.progress || 0}%`
+              ),
 
-                project.province
-                  ? React.createElement(
-                      "small",
-                      null,
-                      project.province
-                    )
-                  : null
-              )
-            ),
+              h(
+                "td",
+                null,
+                p.status ||
+                  "-"
+              ),
 
-            React.createElement(
-              "td",
-              null,
-              project.budget ||
-                "N/A"
-            ),
+              h(
+                "td",
+                null,
+                p.riskLevel ||
+                  "-"
+              ),
 
-            React.createElement(
-              "td",
-              null,
+              h(
+                "td",
+                null,
 
-              React.createElement(
-                "div",
-                {
-                  className:
-                    "table-progress"
-                },
-
-                React.createElement(
-                  "div",
+                h(
+                  "button",
                   {
                     className:
-                      "table-progress-top"
+                      "table-view-button",
+                    onClick: () =>
+                      navigate(
+                        `/admin/projects/${p._id}`
+                      )
                   },
-
-                  React.createElement(
-                    "span",
-                    null,
-                    `${progress}%`
-                  )
-                ),
-
-                React.createElement(
-                  "div",
-                  {
-                    className:
-                      "table-progress-bar"
-                  },
-
-                  React.createElement(
-                    "div",
-                    {
-                      className:
-                        "table-progress-fill",
-                      style: {
-                        width: `${Math.min(
-                          Math.max(
-                            progress,
-                            0
-                          ),
-                          100
-                        )}%`
-                      }
-                    }
-                  )
+                  "View"
                 )
-              )
-            ),
-
-            React.createElement(
-              "td",
-              null,
-
-              React.createElement(
-                "span",
-                {
-                  className: `status-badge ${getStatusClass(
-                    status
-                  )}`
-                },
-                status
-              )
-            ),
-
-            React.createElement(
-              "td",
-              null,
-
-              React.createElement(
-                "span",
-                {
-                  className: `risk-badge ${getStatusClass(
-                    risk
-                  )}`
-                },
-                risk
-              )
-            ),
-
-            React.createElement(
-              "td",
-              null,
-
-              React.createElement(
-                "button",
-                {
-                  type: "button",
-                  className:
-                    "table-action-button",
-                  onClick: () =>
-                    openProject(project)
-                },
-                "View"
               )
             )
-          );
-        })
+        )
       )
     )
   );

@@ -12,15 +12,21 @@ import {
   logoutUser
 } from "../services/api";
 
-const AuthContext = createContext(null);
+const AuthContext =
+  createContext(null);
 
 export const AuthProvider = ({
   children
 }) => {
-  const [user, setUser] = useState(null);
+  const [
+    user,
+    setUser
+  ] = useState(null);
 
-  const [loading, setLoading] =
-    useState(true);
+  const [
+    loading,
+    setLoading
+  ] = useState(true);
 
   useEffect(() => {
     const token =
@@ -35,21 +41,11 @@ export const AuthProvider = ({
 
     getCurrentUser()
       .then((data) => {
-        if (data && data.user) {
+        if (data.user) {
           setUser(data.user);
-
-          localStorage.setItem(
-            "projectwatch_user",
-            JSON.stringify(data.user)
-          );
         }
       })
-      .catch((error) => {
-        console.error(
-          "Authentication check failed:",
-          error
-        );
-
+      .catch(() => {
         logoutUser();
         setUser(null);
       })
@@ -58,82 +54,84 @@ export const AuthProvider = ({
       });
   }, []);
 
-  const login = async (
-    email,
-    password
-  ) => {
-    const data = await loginUser(
+  const login =
+    async (
       email,
       password
-    );
+    ) => {
+      const data =
+        await loginUser(
+          email,
+          password
+        );
 
-    if (data.token) {
-      localStorage.setItem(
-        "projectwatch_token",
-        data.token
-      );
-    }
+      if (data.token) {
+        localStorage.setItem(
+          "projectwatch_token",
+          data.token
+        );
+      }
 
-    if (data.user) {
-      localStorage.setItem(
-        "projectwatch_user",
-        JSON.stringify(data.user)
-      );
+      if (data.user) {
+        localStorage.setItem(
+          "projectwatch_user",
+          JSON.stringify(
+            data.user
+          )
+        );
 
-      setUser(data.user);
-    }
+        setUser(data.user);
+      }
 
-    return data;
-  };
+      return data;
+    };
 
-  const register = async (
-    userData
-  ) => {
-    const data =
-      await registerUser(userData);
+  const register =
+    async (
+      userData
+    ) => {
+      const data =
+        await registerUser(
+          userData
+        );
 
-    if (data.token) {
-      localStorage.setItem(
-        "projectwatch_token",
-        data.token
-      );
-    }
+      if (data.token) {
+        localStorage.setItem(
+          "projectwatch_token",
+          data.token
+        );
+      }
 
-    if (data.user) {
-      localStorage.setItem(
-        "projectwatch_user",
-        JSON.stringify(data.user)
-      );
+      if (data.user) {
+        setUser(data.user);
+      }
 
-      setUser(data.user);
-    }
-
-    return data;
-  };
+      return data;
+    };
 
   const logout = () => {
     logoutUser();
     setUser(null);
   };
 
-  const contextValue = {
-    user,
-    loading,
-    login,
-    register,
-    logout,
-    isAuthenticated: Boolean(user)
-  };
-
   return React.createElement(
     AuthContext.Provider,
     {
-      value: contextValue
+      value: {
+        user,
+        loading,
+        login,
+        register,
+        logout,
+        isAuthenticated:
+          Boolean(user)
+      }
     },
     children
   );
 };
 
-export const useAuth = () => {
-  return useContext(AuthContext);
-};
+export const useAuth = () =>
+  useContext(
+    AuthContext
+  );
