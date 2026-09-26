@@ -1,6 +1,11 @@
 const Notification =
   require("../models/Notification");
 
+
+// ==========================================
+// GET ALL NOTIFICATIONS
+// ==========================================
+
 const getNotifications =
   async (req, res) => {
     try {
@@ -15,8 +20,12 @@ const getNotifications =
         success: true,
         notifications
       });
+
     } catch (error) {
-      console.error(error);
+      console.error(
+        "Get notifications error:",
+        error
+      );
 
       res.status(500).json({
         success: false,
@@ -25,6 +34,47 @@ const getNotifications =
       });
     }
   };
+
+
+// ==========================================
+// GET MY NOTIFICATIONS
+// ==========================================
+
+const getMyNotifications =
+  async (req, res) => {
+    try {
+      const notifications =
+        await Notification.find({
+          recipient: req.user._id
+        })
+          .sort({
+            isRead: 1,
+            createdAt: -1
+          });
+
+      res.json({
+        success: true,
+        notifications
+      });
+
+    } catch (error) {
+      console.error(
+        "Get my notifications error:",
+        error
+      );
+
+      res.status(500).json({
+        success: false,
+        message:
+          "Failed to load your notifications"
+      });
+    }
+  };
+
+
+// ==========================================
+// CREATE NOTIFICATION
+// ==========================================
 
 const createNotification =
   async (req, res) => {
@@ -38,7 +88,13 @@ const createNotification =
         success: true,
         notification
       });
+
     } catch (error) {
+      console.error(
+        "Create notification error:",
+        error
+      );
+
       res.status(500).json({
         success: false,
         message:
@@ -47,6 +103,11 @@ const createNotification =
     }
   };
 
+
+// ==========================================
+// MARK ONE NOTIFICATION AS READ
+// ==========================================
+
 const markAsRead =
   async (req, res) => {
     try {
@@ -54,7 +115,7 @@ const markAsRead =
         await Notification.findByIdAndUpdate(
           req.params.id,
           {
-            read: true
+            isRead: true
           },
           {
             new: true
@@ -73,7 +134,13 @@ const markAsRead =
         success: true,
         notification
       });
+
     } catch (error) {
+      console.error(
+        "Mark notification read error:",
+        error
+      );
+
       res.status(500).json({
         success: false,
         message:
@@ -82,17 +149,23 @@ const markAsRead =
     }
   };
 
+
+// ==========================================
+// MARK ALL NOTIFICATIONS AS READ
+// ==========================================
+
 const markAllAsRead =
   async (req, res) => {
     try {
       await Notification.updateMany(
         {
-          read: {
+          recipient: req.user._id,
+          isRead: {
             $ne: true
           }
         },
         {
-          read: true
+          isRead: true
         }
       );
 
@@ -101,7 +174,13 @@ const markAllAsRead =
         message:
           "All notifications marked as read"
       });
+
     } catch (error) {
+      console.error(
+        "Mark all notifications read error:",
+        error
+      );
+
       res.status(500).json({
         success: false,
         message:
@@ -110,8 +189,14 @@ const markAllAsRead =
     }
   };
 
+
+// ==========================================
+// EXPORT
+// ==========================================
+
 module.exports = {
   getNotifications,
+  getMyNotifications,
   createNotification,
   markAsRead,
   markAllAsRead

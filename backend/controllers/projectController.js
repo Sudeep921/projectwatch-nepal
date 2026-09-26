@@ -1,7 +1,13 @@
 const Project = require("../models/Project");
 const Alert = require("../models/Alert");
-const { calculateRisk } = require("../services/riskService");
 
+const {
+  calculateRisk
+} = require("../services/riskService");
+
+const {
+  generateProjectCode
+} = require("../utils/projectCodeGenerator");
 
 // ==========================================
 // CREATE PROJECT
@@ -13,19 +19,33 @@ const createProject = async (req, res) => {
       ...req.body
     };
 
+    // Generate project code automatically
+    if (!projectData.projectCode) {
+      projectData.projectCode =
+        await generateProjectCode();
+    }
+
     // Automatic risk calculation
-    const calculatedRisk = calculateRisk(projectData);
+    const calculatedRisk =
+      calculateRisk(projectData);
 
-    projectData.riskLevel = calculatedRisk;
+    projectData.riskLevel =
+      calculatedRisk;
 
-    const project = await Project.create(projectData);
+    const project =
+      await Project.create(projectData);
 
     // Create alert for High/Critical risk
-    if (calculatedRisk === "High" || calculatedRisk === "Critical") {
+    if (
+      calculatedRisk === "High" ||
+      calculatedRisk === "Critical"
+    ) {
       await Alert.create({
         project: project._id,
-        title: `${calculatedRisk} Project Risk`,
-        message: `${project.projectName} has been classified as ${calculatedRisk} risk.`,
+        title:
+          `${calculatedRisk} Project Risk`,
+        message:
+          `${project.projectName} has been classified as ${calculatedRisk} risk.`,
         type: "Critical Risk",
         severity: calculatedRisk
       });
@@ -33,12 +53,16 @@ const createProject = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: "Project created successfully",
+      message:
+        "Project created successfully",
       project
     });
 
   } catch (error) {
-    console.error("Create project error:", error);
+    console.error(
+      "Create project error:",
+      error
+    );
 
     res.status(500).json({
       success: false,
@@ -47,16 +71,21 @@ const createProject = async (req, res) => {
   }
 };
 
-
 // ==========================================
 // GET ALL PROJECTS
 // ==========================================
 
 const getProjects = async (req, res) => {
   try {
-    const projects = await Project.find()
-      .populate("assignedOfficer", "-password")
-      .sort({ createdAt: -1 });
+    const projects =
+      await Project.find()
+        .populate(
+          "assignedOfficer",
+          "-password"
+        )
+        .sort({
+          createdAt: -1
+        });
 
     res.json({
       success: true,
@@ -65,7 +94,10 @@ const getProjects = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Get projects error:", error);
+    console.error(
+      "Get projects error:",
+      error
+    );
 
     res.status(500).json({
       success: false,
@@ -74,20 +106,25 @@ const getProjects = async (req, res) => {
   }
 };
 
-
 // ==========================================
 // GET SINGLE PROJECT
 // ==========================================
 
 const getProject = async (req, res) => {
   try {
-    const project = await Project.findById(req.params.id)
-      .populate("assignedOfficer", "-password");
+    const project =
+      await Project.findById(
+        req.params.id
+      ).populate(
+        "assignedOfficer",
+        "-password"
+      );
 
     if (!project) {
       return res.status(404).json({
         success: false,
-        message: "Project not found"
+        message:
+          "Project not found"
       });
     }
 
@@ -97,7 +134,10 @@ const getProject = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Get project error:", error);
+    console.error(
+      "Get project error:",
+      error
+    );
 
     res.status(500).json({
       success: false,
@@ -106,19 +146,25 @@ const getProject = async (req, res) => {
   }
 };
 
-
 // ==========================================
 // UPDATE PROJECT
 // ==========================================
 
-const updateProject = async (req, res) => {
+const updateProject = async (
+  req,
+  res
+) => {
   try {
-    const oldProject = await Project.findById(req.params.id);
+    const oldProject =
+      await Project.findById(
+        req.params.id
+      );
 
     if (!oldProject) {
       return res.status(404).json({
         success: false,
-        message: "Project not found"
+        message:
+          "Project not found"
       });
     }
 
@@ -131,39 +177,51 @@ const updateProject = async (req, res) => {
     delete updatedData.__v;
 
     // Recalculate risk
-    updatedData.riskLevel = calculateRisk(updatedData);
+    updatedData.riskLevel =
+      calculateRisk(updatedData);
 
-    const project = await Project.findByIdAndUpdate(
-      req.params.id,
-      updatedData,
-      {
-        new: true,
-        runValidators: true
-      }
-    ).populate("assignedOfficer", "-password");
+    const project =
+      await Project.findByIdAndUpdate(
+        req.params.id,
+        updatedData,
+        {
+          new: true,
+          runValidators: true
+        }
+      ).populate(
+        "assignedOfficer",
+        "-password"
+      );
 
-    // Create alert if high/critical
+    // Create alert if High/Critical
     if (
       project.riskLevel === "High" ||
       project.riskLevel === "Critical"
     ) {
       await Alert.create({
         project: project._id,
-        title: `${project.riskLevel} Project Risk`,
-        message: `${project.projectName} is currently classified as ${project.riskLevel} risk.`,
+        title:
+          `${project.riskLevel} Project Risk`,
+        message:
+          `${project.projectName} is currently classified as ${project.riskLevel} risk.`,
         type: "Critical Risk",
-        severity: project.riskLevel
+        severity:
+          project.riskLevel
       });
     }
 
     res.json({
       success: true,
-      message: "Project updated successfully",
+      message:
+        "Project updated successfully",
       project
     });
 
   } catch (error) {
-    console.error("Update project error:", error);
+    console.error(
+      "Update project error:",
+      error
+    );
 
     res.status(500).json({
       success: false,
@@ -172,33 +230,44 @@ const updateProject = async (req, res) => {
   }
 };
 
-
 // ==========================================
 // DELETE PROJECT
 // ==========================================
 
-const deleteProject = async (req, res) => {
+const deleteProject = async (
+  req,
+  res
+) => {
   try {
-    const project = await Project.findByIdAndDelete(req.params.id);
+    const project =
+      await Project.findByIdAndDelete(
+        req.params.id
+      );
 
     if (!project) {
       return res.status(404).json({
         success: false,
-        message: "Project not found"
+        message:
+          "Project not found"
       });
     }
 
+    // Delete related alerts
     await Alert.deleteMany({
       project: project._id
     });
 
     res.json({
       success: true,
-      message: "Project deleted successfully"
+      message:
+        "Project deleted successfully"
     });
 
   } catch (error) {
-    console.error("Delete project error:", error);
+    console.error(
+      "Delete project error:",
+      error
+    );
 
     res.status(500).json({
       success: false,
@@ -207,20 +276,79 @@ const deleteProject = async (req, res) => {
   }
 };
 
-
 // ==========================================
-// PUBLIC PROJECTS
+// SEARCH / FILTER PROJECTS
 // ==========================================
 
-const getPublicProjects = async (req, res) => {
+const searchProjects = async (
+  req,
+  res
+) => {
   try {
-    const projects = await Project.find({
-      isPublished: true
-    })
-      .select(
-        "projectName projectCode province district municipality contractor budget progress status riskLevel description startDate endDate"
-      )
-      .sort({ createdAt: -1 });
+    const {
+      search,
+      province,
+      status,
+      risk
+    } = req.query;
+
+    const filter = {};
+
+    // Search by project name
+    // or project code
+    if (search) {
+      filter.$or = [
+        {
+          projectName: {
+            $regex: search,
+            $options: "i"
+          }
+        },
+        {
+          projectCode: {
+            $regex: search,
+            $options: "i"
+          }
+        }
+      ];
+    }
+
+    // Province filter
+    if (
+      province &&
+      province !== "All Provinces"
+    ) {
+      filter.province =
+        province;
+    }
+
+    // Status filter
+    if (
+      status &&
+      status !== "All Status"
+    ) {
+      filter.status =
+        status;
+    }
+
+    // Risk filter
+    if (
+      risk &&
+      risk !== "All Risk"
+    ) {
+      filter.riskLevel =
+        risk;
+    }
+
+    const projects =
+      await Project.find(filter)
+        .populate(
+          "assignedOfficer",
+          "-password"
+        )
+        .sort({
+          createdAt: -1
+        });
 
     res.json({
       success: true,
@@ -229,15 +357,95 @@ const getPublicProjects = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Public projects error:", error);
+    console.error(
+      "Search projects error:",
+      error
+    );
 
     res.status(500).json({
       success: false,
-      message: "Failed to load public projects"
+      message:
+        "Failed to search projects",
+      error: error.message
     });
   }
 };
 
+// ==========================================
+// PUBLIC PROJECTS
+// ==========================================
+
+const getPublicProjects = async (
+  req,
+  res
+) => {
+  try {
+    const projects =
+      await Project.find({
+        isPublished: true
+      })
+        .select(
+          "projectName projectCode province district municipality contractor budget progress status riskLevel description startDate endDate"
+        )
+        .sort({
+          createdAt: -1
+        });
+
+    res.json({
+      success: true,
+      count: projects.length,
+      projects
+    });
+
+  } catch (error) {
+    console.error(
+      "Public projects error:",
+      error
+    );
+
+    res.status(500).json({
+      success: false,
+      message:
+        "Failed to load public projects"
+    });
+  }
+};
+
+// ==========================================
+// GENERATE PROJECT CODE
+// ==========================================
+
+const generateCode = async (
+  req,
+  res
+) => {
+  try {
+    const code =
+      await generateProjectCode();
+
+    res.json({
+      success: true,
+      code
+    });
+
+  } catch (error) {
+    console.error(
+      "Generate project code error:",
+      error
+    );
+
+    res.status(500).json({
+      success: false,
+      message:
+        "Failed to generate project code",
+      error: error.message
+    });
+  }
+};
+
+// ==========================================
+// EXPORT CONTROLLERS
+// ==========================================
 
 module.exports = {
   createProject,
@@ -245,5 +453,7 @@ module.exports = {
   getProject,
   updateProject,
   deleteProject,
-  getPublicProjects
+  searchProjects,
+  getPublicProjects,
+  generateCode
 };

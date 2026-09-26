@@ -8,35 +8,82 @@ import {
   Navigate
 } from "react-router-dom";
 
-import { useAuth } from "./context/AuthContext";
+import {
+  useAuth
+} from "./context/AuthContext";
 
-import DashboardLayout from "./layouts/DashboardLayout";
+import DashboardLayout
+  from "./layouts/DashboardLayout";
 
-import Dashboard from "./pages/Dashboard";
-import Projects from "./pages/Projects";
-import ProjectDetails from "./pages/ProjectDetails";
-import Map from "./pages/Map";
-import FieldReports from "./pages/FieldReports";
-import Complaints from "./pages/Complaints";
-import Evidence from "./pages/Evidence";
-import Alerts from "./pages/Alerts";
-import Reports from "./pages/Reports";
-import Settings from "./pages/Settings";
-import PublicPortal from "./pages/PublicPortal";
-import PublicProjectDetails from "./pages/PublicProjectDetails";
-import PublicComplaintForm from "./pages/PublicComplaintForm";
-import AdminLogin from "./pages/AdminLogin";
-import Notifications from "./pages/Notifications";
-import AddProjectPage from "./pages/AddProjectPage";
-import PublicComplaint from "./pages/PublicComplaint";
-import PublicMap from "./pages/PublicMap";
+import Dashboard
+  from "./pages/Dashboard";
+
+import Projects
+  from "./pages/Projects";
+
+import ProjectDetails
+  from "./pages/ProjectDetails";
+
+import Map
+  from "./pages/Map";
+
+import FieldReports
+  from "./pages/FieldReports";
+
+import Complaints
+  from "./pages/Complaints";
+
+import Evidence
+  from "./pages/Evidence";
+
+import Alerts
+  from "./pages/Alerts";
+
+import Reports
+  from "./pages/Reports";
+
+import Settings
+  from "./pages/Settings";
+
+import Notifications
+  from "./pages/Notifications";
+
+import AddProjectPage
+  from "./pages/AddProjectPage";
+
+import UserManagement
+  from "./pages/UserManagement";
+
+import AuditLogs
+  from "./pages/AuditLogs";
+
+import SystemSettings
+  from "./pages/SystemSettings";
+
+import PublicPortal
+  from "./pages/PublicPortal";
+
+import PublicProjectDetails
+  from "./pages/PublicProjectDetails";
+
+import PublicComplaintForm
+  from "./pages/PublicComplaintForm";
+
+import PublicComplaint
+  from "./pages/PublicComplaint";
+
+import PublicMap
+  from "./pages/PublicMap";
+
+import AdminLogin
+  from "./pages/AdminLogin";
 
 
 const h = React.createElement;
 
 
 /* =========================================
-   PROTECTED ROUTES
+   PROTECTED ADMIN LAYOUT
 ========================================= */
 
 const ProtectedRoutes = () => {
@@ -85,57 +132,84 @@ const App = () => {
       null,
 
       /* =====================================
-         PUBLIC PORTAL
-         This is the site's HOME page — normal
-         citizens land here, no login required.
+         PUBLIC HOME
       ===================================== */
 
       h(
         Route,
         {
           path: "/",
-          element:
-            h(PublicPortal)
+          element: h(
+            PublicPortal
+          )
         }
       ),
+
+      /* =====================================
+         PUBLIC PORTAL
+      ===================================== */
 
       h(
         Route,
         {
           path: "/public",
-          element:
-            h(PublicPortal)
+          element: h(
+            PublicPortal
+          )
         }
       ),
+
+      /* =====================================
+         PUBLIC PROJECT DETAILS
+      ===================================== */
 
       h(
         Route,
         {
           path: "/public/projects/:id",
-          element:
-            h(PublicProjectDetails)
-        }
-      ),
-
-      h(
-        Route,
-        {
-          path: "/public/report",
-          element:
-            h(PublicComplaintForm)
-        }
-      ),
-
-      React.createElement(
-        Route,
-        {
-          path: "/public/projects/:id",
-          element: React.createElement(
+          element: h(
             PublicProjectDetails
           )
         }
       ),
 
+      /* =====================================
+         PUBLIC COMPLAINT
+      ===================================== */
+
+      h(
+        Route,
+        {
+          path: "/public/report",
+          element: h(
+            PublicComplaintForm
+          )
+        }
+      ),
+
+      h(
+        Route,
+        {
+          path: "/complaints-public",
+          element: h(
+            PublicComplaint
+          )
+        }
+      ),
+
+      /* =====================================
+         PUBLIC MAP
+      ===================================== */
+
+      h(
+        Route,
+        {
+          path: "/public-map",
+          element: h(
+            PublicMap
+          )
+        }
+      ),
 
       /* =====================================
          ADMIN LOGIN
@@ -145,11 +219,11 @@ const App = () => {
         Route,
         {
           path: "/admin-login",
-          element:
-            h(AdminLogin)
+          element: h(
+            AdminLogin
+          )
         }
       ),
-
 
       /* =====================================
          PROTECTED ADMIN AREA
@@ -159,30 +233,28 @@ const App = () => {
         Route,
         {
           path: "/admin",
-          element:
-            h(ProtectedRoutes)
+          element: h(
+            ProtectedRoutes
+          )
         },
 
-
         /* ===================================
-           DEFAULT
+           ADMIN DEFAULT
         =================================== */
 
         h(
           Route,
           {
             index: true,
-            element:
-              h(
-                Navigate,
-                {
-                  to: "/admin/dashboard",
-                  replace: true
-                }
-              )
+            element: h(
+              Navigate,
+              {
+                to: "/admin/dashboard",
+                replace: true
+              }
+            )
           }
         ),
-
 
         /* ===================================
            DASHBOARD
@@ -192,11 +264,11 @@ const App = () => {
           Route,
           {
             path: "dashboard",
-            element:
-              h(Dashboard)
+            element: h(
+              Dashboard
+            )
           }
         ),
-
 
         /* ===================================
            PROJECTS
@@ -206,11 +278,11 @@ const App = () => {
           Route,
           {
             path: "projects",
-            element:
-              h(Projects)
+            element: h(
+              Projects
+            )
           }
         ),
-
 
         /* ===================================
            ADD PROJECT
@@ -220,11 +292,11 @@ const App = () => {
           Route,
           {
             path: "projects/new",
-            element:
-              h(AddProjectPage)
+            element: h(
+              AddProjectPage
+            )
           }
         ),
-
 
         /* ===================================
            PROJECT DETAILS
@@ -234,11 +306,11 @@ const App = () => {
           Route,
           {
             path: "projects/:id",
-            element:
-              h(ProjectDetails)
+            element: h(
+              ProjectDetails
+            )
           }
         ),
-
 
         /* ===================================
            MAP
@@ -248,11 +320,11 @@ const App = () => {
           Route,
           {
             path: "map",
-            element:
-              h(Map)
+            element: h(
+              Map
+            )
           }
         ),
-
 
         /* ===================================
            FIELD REPORTS
@@ -262,11 +334,11 @@ const App = () => {
           Route,
           {
             path: "field-reports",
-            element:
-              h(FieldReports)
+            element: h(
+              FieldReports
+            )
           }
         ),
-
 
         /* ===================================
            COMPLAINTS
@@ -276,11 +348,11 @@ const App = () => {
           Route,
           {
             path: "complaints",
-            element:
-              h(Complaints)
+            element: h(
+              Complaints
+            )
           }
         ),
-
 
         /* ===================================
            EVIDENCE
@@ -290,11 +362,11 @@ const App = () => {
           Route,
           {
             path: "evidence",
-            element:
-              h(Evidence)
+            element: h(
+              Evidence
+            )
           }
         ),
-
 
         /* ===================================
            ALERTS
@@ -304,25 +376,11 @@ const App = () => {
           Route,
           {
             path: "alerts",
-            element:
-              h(Alerts)
+            element: h(
+              Alerts
+            )
           }
         ),
-
-
-        /* ===================================
-           REPORTS
-        =================================== */
-
-        h(
-          Route,
-          {
-            path: "reports",
-            element:
-              h(Reports)
-          }
-        ),
-
 
         /* ===================================
            NOTIFICATIONS
@@ -332,13 +390,25 @@ const App = () => {
           Route,
           {
             path: "notifications",
-            element:
-              React.createElement(
-                Notifications
-              )
+            element: h(
+              Notifications
+            )
           }
         ),
 
+        /* ===================================
+           REPORTS
+        =================================== */
+
+        h(
+          Route,
+          {
+            path: "reports",
+            element: h(
+              Reports
+            )
+          }
+        ),
 
         /* ===================================
            SETTINGS
@@ -348,29 +418,70 @@ const App = () => {
           Route,
           {
             path: "settings",
-            element:
-              h(Settings)
+            element: h(
+              Settings
+            )
+          }
+        ),
+
+        /* ===================================
+           USERS
+        =================================== */
+
+        h(
+          Route,
+          {
+            path: "users",
+            element: h(
+              UserManagement
+            )
+          }
+        ),
+
+        /* ===================================
+           AUDIT LOGS
+        =================================== */
+
+        h(
+          Route,
+          {
+            path: "audit-logs",
+            element: h(
+              AuditLogs
+            )
+          }
+        ),
+
+        /* ===================================
+           SYSTEM SETTINGS
+        =================================== */
+
+        h(
+          Route,
+          {
+            path: "system-settings",
+            element: h(
+              SystemSettings
+            )
           }
         )
       ),
 
-
       /* =====================================
-         404 / UNKNOWN ROUTE
+         UNKNOWN ROUTE
       ===================================== */
 
       h(
         Route,
         {
           path: "*",
-          element:
-            h(
-              Navigate,
-              {
-                to: "/",
-                replace: true
-              }
-            )
+          element: h(
+            Navigate,
+            {
+              to: "/",
+              replace: true
+            }
+          )
         }
       )
     )

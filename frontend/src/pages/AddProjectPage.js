@@ -7,10 +7,16 @@ import {
 } from "react-router-dom";
 
 import {
-  createProject
+  createProject,
+  generateProjectCode
 } from "../services/api";
 
 const h = React.createElement;
+
+
+// ========================================
+// ADD PROJECT PAGE
+// ========================================
 
 const AddProjectPage = () => {
   const navigate =
@@ -22,9 +28,19 @@ const AddProjectPage = () => {
   ] = useState(false);
 
   const [
+    codeLoading,
+    setCodeLoading
+  ] = useState(false);
+
+  const [
     error,
     setError
   ] = useState("");
+
+
+  // ========================================
+  // FORM STATE
+  // ========================================
 
   const [
     form,
@@ -47,6 +63,11 @@ const AddProjectPage = () => {
     isPublic: true
   });
 
+
+  // ========================================
+  // UPDATE FORM
+  // ========================================
+
   const update =
     (key) =>
     (event) => {
@@ -57,46 +78,39 @@ const AddProjectPage = () => {
       });
     };
 
-  const submit =
-    async (event) => {
-      event.preventDefault();
 
+  // ========================================
+  // GENERATE PROJECT CODE
+  // ========================================
+
+  const generateCode =
+    async () => {
       try {
-        setSaving(true);
+        setCodeLoading(true);
         setError("");
 
-        await createProject({
-          ...form,
-          budget:
-            Number(form.budget || 0),
-          progress:
-            Number(
-              form.progress || 0
-            ),
-          latitude:
-            form.latitude
-              ? Number(
-                  form.latitude
-                )
-              : undefined,
-          longitude:
-            form.longitude
-              ? Number(
-                  form.longitude
-                )
-              : undefined
-        });
+        const result =
+          await generateProjectCode();
 
-        navigate("/admin/projects");
+        setForm({
+          ...form,
+          projectCode:
+            result.code || ""
+        });
       } catch (err) {
         setError(
           err.message ||
-            "Failed to create project"
+            "Failed to generate project code"
         );
       } finally {
-        setSaving(false);
+        setCodeLoading(false);
       }
     };
+
+
+  // ========================================
+  // INPUT COMPONENT
+  // ========================================
 
   const input = (
     label,
@@ -109,23 +123,112 @@ const AddProjectPage = () => {
         className:
           "form-field"
       },
+
       h(
         "span",
         null,
         label
       ),
+
       h(
         "input",
         {
           type,
-          value: form[key],
+
+          value:
+            form[key],
+
           onChange:
             update(key),
+
           required:
-            key === "name"
+            key === "name",
+
+          min:
+            key === "progress"
+              ? 0
+              : undefined,
+
+          max:
+            key === "progress"
+              ? 100
+              : undefined
         }
       )
     );
+
+
+  // ========================================
+  // SUBMIT PROJECT
+  // ========================================
+
+  const submit =
+    async (event) => {
+      event.preventDefault();
+
+      try {
+        setSaving(true);
+        setError("");
+
+        const projectData = {
+          ...form,
+
+          // Backend requires projectName
+          projectName:
+            form.name,
+
+          budget:
+            Number(
+              form.budget || 0
+            ),
+
+          progress:
+            Number(
+              form.progress || 0
+            ),
+
+          latitude:
+            form.latitude !== ""
+              ? Number(
+                  form.latitude
+                )
+              : undefined,
+
+          longitude:
+            form.longitude !== ""
+              ? Number(
+                  form.longitude
+                )
+              : undefined
+        };
+
+        await createProject(
+          projectData
+        );
+
+        window.alert(
+          "Project created successfully"
+        );
+
+        navigate(
+          "/admin/projects"
+        );
+
+      } catch (err) {
+        setError(
+          err.message ||
+            "Failed to create project"
+        );
+
+      } finally {
+        setSaving(false);
+      }
+    };
+
+
+  // ========================================
+  // RENDER
+  // ========================================
 
   return h(
     "div",
@@ -133,6 +236,11 @@ const AddProjectPage = () => {
       className:
         "page add-project-page"
     },
+
+
+    // ======================================
+    // PAGE HEADING
+    // ======================================
 
     h(
       "div",
@@ -148,13 +256,17 @@ const AddProjectPage = () => {
         h(
           "button",
           {
+            type: "button",
+
             className:
               "back-button",
+
             onClick: () =>
               navigate(
                 "/admin/projects"
               )
           },
+
           "← Back"
         ),
 
@@ -164,22 +276,30 @@ const AddProjectPage = () => {
             className:
               "eyebrow"
           },
+
           "PROJECT REGISTRY"
         ),
 
         h(
           "h1",
           null,
+
           "Add New Government Project"
         ),
 
         h(
           "p",
           null,
+
           "Register a new public development project."
         )
       )
     ),
+
+
+    // ======================================
+    // ERROR
+    // ======================================
 
     error
       ? h(
@@ -188,17 +308,30 @@ const AddProjectPage = () => {
             className:
               "form-error"
           },
+
           error
         )
       : null,
+
+
+    // ======================================
+    // FORM
+    // ======================================
 
     h(
       "form",
       {
         className:
           "project-form",
-        onSubmit: submit
+
+        onSubmit:
+          submit
       },
+
+
+      // ====================================
+      // PROJECT INFORMATION
+      // ====================================
 
       h(
         "div",
@@ -210,6 +343,7 @@ const AddProjectPage = () => {
         h(
           "h2",
           null,
+
           "Project Information"
         ),
 
@@ -225,10 +359,78 @@ const AddProjectPage = () => {
             "name"
           ),
 
-          input(
-            "Project Code",
-            "projectCode"
+
+          // PROJECT CODE + GENERATE BUTTON
+
+          h(
+            "div",
+            {
+              className:
+                "form-field"
+            },
+
+            h(
+              "span",
+              null,
+
+              "Project Code"
+            ),
+
+            h(
+              "div",
+              {
+                style: {
+                  display: "flex",
+                  gap: "8px",
+                  alignItems:
+                    "stretch"
+                }
+              },
+
+              h(
+                "input",
+                {
+                  type: "text",
+
+                  value:
+                    form.projectCode,
+
+                  onChange:
+                    update(
+                      "projectCode"
+                    ),
+
+                  style: {
+                    flex: 1
+                  },
+
+                  placeholder:
+                    "PW-BAG-00001"
+                }
+              ),
+
+              h(
+                "button",
+                {
+                  type: "button",
+
+                  className:
+                    "operation-btn",
+
+                  onClick:
+                    generateCode,
+
+                  disabled:
+                    codeLoading
+                },
+
+                codeLoading
+                  ? "Generating..."
+                  : "Generate Code"
+              )
+            )
           ),
+
 
           input(
             "District",
@@ -264,6 +466,11 @@ const AddProjectPage = () => {
         )
       ),
 
+
+      // ====================================
+      // CLASSIFICATION
+      // ====================================
+
       h(
         "div",
         {
@@ -274,6 +481,7 @@ const AddProjectPage = () => {
         h(
           "h2",
           null,
+
           "Classification"
         ),
 
@@ -284,27 +492,35 @@ const AddProjectPage = () => {
               "form-grid"
           },
 
+
+          // PROVINCE
+
           h(
             "label",
             {
               className:
                 "form-field"
             },
+
             h(
               "span",
               null,
+
               "Province"
             ),
+
             h(
               "select",
               {
                 value:
                   form.province,
+
                 onChange:
                   update(
                     "province"
                   )
               },
+
               [
                 "Bagmati",
                 "Gandaki",
@@ -314,17 +530,25 @@ const AddProjectPage = () => {
                 "Karnali",
                 "Sudurpashchim"
               ].map(
-                (x) =>
+                (province) =>
                   h(
                     "option",
                     {
-                      key: x
+                      key:
+                        province,
+
+                      value:
+                        province
                     },
-                    x
+
+                    province
                   )
               )
             )
           ),
+
+
+          // STATUS
 
           h(
             "label",
@@ -332,36 +556,51 @@ const AddProjectPage = () => {
               className:
                 "form-field"
             },
+
             h(
               "span",
               null,
+
               "Status"
             ),
+
             h(
               "select",
               {
                 value:
                   form.status,
+
                 onChange:
-                  update("status")
+                  update(
+                    "status"
+                  )
               },
+
               [
                 "Active",
                 "Delayed",
                 "Completed",
                 "Critical"
               ].map(
-                (x) =>
+                (status) =>
                   h(
                     "option",
                     {
-                      key: x
+                      key:
+                        status,
+
+                      value:
+                        status
                     },
-                    x
+
+                    status
                   )
               )
             )
           ),
+
+
+          // RISK LEVEL
 
           h(
             "label",
@@ -369,40 +608,55 @@ const AddProjectPage = () => {
               className:
                 "form-field"
             },
+
             h(
               "span",
               null,
+
               "Risk Level"
             ),
+
             h(
               "select",
               {
                 value:
                   form.riskLevel,
+
                 onChange:
                   update(
                     "riskLevel"
                   )
               },
+
               [
                 "Low",
                 "Medium",
                 "High",
                 "Critical"
               ].map(
-                (x) =>
+                (risk) =>
                   h(
                     "option",
                     {
-                      key: x
+                      key:
+                        risk,
+
+                      value:
+                        risk
                     },
-                    x
+
+                    risk
                   )
               )
             )
           )
         )
       ),
+
+
+      // ====================================
+      // MAP LOCATION
+      // ====================================
 
       h(
         "div",
@@ -414,6 +668,7 @@ const AddProjectPage = () => {
         h(
           "h2",
           null,
+
           "Map Location"
         ),
 
@@ -438,32 +693,104 @@ const AddProjectPage = () => {
         )
       ),
 
+
+      // ====================================
+      // DESCRIPTION
+      // ====================================
+
       h(
-        "label",
+        "div",
         {
           className:
-            "form-field"
+            "form-section"
         },
 
         h(
-          "span",
-          null,
-          "Description"
-        ),
-
-        h(
-          "textarea",
+          "label",
           {
-            rows: 5,
-            value:
-              form.description,
-            onChange:
-              update(
-                "description"
-              )
-          }
+            className:
+              "form-field"
+          },
+
+          h(
+            "span",
+            null,
+
+            "Description"
+          ),
+
+          h(
+            "textarea",
+            {
+              rows: 5,
+
+              value:
+                form.description,
+
+              onChange:
+                update(
+                  "description"
+                ),
+
+              placeholder:
+                "Enter project description..."
+            }
+          )
         )
       ),
+
+
+      // ====================================
+      // PUBLIC PROJECT
+      // ====================================
+
+      h(
+        "div",
+        {
+          className:
+            "form-section"
+        },
+
+        h(
+          "label",
+          {
+            className:
+              "checkbox-field"
+          },
+
+          h(
+            "input",
+            {
+              type: "checkbox",
+
+              checked:
+                form.isPublic,
+
+              onChange:
+                (event) =>
+                  setForm({
+                    ...form,
+
+                    isPublic:
+                      event.target
+                        .checked
+                  })
+            }
+          ),
+
+          h(
+            "span",
+            null,
+
+            "Make this project publicly visible"
+          )
+        )
+      ),
+
+
+      // ====================================
+      // FORM ACTIONS
+      // ====================================
 
       h(
         "div",
@@ -472,28 +799,44 @@ const AddProjectPage = () => {
             "form-actions"
         },
 
+
+        // CANCEL
+
         h(
           "button",
           {
             type: "button",
+
             className:
               "secondary-button",
+
             onClick: () =>
               navigate(
                 "/admin/projects"
-              )
+              ),
+
+            disabled:
+              saving
           },
+
           "Cancel"
         ),
+
+
+        // SUBMIT
 
         h(
           "button",
           {
             type: "submit",
+
             className:
               "primary-button",
-            disabled: saving
+
+            disabled:
+              saving
           },
+
           saving
             ? "Creating..."
             : "Create Project"
@@ -502,5 +845,6 @@ const AddProjectPage = () => {
     )
   );
 };
+
 
 export default AddProjectPage;

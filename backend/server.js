@@ -60,145 +60,46 @@ app.use(
    ROUTES
    ===================================================== */
 
-const authRoutes =
-  require("./routes/authRoutes");
-
-const projectRoutes =
-  require("./routes/projectRoutes");
-
-const workerRoutes =
-  require("./routes/workerRoutes");
-
-const bookingRoutes =
-  require("./routes/bookingRoutes");
-
-const dashboardRoutes =
-  require("./routes/dashboardRoutes");
-
-const fieldReportRoutes =
-  require("./routes/fieldReportRoutes");
-
-const complaintRoutes =
-  require("./routes/complaintRoutes");
-
-const notificationRoutes =
-  require("./routes/notificationRoutes");
-
-const verificationRoutes =
-  require("./routes/verificationRoutes");
-
-const evidenceRoutes =
-  require("./routes/evidenceRoutes");
-
-const alertRoutes =
-  require("./routes/alertRoutes");
-
-const publicRoutes =
-  require("./routes/publicRoutes");
-
-const auditRoutes =
-  require("./routes/auditRoutes");
-
-const reportRoutes =
-  require("./routes/reportRoutes");
-
-const aiRoutes =
-  require("./routes/aiRoutes");
+const authRoutes = require("./routes/authRoutes");
+const projectRoutes = require("./routes/projectRoutes");
+const workerRoutes = require("./routes/workerRoutes");
+const bookingRoutes = require("./routes/bookingRoutes");
+const dashboardRoutes = require("./routes/dashboardRoutes");
+const fieldReportRoutes = require("./routes/fieldReportRoutes");
+const complaintRoutes = require("./routes/complaintRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
+const verificationRoutes = require("./routes/verificationRoutes");
+const evidenceRoutes = require("./routes/evidenceRoutes");
+const alertRoutes = require("./routes/alertRoutes");
+const publicRoutes =  require("./routes/publicRoutes");
+const auditRoutes = require("./routes/auditRoutes");
+const reportRoutes = require("./routes/reportRoutes");
+const aiRoutes = require("./routes/aiRoutes");
+const userRoutes = require("./routes/userRoutes");
+const healthRoutes = require("./routes/healthRoutes");
 
 
 /* =====================================================
    API ROUTES
    ===================================================== */
 
-app.use(
-  "/api/auth",
-  authRoutes
-);
-
-
-app.use(
-  "/api/projects",
-  projectRoutes
-);
-
-
-app.use(
-  "/api/workers",
-  workerRoutes
-);
-
-
-app.use(
-  "/api/bookings",
-  bookingRoutes
-);
-
-
-app.use(
-  "/api/dashboard",
-  dashboardRoutes
-);
-
-
-app.use(
-  "/api/field-reports",
-  fieldReportRoutes
-);
-
-
-app.use(
-  "/api/complaints",
-  complaintRoutes
-);
-
-
-app.use(
-  "/api/notifications",
-  notificationRoutes
-);
-
-
-app.use(
-  "/api/verifications",
-  verificationRoutes
-);
-
-
-app.use(
-  "/api/evidence",
-  evidenceRoutes
-);
-
-
-app.use(
-  "/api/alerts",
-  alertRoutes
-);
-
-
-app.use(
-  "/api/public",
-  publicRoutes
-);
-
-
-app.use(
-  "/api/audit",
-  auditRoutes
-);
-
-
-app.use(
-  "/api/reports",
-  reportRoutes
-);
-
-
-app.use(
-  "/api/ai",
-  aiRoutes
-);
-
+app.use( "/api/auth",  authRoutes);
+app.use( "/api/projects", projectRoutes);
+app.use( "/api/workers", workerRoutes);
+app.use( "/api/bookings",  bookingRoutes);
+app.use("/api/dashboard",dashboardRoutes);
+app.use( "/api/field-reports", fieldReportRoutes);
+app.use("/api/complaints", complaintRoutes);
+app.use( "/api/notifications",notificationRoutes);
+app.use( "/api/verifications", verificationRoutes);
+app.use( "/api/evidence", evidenceRoutes);
+app.use( "/api/alerts", alertRoutes);
+app.use(  "/api/public",  publicRoutes);
+app.use( "/api/audit",auditRoutes);
+app.use( "/api/reports",reportRoutes);
+app.use( "/api/ai", aiRoutes);
+app.use( "/api/users", userRoutes);
+app.use( "/api/health", healthRoutes);
 
 /* =====================================================
    HEALTH CHECK

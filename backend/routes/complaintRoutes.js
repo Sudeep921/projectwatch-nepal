@@ -12,6 +12,13 @@ const authMiddleware =
   require(
     "../middleware/authMiddleware"
   );
+  const {
+  updateComplaintStatus
+} = require(
+  "../controllers/complaintAdminController"
+);
+const adminMiddleware =
+  require("../middleware/adminMiddleware");
 
 const router =
   express.Router();
@@ -29,8 +36,9 @@ router.post(
 );
 
 router.put(
-  "/:id",
-  updateComplaint
+  "/:id/status",
+  authMiddleware,
+  adminMiddleware,
+  updateComplaintStatus
 );
-
 module.exports = router;

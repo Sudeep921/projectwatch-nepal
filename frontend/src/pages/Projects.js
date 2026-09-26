@@ -4,6 +4,7 @@ import React, {
   useState
 } from "react";
 
+
 import {
   useNavigate
 } from "react-router-dom";
@@ -17,6 +18,10 @@ import ProjectFilters from
 
 import ProjectTable from
   "../components/ProjectTable";
+import {
+  updateProject,
+  deleteProject
+} from "../services/api";
 
 const h = React.createElement;
 

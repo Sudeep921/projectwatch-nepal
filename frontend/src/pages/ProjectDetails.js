@@ -9,8 +9,11 @@ import {
 } from "react-router-dom";
 
 import {
-  getProject
+  getProject,
+  getProjectTimeline
 } from "../services/api";
+
+import ProjectTimeline from "../components/ProjectTimeline";
 
 const h = React.createElement;
 
@@ -28,25 +31,72 @@ const ProjectDetails = () => {
   ] = useState(null);
 
   const [
+    timeline,
+    setTimeline
+  ] = useState([]);
+
+  const [
     loading,
     setLoading
   ] = useState(true);
 
+  // ========================================
+  // GET PROJECT
+  // ========================================
+
   useEffect(() => {
+    if (!id) {
+      return;
+    }
+
     getProject(id)
-      .then((data) =>
+      .then((data) => {
         setProject(
           data.project ||
-            data.data
-        )
-      )
-      .catch(
-        console.error
-      )
-      .finally(() =>
-        setLoading(false)
-      );
+          data.data
+        );
+      })
+      .catch((error) => {
+        console.error(
+          "Project error:",
+          error
+        );
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, [id]);
+
+  // ========================================
+  // GET PROJECT TIMELINE
+  // ========================================
+
+  useEffect(() => {
+    if (!id) {
+      return;
+    }
+
+    getProjectTimeline(id)
+      .then((result) => {
+        setTimeline(
+          result.timeline ||
+          result.data ||
+          []
+        );
+      })
+      .catch((error) => {
+        console.error(
+          "Timeline error:",
+          error
+        );
+
+        setTimeline([]);
+      });
+  }, [id]);
+
+  // ========================================
+  // LOADING
+  // ========================================
 
   if (loading) {
     return h(
@@ -59,6 +109,10 @@ const ProjectDetails = () => {
     );
   }
 
+  // ========================================
+  // PROJECT NOT FOUND
+  // ========================================
+
   if (!project) {
     return h(
       "div",
@@ -70,12 +124,20 @@ const ProjectDetails = () => {
     );
   }
 
+  // ========================================
+  // PROJECT DETAILS
+  // ========================================
+
   return h(
     "div",
     {
       className:
         "page project-details-page"
     },
+
+    // ========================================
+    // BACK BUTTON
+    // ========================================
 
     h(
       "button",
@@ -89,6 +151,10 @@ const ProjectDetails = () => {
       },
       "← Back to Projects"
     ),
+
+    // ========================================
+    // PROJECT HERO
+    // ========================================
 
     h(
       "div",
@@ -108,20 +174,22 @@ const ProjectDetails = () => {
               "eyebrow"
           },
           project.projectCode ||
-            "PROJECT"
+          "PROJECT"
         ),
 
         h(
           "h1",
           null,
-          project.name
+          project.name ||
+          project.projectName ||
+          "Untitled Project"
         ),
 
         h(
           "p",
           null,
           project.description ||
-            "Government development project."
+          "Government development project."
         )
       ),
 
@@ -131,9 +199,14 @@ const ProjectDetails = () => {
           className:
             "status-badge"
         },
-        project.status
+        project.status ||
+        "-"
       )
     ),
+
+    // ========================================
+    // PROJECT INFORMATION
+    // ========================================
 
     h(
       "div",
@@ -147,22 +220,27 @@ const ProjectDetails = () => {
           "Province",
           project.province
         ],
+
         [
           "District",
           project.district
         ],
+
         [
           "Municipality",
           project.municipality
         ],
+
         [
           "Contractor",
           project.contractor
         ],
+
         [
           "Risk Level",
           project.riskLevel
         ],
+
         [
           "Budget",
           `NPR ${Number(
@@ -193,6 +271,10 @@ const ProjectDetails = () => {
           )
       )
     ),
+
+    // ========================================
+    // PROJECT PROGRESS
+    // ========================================
 
     h(
       "div",
@@ -228,6 +310,7 @@ const ProjectDetails = () => {
           {
             className:
               "progress-fill",
+
             style: {
               width:
                 `${project.progress || 0}%`
@@ -235,7 +318,34 @@ const ProjectDetails = () => {
           }
         )
       )
-    )
+    ),
+
+    // ========================================
+    // PROJECT TIMELINE
+    // ONLY SHOW IF TIMELINE EXISTS
+    // ========================================
+
+    timeline.length > 0 &&
+      h(
+        "section",
+        {
+          className:
+            "data-card"
+        },
+
+        h(
+          "h2",
+          null,
+          "Project Timeline"
+        ),
+
+        h(
+          ProjectTimeline,
+          {
+            timeline
+          }
+        )
+      )
   );
 };
 

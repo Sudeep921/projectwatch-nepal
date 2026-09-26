@@ -1,5 +1,10 @@
 const Project = require("../models/Project");
 
+
+// ==========================================
+// GET PUBLIC PROJECTS
+// ==========================================
+
 const getPublicProjects = async (req, res) => {
   try {
     const {
@@ -44,52 +49,76 @@ const getPublicProjects = async (req, res) => {
       ];
     }
 
-    if (province && province !== "All Provinces") {
+    if (
+      province &&
+      province !== "All Provinces"
+    ) {
       filter.province = province;
     }
 
-    if (status && status !== "All Status") {
+    if (
+      status &&
+      status !== "All Status"
+    ) {
       filter.status = status;
     }
 
-    if (riskLevel && riskLevel !== "All Risk") {
+    if (
+      riskLevel &&
+      riskLevel !== "All Risk"
+    ) {
       filter.riskLevel = riskLevel;
     }
 
-    const projects = await Project.find(filter)
-      .select(
-        "name projectCode province district municipality budget progress status riskLevel description startDate expectedEndDate contractor location latitude longitude updatedAt"
-      )
-      .sort({ updatedAt: -1 });
+    const projects =
+      await Project.find(filter)
+        .select(
+          "name projectCode province district municipality budget progress status riskLevel description startDate expectedEndDate contractor location latitude longitude updatedAt"
+        )
+        .sort({
+          updatedAt: -1
+        });
 
     res.json({
       success: true,
       count: projects.length,
       projects
     });
+
   } catch (error) {
-    console.error("Public projects error:", error);
+    console.error(
+      "Public projects error:",
+      error
+    );
 
     res.status(500).json({
       success: false,
-      message: "Failed to fetch public projects"
+      message:
+        "Failed to fetch public projects"
     });
   }
 };
 
+
+// ==========================================
+// GET SINGLE PUBLIC PROJECT
+// ==========================================
+
 const getPublicProject = async (req, res) => {
   try {
-    const project = await Project.findOne({
-      _id: req.params.id,
-      isPublic: {
-        $ne: false
-      }
-    }).select("-__v");
+    const project =
+      await Project.findOne({
+        _id: req.params.id,
+        isPublic: {
+          $ne: false
+        }
+      }).select("-__v");
 
     if (!project) {
       return res.status(404).json({
         success: false,
-        message: "Public project not found"
+        message:
+          "Public project not found"
       });
     }
 
@@ -97,54 +126,72 @@ const getPublicProject = async (req, res) => {
       success: true,
       project
     });
+
   } catch (error) {
-    console.error("Public project error:", error);
+    console.error(
+      "Public project error:",
+      error
+    );
 
     res.status(500).json({
       success: false,
-      message: "Failed to fetch public project"
+      message:
+        "Failed to fetch public project"
     });
   }
 };
 
+
+// ==========================================
+// GET PUBLIC SUMMARY
+// ==========================================
+
 const getPublicSummary = async (req, res) => {
   try {
-    const projects = await Project.find({
-      isPublic: {
-        $ne: false
-      }
-    }).select(
-      "status riskLevel budget progress province"
-    );
+    const projects =
+      await Project.find({
+        isPublic: {
+          $ne: false
+        }
+      }).select(
+        "status riskLevel budget progress province"
+      );
 
-    const totalProjects = projects.length;
+    const totalProjects =
+      projects.length;
 
-    const activeProjects = projects.filter(
-      (project) =>
-        project.status === "Active"
-    ).length;
+    const activeProjects =
+      projects.filter(
+        (project) =>
+          project.status === "Active"
+      ).length;
 
-    const delayedProjects = projects.filter(
-      (project) =>
-        project.status === "Delayed"
-    ).length;
+    const delayedProjects =
+      projects.filter(
+        (project) =>
+          project.status === "Delayed"
+      ).length;
 
-    const completedProjects = projects.filter(
-      (project) =>
-        project.status === "Completed"
-    ).length;
+    const completedProjects =
+      projects.filter(
+        (project) =>
+          project.status === "Completed"
+      ).length;
 
-    const criticalProjects = projects.filter(
-      (project) =>
-        project.status === "Critical" ||
-        project.riskLevel === "Critical"
-    ).length;
+    const criticalProjects =
+      projects.filter(
+        (project) =>
+          project.status === "Critical" ||
+          project.riskLevel === "Critical"
+      ).length;
 
-    const totalBudget = projects.reduce(
-      (sum, project) =>
-        sum + Number(project.budget || 0),
-      0
-    );
+    const totalBudget =
+      projects.reduce(
+        (sum, project) =>
+          sum +
+          Number(project.budget || 0),
+        0
+      );
 
     const averageProgress =
       totalProjects > 0
@@ -160,7 +207,8 @@ const getPublicSummary = async (req, res) => {
 
     projects.forEach((project) => {
       const province =
-        project.province || "Unknown";
+        project.province ||
+        "Unknown";
 
       if (!provinceMap[province]) {
         provinceMap[province] = {
@@ -180,23 +228,26 @@ const getPublicSummary = async (req, res) => {
         Number(project.progress || 0);
     });
 
-    const provinces = Object.values(
-      provinceMap
-    ).map((item) => ({
-      ...item,
-      averageProgress:
-        item.projects > 0
-          ? Number(
-              (
-                item.progress /
-                item.projects
-              ).toFixed(2)
-            )
-          : 0
-    }));
+    const provinces =
+      Object.values(
+        provinceMap
+      ).map((item) => ({
+        ...item,
+
+        averageProgress:
+          item.projects > 0
+            ? Number(
+                (
+                  item.progress /
+                  item.projects
+                ).toFixed(2)
+              )
+            : 0
+      }));
 
     res.json({
       success: true,
+
       summary: {
         totalProjects,
         activeProjects,
@@ -204,23 +255,101 @@ const getPublicSummary = async (req, res) => {
         completedProjects,
         criticalProjects,
         totalBudget,
+
         averageProgress:
-          Number(averageProgress.toFixed(2)),
+          Number(
+            averageProgress.toFixed(2)
+          ),
+
         provinces
       }
     });
+
   } catch (error) {
-    console.error("Public summary error:", error);
+    console.error(
+      "Public summary error:",
+      error
+    );
 
     res.status(500).json({
       success: false,
-      message: "Failed to generate public summary"
+      message:
+        "Failed to generate public summary"
     });
   }
 };
 
+
+// ==========================================
+// GET PUBLIC STATISTICS
+// ==========================================
+
+const getPublicStatistics =
+  async (req, res) => {
+    try {
+      const projects =
+        await Project.find({
+          isPublic: {
+            $ne: false
+          }
+        });
+
+      const statistics = {
+        total:
+          projects.length,
+
+        active:
+          projects.filter(
+            (project) =>
+              project.status === "Active"
+          ).length,
+
+        delayed:
+          projects.filter(
+            (project) =>
+              project.status === "Delayed"
+          ).length,
+
+        completed:
+          projects.filter(
+            (project) =>
+              project.status === "Completed"
+          ).length,
+
+        critical:
+          projects.filter(
+            (project) =>
+              project.status === "Critical"
+          ).length
+      };
+
+      res.json(
+        statistics
+      );
+
+    } catch (error) {
+      console.error(
+        "Public statistics error:",
+        error
+      );
+
+      res.status(500).json({
+        message:
+          "Failed to load public statistics",
+        error:
+          error.message
+      });
+    }
+  };
+
+
+// ==========================================
+// EXPORT
+// ==========================================
+
 module.exports = {
   getPublicProjects,
   getPublicProject,
-  getPublicSummary
+  getPublicSummary,
+  getPublicStatistics
 };

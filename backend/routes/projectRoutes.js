@@ -4,23 +4,52 @@ const {
   createProject,
   getProjects,
   getProject,
-  updateProject,
-  deleteProject,
-  getPublicProjects
+  getPublicProjects,
+  generateCode
 } = require("../controllers/projectController");
 
-const authMiddleware = require("../middleware/authMiddleware");
-const roleMiddleware = require("../middleware/roleMiddleware");
+const {
+  updateProject,
+  deleteProject
+} = require(
+  "../controllers/projectAdminController"
+);
+
+const authMiddleware =
+  require("../middleware/authMiddleware");
+
+const roleMiddleware =
+  require("../middleware/roleMiddleware");
+
+const adminMiddleware =
+  require("../middleware/adminMiddleware");
 
 const router = express.Router();
 
-// Public projects
+// ========================================
+// GENERATE PROJECT CODE
+// ========================================
+
+router.get(
+  "/generate-code",
+  authMiddleware,
+  adminMiddleware,
+  generateCode
+);
+
+// ========================================
+// PUBLIC PROJECTS
+// ========================================
+
 router.get(
   "/public",
   getPublicProjects
 );
 
-// Admin + Officer
+// ========================================
+// ADMIN + OFFICER
+// ========================================
+
 router.get(
   "/",
   authMiddleware,
@@ -35,7 +64,10 @@ router.get(
   getProject
 );
 
-// Admin only
+// ========================================
+// ADMIN ONLY - CREATE
+// ========================================
+
 router.post(
   "/",
   authMiddleware,
@@ -43,18 +75,32 @@ router.post(
   createProject
 );
 
+// ========================================
+// ADMIN ONLY - UPDATE
+// ========================================
+
 router.put(
   "/:id",
   authMiddleware,
   roleMiddleware("admin"),
+  adminMiddleware,
   updateProject
 );
+
+// ========================================
+// ADMIN ONLY - DELETE
+// ========================================
 
 router.delete(
   "/:id",
   authMiddleware,
   roleMiddleware("admin"),
+  adminMiddleware,
   deleteProject
 );
+
+// ========================================
+// EXPORT
+// ========================================
 
 module.exports = router;

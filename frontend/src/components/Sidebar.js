@@ -8,60 +8,93 @@ import {
   useAuth
 } from "../context/AuthContext";
 
+
 const h = React.createElement;
 
+
 const Sidebar = () => {
+
   const {
     user
   } = useAuth();
 
+
   const links = [
+
     [
       "/admin/dashboard",
       "Dashboard",
       "▦"
     ],
+
     [
       "/admin/projects",
       "Projects",
       "▤"
     ],
+
     [
       "/admin/map",
       "Live Map",
       "⌖"
     ],
+
     [
       "/admin/field-reports",
       "Field Reports",
       "◉"
     ],
+
     [
       "/admin/evidence",
       "Evidence",
       "▣"
     ],
+
     [
       "/admin/complaints",
       "Complaints",
       "◌"
     ],
+
     [
       "/admin/alerts",
       "Alerts",
       "⚠"
     ],
+
+    [
+      "/admin/notifications",
+      "Notifications",
+      "🔔"
+    ],
+
     [
       "/admin/reports",
       "Reports",
       "▥"
     ],
+
     [
-      "/admin/notifications",
-      "Notifications",
-      "🔔"
+      "/admin/users",
+      "Users",
+      "♙"
+    ],
+
+    [
+      "/admin/audit-logs",
+      "Audit Logs",
+      "▤"
+    ],
+
+    [
+      "/admin/system-settings",
+      "System Settings",
+      "⚙"
     ]
+
   ];
+
 
   return h(
     "aside",
@@ -69,6 +102,11 @@ const Sidebar = () => {
       className:
         "dashboard-sidebar"
     },
+
+
+    /* =====================================
+       BRAND
+    ===================================== */
 
     h(
       "div",
@@ -89,18 +127,26 @@ const Sidebar = () => {
       h(
         "div",
         null,
+
         h(
           "strong",
           null,
           "ProjectWatch"
         ),
+
         h(
           "span",
           null,
           "NEPAL"
         )
+
       )
     ),
+
+
+    /* =====================================
+       SECTION
+    ===================================== */
 
     h(
       "div",
@@ -108,8 +154,14 @@ const Sidebar = () => {
         className:
           "sidebar-section-title"
       },
+
       "MONITORING"
     ),
+
+
+    /* =====================================
+       NAVIGATION
+    ===================================== */
 
     h(
       "nav",
@@ -120,11 +172,14 @@ const Sidebar = () => {
 
       links.map(
         ([path, label, icon]) =>
+
           h(
             NavLink,
             {
               key: path,
+
               to: path,
+
               className:
                 ({ isActive }) =>
                   `sidebar-link ${
@@ -148,9 +203,15 @@ const Sidebar = () => {
               null,
               label
             )
+
           )
       )
     ),
+
+
+    /* =====================================
+       BOTTOM
+    ===================================== */
 
     h(
       "div",
@@ -159,10 +220,15 @@ const Sidebar = () => {
           "sidebar-bottom"
       },
 
+
+      /* SETTINGS */
+
       h(
         NavLink,
         {
-          to: "/admin/settings",
+          to:
+            "/admin/settings",
+
           className:
             ({ isActive }) =>
               `sidebar-link ${
@@ -188,6 +254,9 @@ const Sidebar = () => {
         )
       ),
 
+
+      /* USER */
+
       h(
         "div",
         {
@@ -201,6 +270,7 @@ const Sidebar = () => {
             className:
               "sidebar-user-avatar"
           },
+
           (
             user?.name ||
             "A"
@@ -208,6 +278,7 @@ const Sidebar = () => {
             .charAt(0)
             .toUpperCase()
         ),
+
 
         h(
           "div",
@@ -226,10 +297,15 @@ const Sidebar = () => {
             user?.role ||
               "admin"
           )
+
         )
+
       )
+
     )
+
   );
 };
+
 
 export default Sidebar;
