@@ -2,30 +2,19 @@ import React from "react";
 
 const h = React.createElement;
 
-const ProjectProgress = ({
-  progress = 0
-}) => {
+const ProjectProgress = ({ progress = 0 }) => {
   const value = Math.max(
     0,
-    Math.min(
-      100,
-      Number(progress) || 0
-    )
+    Math.min(100, Number(progress) || 0)
   );
 
   return h(
     "div",
-    {
-      className:
-        "project-progress"
-    },
+    { className: "project-progress" },
 
     h(
       "div",
-      {
-        className:
-          "project-progress-top"
-      },
+      { className: "project-progress-header" },
 
       h(
         "span",
@@ -36,24 +25,20 @@ const ProjectProgress = ({
       h(
         "strong",
         null,
-        `${value}%`
+        value + "%"
       )
     ),
 
     h(
       "div",
-      {
-        className:
-          "project-progress-track"
-      },
+      { className: "project-progress-track" },
 
       h(
         "div",
         {
-          className:
-            "project-progress-fill",
+          className: "project-progress-fill",
           style: {
-            width: `${value}%`
+            width: value + "%"
           }
         }
       )

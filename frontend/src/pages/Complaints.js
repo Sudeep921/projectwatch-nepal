@@ -36,9 +36,14 @@ const Complaints = () => {
       location: ""
     });
 
+  // ========================================
+  // LOAD COMPLAINTS + PROJECTS
+  // ========================================
+
   const loadData = async () => {
     try {
       setLoading(true);
+      setError("");
 
       const [
         complaintResponse,
@@ -74,13 +79,19 @@ const Complaints = () => {
     }
   };
 
+  // ========================================
+  // INITIAL LOAD
+  // ========================================
+
   useEffect(() => {
     loadData();
   }, []);
 
-  const handleChange = (
-    event
-  ) => {
+  // ========================================
+  // FORM CHANGE
+  // ========================================
+
+  const handleChange = (event) => {
     const {
       name,
       value
@@ -91,6 +102,46 @@ const Complaints = () => {
       [name]: value
     }));
   };
+
+  // ========================================
+  // GET PROJECT NAME
+  // ========================================
+
+  const getProjectName = (
+    complaint
+  ) => {
+    if (
+      complaint?.project &&
+      typeof complaint.project ===
+        "object"
+    ) {
+      return (
+        complaint.project.name ||
+        complaint.project.projectName ||
+        complaint.project.projectCode ||
+        "General Project"
+      );
+    }
+
+    const project =
+      projects.find(
+        (item) =>
+          item._id ===
+          complaint?.project
+      );
+
+    return (
+      project?.name ||
+      project?.projectName ||
+      project?.projectCode ||
+      complaint?.project ||
+      "General Project"
+    );
+  };
+
+  // ========================================
+  // SUBMIT COMPLAINT
+  // ========================================
 
   const submitComplaint =
     async (event) => {
@@ -129,12 +180,20 @@ const Complaints = () => {
       }
     };
 
+  // ========================================
+  // RETURN UI
+  // ========================================
+
   return React.createElement(
     "div",
     {
       className:
         "page-container"
     },
+
+    // ======================================
+    // PAGE HEADER
+    // ======================================
 
     React.createElement(
       "div",
@@ -170,20 +229,47 @@ const Complaints = () => {
       ),
 
       React.createElement(
-        "button",
+        "div",
         {
           className:
-            "primary-button",
-          onClick: () =>
-            setShowForm(
-              !showForm
-            )
+            "header-actions"
         },
-        showForm
-          ? "Close Form"
-          : "+ New Complaint"
+
+        React.createElement(
+          "button",
+          {
+            className:
+              "secondary-button",
+            onClick:
+              loadData,
+            disabled:
+              loading
+          },
+          loading
+            ? "Refreshing..."
+            : "↻ Refresh"
+        ),
+
+        React.createElement(
+          "button",
+          {
+            className:
+              "primary-button",
+            onClick: () =>
+              setShowForm(
+                !showForm
+              )
+          },
+          showForm
+            ? "Close Form"
+            : "+ New Complaint"
+        )
       )
     ),
+
+    // ======================================
+    // ERROR
+    // ======================================
 
     error
       ? React.createElement(
@@ -196,6 +282,10 @@ const Complaints = () => {
           error
         )
       : null,
+
+    // ======================================
+    // NEW COMPLAINT FORM
+    // ======================================
 
     showForm
       ? React.createElement(
@@ -240,6 +330,7 @@ const Complaints = () => {
                   "form-grid"
               },
 
+              // PROJECT
               React.createElement(
                 "div",
                 {
@@ -283,12 +374,16 @@ const Complaints = () => {
                           value:
                             project._id
                         },
-                        project.name
+                        project.name ||
+                          project.projectName ||
+                          project.projectCode ||
+                          "Unnamed Project"
                       )
                   )
                 )
               ),
 
+              // SUBJECT
               React.createElement(
                 "div",
                 {
@@ -318,6 +413,7 @@ const Complaints = () => {
                 )
               ),
 
+              // LOCATION
               React.createElement(
                 "div",
                 {
@@ -346,6 +442,7 @@ const Complaints = () => {
                 )
               ),
 
+              // DESCRIPTION
               React.createElement(
                 "div",
                 {
@@ -377,6 +474,7 @@ const Complaints = () => {
               )
             ),
 
+            // FORM BUTTONS
             React.createElement(
               "div",
               {
@@ -418,6 +516,10 @@ const Complaints = () => {
         )
       : null,
 
+    // ======================================
+    // LOADING
+    // ======================================
+
     loading
       ? React.createElement(
           "div",
@@ -427,6 +529,11 @@ const Complaints = () => {
           },
           "Loading complaints..."
         )
+
+      // ====================================
+      // EMPTY STATE
+      // ====================================
+
       : complaints.length === 0
       ? React.createElement(
           "div",
@@ -447,6 +554,11 @@ const Complaints = () => {
             "Citizen complaints and project concerns will appear here."
           )
         )
+
+      // ====================================
+      // COMPLAINT LIST
+      // ====================================
+
       : React.createElement(
           "div",
           {
@@ -466,6 +578,7 @@ const Complaints = () => {
                     complaint.id
                 },
 
+                // CARD HEADER
                 React.createElement(
                   "div",
                   {
@@ -491,6 +604,7 @@ const Complaints = () => {
                   )
                 ),
 
+                // DESCRIPTION
                 React.createElement(
                   "p",
                   null,
@@ -498,6 +612,7 @@ const Complaints = () => {
                     "No description available."
                 ),
 
+                // META
                 React.createElement(
                   "div",
                   {
@@ -508,19 +623,16 @@ const Complaints = () => {
                   React.createElement(
                     "span",
                     null,
-                    typeof complaint.project ===
-                      "object"
-                      ? complaint.project?.name ||
-                        complaint.project?.projectName ||
-                        complaint.project?.projectCode ||
-                        "General"
-                      : complaint.project ||
-                        "General"
+                    "📁 ",
+                    getProjectName(
+                      complaint
+                    )
                   ),
 
                   React.createElement(
                     "span",
                     null,
+                    "📍 ",
                     complaint.location ||
                       "Location not provided"
                   )

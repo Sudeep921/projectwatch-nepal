@@ -1,5 +1,6 @@
 import React, {
   useEffect,
+  useMemo,
   useState
 } from "react";
 
@@ -9,18 +10,31 @@ import {
   getProjects
 } from "../services/api";
 
+const h = React.createElement;
+
 const FieldReports = () => {
   const [reports, setReports] = useState([]);
   const [projects, setProjects] = useState([]);
 
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [showForm, setShowForm] = useState(false);
-
-  const [gpsLoading, setGpsLoading] =
-    useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const [showForm, setShowForm] = useState(false);
+
+  const [selectedProject, setSelectedProject] =
+    useState("all");
+
+  const [searchTerm, setSearchTerm] =
+    useState("");
+
+  const [progressFilter, setProgressFilter] =
+    useState("all");
+
+  const [sortOrder, setSortOrder] =
+    useState("newest");
 
   const [form, setForm] = useState({
     project: "",
@@ -31,39 +45,55 @@ const FieldReports = () => {
     longitude: ""
   });
 
+  // ========================================
+  // LOAD DATA
+  // ========================================
+
   const loadData = async () => {
     try {
       setLoading(true);
       setError("");
 
       const [
-        reportResponse,
-        projectResponse
+        reportsResult,
+        projectsResult
       ] = await Promise.all([
         getFieldReports(),
         getProjects()
       ]);
 
+      const reportData =
+        reportsResult?.reports ??
+        reportsResult?.data ??
+        reportsResult ??
+        [];
+
+      const projectData =
+        projectsResult?.projects ??
+        projectsResult?.data ??
+        projectsResult ??
+        [];
+
       setReports(
-        reportResponse?.reports ||
-          reportResponse?.data ||
-          []
+        Array.isArray(reportData)
+          ? reportData
+          : []
       );
 
       setProjects(
-        projectResponse?.projects ||
-          projectResponse?.data ||
-          []
+        Array.isArray(projectData)
+          ? projectData
+          : []
       );
     } catch (err) {
       console.error(
-        "Field report loading failed:",
+        "FIELD REPORT LOAD ERROR:",
         err
       );
 
       setError(
-        err.message ||
-          "Unable to load field reports."
+        err?.message ||
+        "Failed to load field reports."
       );
     } finally {
       setLoading(false);
@@ -73,6 +103,10 @@ const FieldReports = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  // ========================================
+  // FORM CHANGE
+  // ========================================
 
   const handleChange = (event) => {
     const {
@@ -86,48 +120,528 @@ const FieldReports = () => {
     }));
   };
 
-  const getGPS = () => {
-    if (!navigator.geolocation) {
-      window.alert(
+  // ========================================
+  // PROJECT HELPERS
+  // ========================================
+
+  const getProjectId = (project) => {
+    if (!project) {
+      return "";
+    }
+
+    if (typeof project === "string") {
+      return project;
+    }
+
+    return (
+      project._id ||
+      project.id ||
+      ""
+    );
+  };
+
+  const getReportProjectId = (report) => {
+    if (!report) {
+      return "";
+    }
+
+    if (
+      typeof report.project === "string"
+    ) {
+      return report.project;
+    }
+
+    return (
+      report.project?._id ||
+      report.project?.id ||
+      report.projectId ||
+      ""
+    );
+  };
+
+  const getReportProjectName = (report) => {
+    if (!report) {
+      return "Unknown Project";
+    }
+
+    if (
+      typeof report.project === "object" &&
+      report.project
+    ) {
+      return (
+        report.project.projectName ||
+        report.project.name ||
+        report.project.title ||
+        "Unknown Project"
+      );
+    }
+
+    const project = projects.find(
+      (item) =>
+        String(
+          getProjectId(item)
+        ) ===
+        String(
+          getReportProjectId(report)
+        )
+    );
+
+    return (
+      project?.projectName ||
+      project?.name ||
+      project?.title ||
+      "Unknown Project"
+    );
+  };
+
+  // ========================================
+  // PROGRESS
+  // ========================================
+
+  const getProgress = (report) => {
+    const value = Number(
+      report?.reportedProgress ??
+      report?.progress ??
+      0
+    );
+
+    if (Number.isNaN(value)) {
+      return 0;
+    }
+
+    return Math.min(
+      100,
+      Math.max(0, value)
+    );
+  };
+
+  // ========================================
+  // SEARCH
+  // ========================================
+
+  const searchedReports = useMemo(() => {
+    const search =
+      searchTerm
+        .trim()
+        .toLowerCase();
+
+    if (!search) {
+      return reports;
+    }
+
+    return reports.filter(
+      (report) => {
+        const projectName =
+          getReportProjectName(
+            report
+          );
+
+        const observation =
+          report?.observation ||
+          "";
+
+        const location =
+          report?.location ||
+          "";
+
+        return (
+          projectName
+            .toLowerCase()
+            .includes(search) ||
+          observation
+            .toLowerCase()
+            .includes(search) ||
+          location
+            .toLowerCase()
+            .includes(search)
+        );
+      }
+    );
+  }, [
+    reports,
+    searchTerm,
+    projects
+  ]);
+
+  // ========================================
+  // FILTER
+  // ========================================
+
+  const filteredReports = useMemo(() => {
+    let result = [
+      ...searchedReports
+    ];
+
+    if (
+      selectedProject !== "all"
+    ) {
+      result = result.filter(
+        (report) =>
+          String(
+            getReportProjectId(
+              report
+            )
+          ) ===
+          String(
+            selectedProject
+          )
+      );
+    }
+
+    if (
+      progressFilter ===
+      "completed"
+    ) {
+      result = result.filter(
+        (report) =>
+          getProgress(report) >= 100
+      );
+    }
+
+    if (
+      progressFilter ===
+      "critical"
+    ) {
+      result = result.filter(
+        (report) =>
+          getProgress(report) < 30
+      );
+    }
+
+    if (
+      progressFilter ===
+      "in-progress"
+    ) {
+      result = result.filter(
+        (report) => {
+          const progress =
+            getProgress(report);
+
+          return (
+            progress >= 30 &&
+            progress < 100
+          );
+        }
+      );
+    }
+
+    return result;
+  }, [
+    searchedReports,
+    selectedProject,
+    progressFilter
+  ]);
+
+  // ========================================
+  // SORT
+  // ========================================
+
+  const sortedReports = useMemo(() => {
+    return [
+      ...filteredReports
+    ].sort(
+      (a, b) => {
+        const dateA =
+          new Date(
+            a.createdAt ||
+            a.date ||
+            0
+          ).getTime();
+
+        const dateB =
+          new Date(
+            b.createdAt ||
+            b.date ||
+            0
+          ).getTime();
+
+        if (
+          sortOrder === "oldest"
+        ) {
+          return dateA - dateB;
+        }
+
+        return dateB - dateA;
+      }
+    );
+  }, [
+    filteredReports,
+    sortOrder
+  ]);
+
+  // ========================================
+  // LATEST REPORT PER PROJECT
+  // ========================================
+
+  const latestReports = useMemo(() => {
+    const map = {};
+
+    sortedReports.forEach(
+      (report) => {
+        const projectId =
+          getReportProjectId(
+            report
+          );
+
+        if (!projectId) {
+          return;
+        }
+
+        if (!map[projectId]) {
+          map[projectId] =
+            report;
+        }
+      }
+    );
+
+    return map;
+  }, [
+    sortedReports
+  ]);
+
+  // ========================================
+  // SUMMARY
+  // ========================================
+
+  const summary = useMemo(() => {
+    const total =
+      sortedReports.length;
+
+    const completed =
+      sortedReports.filter(
+        (report) =>
+          getProgress(report) >= 100
+      ).length;
+
+    const critical =
+      sortedReports.filter(
+        (report) =>
+          getProgress(report) < 30
+      ).length;
+
+    const inProgress =
+      sortedReports.filter(
+        (report) => {
+          const progress =
+            getProgress(report);
+
+          return (
+            progress >= 30 &&
+            progress < 100
+          );
+        }
+      ).length;
+
+    return {
+      total,
+      completed,
+      critical,
+      inProgress
+    };
+  }, [
+    sortedReports
+  ]);
+
+  // ========================================
+  // SUBMIT REPORT
+  // ========================================
+
+  const handleSubmit = async (
+    event
+  ) => {
+    event.preventDefault();
+
+    setError("");
+    setSuccess("");
+
+    if (!form.project) {
+      setError(
+        "Please select a project."
+      );
+      return;
+    }
+
+    const progress =
+      Number(
+        form.reportedProgress
+      );
+
+    if (
+      Number.isNaN(progress) ||
+      progress < 0 ||
+      progress > 100
+    ) {
+      setError(
+        "Progress must be between 0 and 100."
+      );
+      return;
+    }
+
+    if (
+      !Number.isInteger(progress)
+    ) {
+      setError(
+        "Progress must be a whole number."
+      );
+      return;
+    }
+
+    if (
+      form.latitude !== ""
+    ) {
+      const latitude =
+        Number(form.latitude);
+
+      if (
+        Number.isNaN(latitude) ||
+        latitude < -90 ||
+        latitude > 90
+      ) {
+        setError(
+          "Latitude must be between -90 and 90."
+        );
+        return;
+      }
+    }
+
+    if (
+      form.longitude !== ""
+    ) {
+      const longitude =
+        Number(form.longitude);
+
+      if (
+        Number.isNaN(longitude) ||
+        longitude < -180 ||
+        longitude > 180
+      ) {
+        setError(
+          "Longitude must be between -180 and 180."
+        );
+        return;
+      }
+    }
+
+    if (
+      !form.observation.trim()
+    ) {
+      setError(
+        "Please enter an observation."
+      );
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+
+      const payload = {
+        project:
+          form.project,
+
+        reportedProgress:
+          progress,
+
+        observation:
+          form.observation.trim(),
+
+        location:
+          form.location.trim()
+      };
+
+      if (
+        form.latitude !== ""
+      ) {
+        payload.latitude =
+          Number(form.latitude);
+      }
+
+      if (
+        form.longitude !== ""
+      ) {
+        payload.longitude =
+          Number(form.longitude);
+      }
+
+      await createFieldReport(
+        payload
+      );
+
+      setSuccess(
+        progress >= 100
+          ? "Field report submitted. Project completed notification should be created automatically."
+          : progress < 30
+          ? "Field report submitted. Critical alert should be created automatically."
+          : "Field report submitted successfully."
+      );
+
+      setForm({
+        project: "",
+        reportedProgress: "",
+        observation: "",
+        location: "",
+        latitude: "",
+        longitude: ""
+      });
+
+      setShowForm(false);
+
+      await loadData();
+    } catch (err) {
+      console.error(
+        "FIELD REPORT CREATE ERROR:",
+        err
+      );
+
+      setError(
+        err?.message ||
+        "Failed to create field report."
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // ========================================
+  // GPS
+  // ========================================
+
+  const handleGPS = () => {
+    setError("");
+
+    if (
+      !navigator.geolocation
+    ) {
+      setError(
         "Geolocation is not supported by this browser."
       );
       return;
     }
 
-    setGpsLoading(true);
-
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        const latitude =
-          position.coords.latitude;
+        setForm(
+          (previous) => ({
+            ...previous,
 
-        const longitude =
-          position.coords.longitude;
+            latitude:
+              position.coords.latitude.toFixed(
+                6
+              ),
 
-        setForm((previous) => ({
-          ...previous,
-          latitude:
-            latitude.toFixed(6),
-          longitude:
-            longitude.toFixed(6),
-          location:
-            `${latitude.toFixed(
-              6
-            )}, ${longitude.toFixed(6)}`
-        }));
-
-        setGpsLoading(false);
-      },
-      (error) => {
-        console.error(
-          "GPS error:",
-          error
+            longitude:
+              position.coords.longitude.toFixed(
+                6
+              )
+          })
         );
 
-        setGpsLoading(false);
-
-        window.alert(
-          "Unable to get your current GPS location."
+        setSuccess(
+          "Current GPS location added."
+        );
+      },
+      () => {
+        setError(
+          "Unable to get your current location."
         );
       },
       {
@@ -138,637 +652,1127 @@ const FieldReports = () => {
     );
   };
 
-  const resetForm = () => {
-    setForm({
-      project: "",
-      reportedProgress: "",
-      observation: "",
-      location: "",
-      latitude: "",
-      longitude: ""
-    });
+  // ========================================
+  // RESET FILTERS
+  // ========================================
+
+  const clearFilters = () => {
+    setSearchTerm("");
+    setSelectedProject("all");
+    setProgressFilter("all");
+    setSortOrder("newest");
   };
 
-  const submitReport = async (event) => {
-    event.preventDefault();
+  // ========================================
+  // LOADING
+  // ========================================
 
-    try {
-      setSaving(true);
-      setError("");
+  if (loading) {
+    return h(
+      "div",
+      {
+        className:
+          "field-reports-page"
+      },
 
-      await createFieldReport({
-        project: form.project,
-        reportedProgress:
-          Number(
-            form.reportedProgress
-          ),
-        observation:
-          form.observation,
-        location:
-          form.location,
-        latitude:
-          form.latitude
-            ? Number(form.latitude)
-            : undefined,
-        longitude:
-          form.longitude
-            ? Number(form.longitude)
-            : undefined
-      });
-
-      resetForm();
-      setShowForm(false);
-
-      await loadData();
-    } catch (err) {
-      console.error(
-        "Field report creation failed:",
-        err
-      );
-
-      setError(
-        err.message ||
-          "Unable to submit field report."
-      );
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const getProjectName = (report) => {
-    if (
-      report.project &&
-      typeof report.project === "object"
-    ) {
-      return (
-        report.project.name ||
-        "Government Project"
-      );
-    }
-
-    const project = projects.find(
-      (item) =>
-        item._id === report.project
+      h(
+        "div",
+        {
+          className:
+            "field-reports-loading"
+        },
+        "Loading field reports..."
+      )
     );
+  }
 
-    return (
-      project?.name ||
-      report.project ||
-      "Government Project"
-    );
-  };
+  // ========================================
+  // MAIN UI
+  // ========================================
 
-  return React.createElement(
+  return h(
     "div",
     {
       className:
-        "page-container field-reports-page"
+        "field-reports-page"
     },
 
-    React.createElement(
+    // ======================================
+    // HEADER
+    // ======================================
+
+    h(
       "div",
       {
-        className: "page-header"
+        className:
+          "field-reports-header"
       },
 
-      React.createElement(
+      h(
         "div",
         null,
 
-        React.createElement(
-          "span",
-          {
-            className:
-              "page-eyebrow"
-          },
-          "FIELD MONITORING"
-        ),
-
-        React.createElement(
+        h(
           "h1",
           null,
           "Field Reports"
         ),
 
-        React.createElement(
+        h(
           "p",
           null,
-          "Review and submit field inspection reports from project sites."
+          "Monitor project progress from field updates."
         )
       ),
 
-      React.createElement(
+      h(
         "button",
         {
           className:
-            "primary-button",
-          onClick: () =>
+            "field-report-add-button",
+
+          onClick: () => {
             setShowForm(
               !showForm
-            )
+            );
+
+            setError("");
+            setSuccess("");
+          }
         },
+
         showForm
-          ? "Close Form"
+          ? "✕ Close"
           : "+ New Field Report"
       )
     ),
 
-    error
-      ? React.createElement(
-          "div",
-          {
-            className:
-              "form-error"
-          },
-          "⚠ ",
-          error
-        )
-      : null,
+    // ======================================
+    // SUCCESS
+    // ======================================
 
-    showForm
-      ? React.createElement(
-          "div",
-          {
-            className:
-              "report-form-card"
-          },
-
-          React.createElement(
-            "div",
-            {
-              className:
-                "report-form-title"
-            },
-
-            React.createElement(
-              "span",
-              {
-                className:
-                  "page-eyebrow"
-              },
-              "SITE INSPECTION"
-            ),
-
-            React.createElement(
-              "h2",
-              null,
-              "Submit Field Report"
-            ),
-
-            React.createElement(
-              "p",
-              null,
-              "Record the latest condition and progress observed at the project site."
-            )
-          ),
-
-          React.createElement(
-            "form",
-            {
-              onSubmit:
-                submitReport
-            },
-
-            React.createElement(
-              "div",
-              {
-                className:
-                  "form-grid"
-              },
-
-              React.createElement(
-                "div",
-                {
-                  className:
-                    "form-group"
-                },
-
-                React.createElement(
-                  "label",
-                  null,
-                  "Project"
-                ),
-
-                React.createElement(
-                  "select",
-                  {
-                    name: "project",
-                    value:
-                      form.project,
-                    onChange:
-                      handleChange,
-                    required: true
-                  },
-
-                  React.createElement(
-                    "option",
-                    {
-                      value: ""
-                    },
-                    "Select project"
-                  ),
-
-                  projects.map(
-                    (project) =>
-                      React.createElement(
-                        "option",
-                        {
-                          key:
-                            project._id,
-                          value:
-                            project._id
-                        },
-                        project.name ||
-                          "Government Project"
-                      )
-                  )
-                )
-              ),
-
-              React.createElement(
-                "div",
-                {
-                  className:
-                    "form-group"
-                },
-
-                React.createElement(
-                  "label",
-                  null,
-                  "Reported Progress (%)"
-                ),
-
-                React.createElement(
-                  "input",
-                  {
-                    type: "number",
-                    name:
-                      "reportedProgress",
-                    min: 0,
-                    max: 100,
-                    value:
-                      form.reportedProgress,
-                    onChange:
-                      handleChange,
-                    placeholder:
-                      "e.g. 45",
-                    required: true
-                  }
-                )
-              ),
-
-              React.createElement(
-                "div",
-                {
-                  className:
-                    "form-group full"
-                },
-
-                React.createElement(
-                  "label",
-                  null,
-                  "Site Location"
-                ),
-
-                React.createElement(
-                  "div",
-                  {
-                    className:
-                      "location-input-row"
-                  },
-
-                  React.createElement(
-                    "input",
-                    {
-                      name:
-                        "location",
-                      value:
-                        form.location,
-                      onChange:
-                        handleChange,
-                      placeholder:
-                        "GPS location or site address"
-                    }
-                  ),
-
-                  React.createElement(
-                    "button",
-                    {
-                      type: "button",
-                      className:
-                        "gps-button",
-                      onClick:
-                        getGPS,
-                      disabled:
-                        gpsLoading
-                    },
-                    gpsLoading
-                      ? "Getting GPS..."
-                      : "⌖ Get GPS"
-                  )
-                )
-              ),
-
-              React.createElement(
-                "div",
-                {
-                  className:
-                    "form-group"
-                },
-
-                React.createElement(
-                  "label",
-                  null,
-                  "Latitude"
-                ),
-
-                React.createElement(
-                  "input",
-                  {
-                    name:
-                      "latitude",
-                    value:
-                      form.latitude,
-                    onChange:
-                      handleChange,
-                    placeholder:
-                      "28.394900"
-                  }
-                )
-              ),
-
-              React.createElement(
-                "div",
-                {
-                  className:
-                    "form-group"
-                },
-
-                React.createElement(
-                  "label",
-                  null,
-                  "Longitude"
-                ),
-
-                React.createElement(
-                  "input",
-                  {
-                    name:
-                      "longitude",
-                    value:
-                      form.longitude,
-                    onChange:
-                      handleChange,
-                    placeholder:
-                      "84.124000"
-                  }
-                )
-              ),
-
-              React.createElement(
-                "div",
-                {
-                  className:
-                    "form-group full"
-                },
-
-                React.createElement(
-                  "label",
-                  null,
-                  "Site Observation"
-                ),
-
-                React.createElement(
-                  "textarea",
-                  {
-                    name:
-                      "observation",
-                    value:
-                      form.observation,
-                    onChange:
-                      handleChange,
-                    rows: 6,
-                    placeholder:
-                      "Describe the current site condition, work progress, materials, workers, delays or other observations...",
-                    required: true
-                  }
-                )
-              )
-            ),
-
-            React.createElement(
-              "div",
-              {
-                className:
-                  "modal-footer"
-              },
-
-              React.createElement(
-                "button",
-                {
-                  type: "button",
-                  className:
-                    "secondary-button",
-                  onClick: () => {
-                    resetForm();
-                    setShowForm(false);
-                  }
-                },
-                "Cancel"
-              ),
-
-              React.createElement(
-                "button",
-                {
-                  type: "submit",
-                  className:
-                    "primary-button",
-                  disabled:
-                    saving
-                },
-                saving
-                  ? "Submitting..."
-                  : "Submit Field Report"
-              )
-            )
-          )
-        )
-      : null,
-
-    React.createElement(
-      "div",
-      {
-        className:
-          "reports-section"
-      },
-
-      React.createElement(
+    success &&
+      h(
         "div",
         {
           className:
-            "section-heading"
+            "field-report-success"
+        },
+        success
+      ),
+
+    // ======================================
+    // ERROR
+    // ======================================
+
+    error &&
+      h(
+        "div",
+        {
+          className:
+            "field-report-error"
+        },
+        error
+      ),
+
+    // ======================================
+    // SUMMARY
+    // ======================================
+
+    h(
+      "div",
+      {
+        className:
+          "field-report-summary-grid"
+      },
+
+      h(
+        "div",
+        {
+          className:
+            "field-report-summary-card"
         },
 
-        React.createElement(
+        h(
+          "span",
+          {
+            className:
+              "field-report-summary-icon"
+          },
+          "📋"
+        ),
+
+        h(
           "div",
           null,
 
-          React.createElement(
+          h(
+            "strong",
+            null,
+            summary.total
+          ),
+
+          h(
             "span",
-            {
-              className:
-                "page-eyebrow"
-            },
-            "INSPECTION RECORDS"
-          ),
-
-          React.createElement(
-            "h2",
             null,
-            "Inspection Reports"
-          ),
-
-          React.createElement(
-            "p",
-            null,
-            `${reports.length} field report${
-              reports.length === 1
-                ? ""
-                : "s"
-            } recorded`
+            "Total Reports"
           )
         )
       ),
 
-      loading
-        ? React.createElement(
-            "div",
-            {
-              className:
-                "page-loading"
-            },
-            "Loading field reports..."
+      h(
+        "div",
+        {
+          className:
+            "field-report-summary-card"
+        },
+
+        h(
+          "span",
+          {
+            className:
+              "field-report-summary-icon"
+          },
+          "🔄"
+        ),
+
+        h(
+          "div",
+          null,
+
+          h(
+            "strong",
+            null,
+            summary.inProgress
+          ),
+
+          h(
+            "span",
+            null,
+            "In Progress"
           )
-        : reports.length === 0
-        ? React.createElement(
+        )
+      ),
+
+      h(
+        "div",
+        {
+          className:
+            "field-report-summary-card"
+        },
+
+        h(
+          "span",
+          {
+            className:
+              "field-report-summary-icon"
+          },
+          "✓"
+        ),
+
+        h(
+          "div",
+          null,
+
+          h(
+            "strong",
+            null,
+            summary.completed
+          ),
+
+          h(
+            "span",
+            null,
+            "Completed"
+          )
+        )
+      ),
+
+      h(
+        "div",
+        {
+          className:
+            "field-report-summary-card"
+        },
+
+        h(
+          "span",
+          {
+            className:
+              "field-report-summary-icon"
+          },
+          "⚠"
+        ),
+
+        h(
+          "div",
+          null,
+
+          h(
+            "strong",
+            null,
+            summary.critical
+          ),
+
+          h(
+            "span",
+            null,
+            "Critical Progress"
+          )
+        )
+      )
+    ),
+
+    // ======================================
+    // FORM
+    // ======================================
+
+    showForm &&
+      h(
+        "div",
+        {
+          className:
+            "field-report-form-card"
+        },
+
+        h(
+          "div",
+          {
+            className:
+              "field-report-form-title"
+          },
+          "Submit Field Report"
+        ),
+
+        h(
+          "form",
+          {
+            onSubmit:
+              handleSubmit,
+
+            className:
+              "field-report-form"
+          },
+
+          h(
             "div",
             {
               className:
-                "empty-state"
+                "field-report-form-grid"
             },
 
-            React.createElement(
-              "h3",
-              null,
-              "No field reports yet"
-            ),
-
-            React.createElement(
-              "p",
-              null,
-              "Start monitoring a project by submitting your first field inspection report."
-            ),
-
-            React.createElement(
-              "button",
+            // PROJECT
+            h(
+              "div",
               {
                 className:
-                  "primary-button",
-                onClick: () =>
-                  setShowForm(true)
+                  "field-report-field"
               },
-              "+ Create First Report"
+
+              h(
+                "label",
+                null,
+                "Project"
+              ),
+
+              h(
+                "select",
+                {
+                  name: "project",
+                  value:
+                    form.project,
+                  onChange:
+                    handleChange,
+                  required: true
+                },
+
+                h(
+                  "option",
+                  {
+                    value: ""
+                  },
+                  "Select Project"
+                ),
+
+                projects.map(
+                  (project) =>
+                    h(
+                      "option",
+                      {
+                        key:
+                          getProjectId(
+                            project
+                          ),
+
+                        value:
+                          getProjectId(
+                            project
+                          )
+                      },
+
+                      project.projectName ||
+                        project.name ||
+                        project.title ||
+                        "Unnamed Project"
+                    )
+                )
+              )
+            ),
+
+            // PROGRESS
+            h(
+              "div",
+              {
+                className:
+                  "field-report-field"
+              },
+
+              h(
+                "label",
+                null,
+                "Reported Progress (%)"
+              ),
+
+              h(
+                "input",
+                {
+                  type: "number",
+
+                  name:
+                    "reportedProgress",
+
+                  value:
+                    form.reportedProgress,
+
+                  onChange:
+                    handleChange,
+
+                  min: 0,
+                  max: 100,
+                  step: 1,
+
+                  placeholder:
+                    "Example: 65",
+
+                  required: true
+                }
+              )
+            ),
+
+            // OBSERVATION
+            h(
+              "div",
+              {
+                className:
+                  "field-report-field field-report-full"
+              },
+
+              h(
+                "label",
+                null,
+                "Observation"
+              ),
+
+              h(
+                "textarea",
+                {
+                  name:
+                    "observation",
+
+                  value:
+                    form.observation,
+
+                  onChange:
+                    handleChange,
+
+                  rows: 4,
+
+                  placeholder:
+                    "Describe the current field condition...",
+
+                  required: true
+                }
+              )
+            ),
+
+            // LOCATION
+            h(
+              "div",
+              {
+                className:
+                  "field-report-field"
+              },
+
+              h(
+                "label",
+                null,
+                "Location"
+              ),
+
+              h(
+                "input",
+                {
+                  type: "text",
+
+                  name:
+                    "location",
+
+                  value:
+                    form.location,
+
+                  onChange:
+                    handleChange,
+
+                  placeholder:
+                    "Example: Kathmandu"
+                }
+              )
+            ),
+
+            // LATITUDE
+            h(
+              "div",
+              {
+                className:
+                  "field-report-field"
+              },
+
+              h(
+                "label",
+                null,
+                "Latitude"
+              ),
+
+              h(
+                "input",
+                {
+                  type: "number",
+
+                  name:
+                    "latitude",
+
+                  value:
+                    form.latitude,
+
+                  onChange:
+                    handleChange,
+
+                  step: "any",
+
+                  placeholder:
+                    "27.7172"
+                }
+              )
+            ),
+
+            // LONGITUDE
+            h(
+              "div",
+              {
+                className:
+                  "field-report-field"
+              },
+
+              h(
+                "label",
+                null,
+                "Longitude"
+              ),
+
+              h(
+                "input",
+                {
+                  type: "number",
+
+                  name:
+                    "longitude",
+
+                  value:
+                    form.longitude,
+
+                  onChange:
+                    handleChange,
+
+                  step: "any",
+
+                  placeholder:
+                    "85.3240"
+                }
+              )
             )
-          )
-        : React.createElement(
+          ),
+
+          // FORM ACTIONS
+          h(
             "div",
             {
               className:
-                "reports-list"
+                "field-report-form-actions"
             },
 
-            reports.map(
-              (report) =>
-                React.createElement(
+            h(
+              "button",
+              {
+                type: "button",
+
+                className:
+                  "field-report-gps-button",
+
+                onClick:
+                  handleGPS
+              },
+
+              "📍 Use Current GPS"
+            ),
+
+            h(
+              "button",
+              {
+                type: "button",
+
+                className:
+                  "field-report-cancel-button",
+
+                onClick: () => {
+                  setShowForm(false);
+                  setError("");
+                }
+              },
+
+              "Cancel"
+            ),
+
+            h(
+              "button",
+              {
+                type: "submit",
+
+                className:
+                  "field-report-submit-button",
+
+                disabled:
+                  submitting
+              },
+
+              submitting
+                ? "Submitting..."
+                : "Submit Report"
+            )
+          )
+        )
+      ),
+
+    // ======================================
+    // TOOLBAR
+    // ======================================
+
+    h(
+      "div",
+      {
+        className:
+          "field-report-toolbar"
+      },
+
+      h(
+        "input",
+        {
+          type: "search",
+
+          className:
+            "field-report-search",
+
+          value:
+            searchTerm,
+
+          onChange: (event) =>
+            setSearchTerm(
+              event.target.value
+            ),
+
+          placeholder:
+            "Search project, observation..."
+        }
+      ),
+
+      h(
+        "div",
+        {
+          className:
+            "field-report-count"
+        },
+
+        h(
+          "strong",
+          null,
+          sortedReports.length
+        ),
+
+        " field reports"
+      ),
+
+      h(
+        "select",
+        {
+          value:
+            selectedProject,
+
+          onChange: (event) =>
+            setSelectedProject(
+              event.target.value
+            ),
+
+          className:
+            "field-report-project-filter"
+        },
+
+        h(
+          "option",
+          {
+            value: "all"
+          },
+          "All Projects"
+        ),
+
+        projects.map(
+          (project) =>
+            h(
+              "option",
+              {
+                key:
+                  getProjectId(
+                    project
+                  ),
+
+                value:
+                  getProjectId(
+                    project
+                  )
+              },
+
+              project.projectName ||
+                project.name ||
+                project.title ||
+                "Unnamed Project"
+            )
+        )
+      ),
+
+      h(
+        "select",
+        {
+          value:
+            progressFilter,
+
+          onChange: (event) =>
+            setProgressFilter(
+              event.target.value
+            ),
+
+          className:
+            "field-report-progress-filter"
+        },
+
+        h(
+          "option",
+          {
+            value: "all"
+          },
+          "All Progress"
+        ),
+
+        h(
+          "option",
+          {
+            value:
+              "in-progress"
+          },
+          "In Progress"
+        ),
+
+        h(
+          "option",
+          {
+            value:
+              "completed"
+          },
+          "Completed"
+        ),
+
+        h(
+          "option",
+          {
+            value:
+              "critical"
+          },
+          "Critical (<30%)"
+        )
+      ),
+
+      h(
+        "select",
+        {
+          value:
+            sortOrder,
+
+          onChange: (event) =>
+            setSortOrder(
+              event.target.value
+            ),
+
+          className:
+            "field-report-sort"
+        },
+
+        h(
+          "option",
+          {
+            value:
+              "newest"
+          },
+          "Newest First"
+        ),
+
+        h(
+          "option",
+          {
+            value:
+              "oldest"
+          },
+          "Oldest First"
+        )
+      ),
+
+      h(
+        "button",
+        {
+          className:
+            "field-report-clear-button",
+
+          onClick:
+            clearFilters
+        },
+
+   
+      ),
+
+      h(
+        "button",
+        {
+          className:
+            "field-report-refresh-button",
+
+          onClick:
+            loadData
+        },
+
+        "↻ Refresh"
+      )
+    ),
+
+    // ======================================
+    // EMPTY STATE
+    // ======================================
+
+    sortedReports.length === 0
+
+      ? h(
+          "div",
+          {
+            className:
+              "field-report-empty"
+          },
+
+          searchTerm ||
+          selectedProject !== "all" ||
+          progressFilter !== "all"
+
+            ? "No field reports match your filters."
+
+            : "No field reports found."
+        )
+
+      // ====================================
+      // REPORT LIST
+      // ====================================
+
+      : h(
+          "div",
+          {
+            className:
+              "field-reports-list"
+          },
+
+          sortedReports.map(
+            (report, index) => {
+              const progress =
+                getProgress(
+                  report
+                );
+
+              const projectName =
+                getReportProjectName(
+                  report
+                );
+
+              const reportDate =
+                report.createdAt ||
+                report.date;
+
+              const projectId =
+                getReportProjectId(
+                  report
+                );
+
+              const latestReport =
+                latestReports[
+                  projectId
+                ];
+
+              const isLatest =
+                latestReport ===
+                report;
+
+              return h(
+                "div",
+                {
+                  key:
+                    report._id ||
+                    report.id ||
+                    index,
+
+                  className:
+                    "field-report-card"
+                },
+
+                // CARD TOP
+                h(
                   "div",
                   {
                     className:
-                      "report-card",
-                    key:
-                      report._id ||
-                      report.id
+                      "field-report-card-top"
                   },
 
-                  React.createElement(
+                  h(
+                    "div",
+                    null,
+
+                    h(
+                      "div",
+                      {
+                        className:
+                          "field-report-project-name"
+                      },
+
+                      projectName
+                    ),
+
+                    reportDate &&
+                      h(
+                        "div",
+                        {
+                          className:
+                            "field-report-date"
+                        },
+
+                        new Date(
+                          reportDate
+                        ).toLocaleString()
+                      )
+                  ),
+
+                  h(
                     "div",
                     {
                       className:
-                        "report-card-header"
+                        "field-report-progress-number"
                     },
 
-                    React.createElement(
-                      "strong",
-                      null,
-                      getProjectName(
-                        report
-                      )
-                    ),
+                    progress +
+                      "%"
+                  )
+                ),
 
-                    React.createElement(
+                // STATUS BADGE
+                progress >= 100
+                  ? h(
                       "span",
                       {
                         className:
-                          "status-badge"
+                          "field-report-completed-badge"
                       },
-                      report.status ||
-                        "Submitted"
+
+                      "✓ Completed"
                     )
+
+                  : progress < 30
+                  ? h(
+                      "span",
+                      {
+                        className:
+                          "field-report-critical-badge"
+                      },
+
+                      "⚠ Critical Progress"
+                    )
+
+                  : h(
+                      "span",
+                      {
+                        className:
+                          "field-report-active-badge"
+                      },
+
+                      "● In Progress"
+                    ),
+
+                // LATEST BADGE
+                isLatest &&
+                  h(
+                    "span",
+                    {
+                      className:
+                        "field-report-latest"
+                    },
+
+                    "Latest Update"
                   ),
 
-                  React.createElement(
-                    "p",
-                    null,
-                    report.observation ||
-                      "No observation available."
-                  ),
+                // PROGRESS BAR
+                h(
+                  "div",
+                  {
+                    className:
+                      "field-report-progress-track"
+                  },
 
-                  React.createElement(
+                  h(
                     "div",
                     {
                       className:
-                        "report-meta"
+                        "field-report-progress-fill",
+
+                      style: {
+                        width:
+                          progress +
+                          "%"
+                      }
+                    }
+                  )
+                ),
+
+                // PROGRESS LABEL
+                h(
+                  "div",
+                  {
+                    className:
+                      "field-report-card-progress-label"
+                  },
+
+                  "Reported project progress: ",
+
+                  h(
+                    "strong",
+                    null,
+
+                    progress +
+                      "%"
+                  )
+                ),
+
+                // OBSERVATION
+                report.observation &&
+                  h(
+                    "div",
+                    {
+                      className:
+                        "field-report-observation"
                     },
 
-                    React.createElement(
-                      "span",
+                    h(
+                      "strong",
                       null,
-                      `Progress: ${
-                        report.reportedProgress ??
-                        report.progress ??
-                        0
-                      }%`
+                      "Observation"
                     ),
 
-                    React.createElement(
-                      "span",
+                    h(
+                      "p",
                       null,
-                      report.location ||
-                        "Location not provided"
-                    ),
+
+                      report.observation
+                    )
+                  ),
+
+                // LOCATION
+                (
+                  report.location ||
+                  report.latitude ||
+                  report.longitude
+                ) &&
+                  h(
+                    "div",
+                    {
+                      className:
+                        "field-report-location"
+                    },
+
+                    "📍 ",
+
+                    report.location ||
+                      "Field Location",
 
                     report.latitude &&
                     report.longitude
-                      ? React.createElement(
-                          "span",
-                          null,
-                          `GPS: ${report.latitude}, ${report.longitude}`
+                      ? " (" +
+                        report.latitude +
+                        ", " +
+                        report.longitude +
+                        ")"
+                      : ""
+                  ),
+
+                // OFFICER
+                (
+                  report.officer ||
+                  report.createdBy
+                ) &&
+                  h(
+                    "div",
+                    {
+                      className:
+                        "field-report-officer"
+                    },
+
+                    "👤 ",
+
+                    typeof report.officer ===
+                      "object"
+
+                      ? (
+                          report.officer.name ||
+                          report.officer.fullName ||
+                          report.officer.email ||
+                          "Field Officer"
                         )
-                      : null
+
+                      : typeof report.createdBy ===
+                        "object"
+
+                      ? (
+                          report.createdBy.name ||
+                          report.createdBy.fullName ||
+                          report.createdBy.email ||
+                          "Field Officer"
+                        )
+
+                      : (
+                          report.officer ||
+                          report.createdBy
+                        )
                   )
-                )
-            )
+              );
+            }
           )
-    )
+        )
   );
 };
 

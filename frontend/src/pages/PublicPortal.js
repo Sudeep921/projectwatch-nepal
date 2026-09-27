@@ -12,11 +12,12 @@ import {
   getPublicSummary
 } from "../services/api";
 
-const h = React.createElement;
 import PublicProjectExplorer from "../components/PublicProjectExplorer";
 import PublicMap from "../components/PublicMap";
 import PublicUpdates from "../components/PublicUpdates";
 import PublicContact from "../components/PublicContact";
+
+const h = React.createElement;
 
 const PROVINCES = [
   "All Provinces",
@@ -229,12 +230,15 @@ const PublicPortal = () => {
   const clearFilters =
     () => {
       setSearch("");
+
       setProvince(
         "All Provinces"
       );
+
       setStatus(
         "All Status"
       );
+
       setRisk(
         "All Risk"
       );
@@ -412,6 +416,8 @@ const PublicPortal = () => {
         )
       ),
 
+      /* HEADER ACTIONS */
+
       h(
         "div",
         {
@@ -432,15 +438,6 @@ const PublicPortal = () => {
                 )
           },
           "⚠ Report an Issue"
-        ),
-
-        h(
-          "a",
-          {
-            href:
-              "/admin-login"
-          },
-          "Admin Login"
         )
       )
     ),
@@ -1084,31 +1081,6 @@ const PublicPortal = () => {
                 )
           },
           "Report a Project Issue"
-        )
-      ),
-
-      /* FOOTER COL 3 */
-
-      h(
-        "div",
-        {
-          className:
-            "public-footer-col"
-        },
-
-        h(
-          "strong",
-          null,
-          "Administration"
-        ),
-
-        h(
-          "a",
-          {
-            href:
-              "/admin-login"
-          },
-          "Officer / Admin Login"
         )
       ),
 

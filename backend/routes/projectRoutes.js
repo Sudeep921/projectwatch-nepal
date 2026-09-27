@@ -1,18 +1,18 @@
-const express = require("express");
+const express =
+  require("express");
 
 const {
   createProject,
   getProjects,
   getProject,
   getPublicProjects,
-  generateCode
-} = require("../controllers/projectController");
-
-const {
+  generateCode,
   updateProject,
-  deleteProject
+  deleteProject,
+  searchProjects,
+  getProjectTimeline
 } = require(
-  "../controllers/projectAdminController"
+  "../controllers/projectController"
 );
 
 const authMiddleware =
@@ -24,11 +24,13 @@ const roleMiddleware =
 const adminMiddleware =
   require("../middleware/adminMiddleware");
 
-const router = express.Router();
+const router =
+  express.Router();
 
-// ========================================
+
+// ==========================================
 // GENERATE PROJECT CODE
-// ========================================
+// ==========================================
 
 router.get(
   "/generate-code",
@@ -37,36 +39,82 @@ router.get(
   generateCode
 );
 
-// ========================================
+
+// ==========================================
 // PUBLIC PROJECTS
-// ========================================
+// ==========================================
 
 router.get(
   "/public",
   getPublicProjects
 );
 
-// ========================================
-// ADMIN + OFFICER
-// ========================================
+
+// ==========================================
+// SEARCH / FILTER PROJECTS
+// IMPORTANT: MUST COME BEFORE /:id
+// ==========================================
+
+router.get(
+  "/search",
+  authMiddleware,
+  roleMiddleware(
+    "admin",
+    "officer"
+  ),
+  searchProjects
+);
+
+
+// ==========================================
+// PROJECT TIMELINE
+// IMPORTANT: MUST COME BEFORE /:id
+// ==========================================
+
+router.get(
+  "/:id/timeline",
+  authMiddleware,
+  roleMiddleware(
+    "admin",
+    "officer"
+  ),
+  getProjectTimeline
+);
+
+
+// ==========================================
+// GET ALL PROJECTS
+// ==========================================
 
 router.get(
   "/",
   authMiddleware,
-  roleMiddleware("admin", "officer"),
+  roleMiddleware(
+    "admin",
+    "officer"
+  ),
   getProjects
 );
+
+
+// ==========================================
+// GET SINGLE PROJECT
+// ==========================================
 
 router.get(
   "/:id",
   authMiddleware,
-  roleMiddleware("admin", "officer"),
+  roleMiddleware(
+    "admin",
+    "officer"
+  ),
   getProject
 );
 
-// ========================================
-// ADMIN ONLY - CREATE
-// ========================================
+
+// ==========================================
+// CREATE PROJECT
+// ==========================================
 
 router.post(
   "/",
@@ -75,9 +123,10 @@ router.post(
   createProject
 );
 
-// ========================================
-// ADMIN ONLY - UPDATE
-// ========================================
+
+// ==========================================
+// UPDATE PROJECT
+// ==========================================
 
 router.put(
   "/:id",
@@ -87,9 +136,10 @@ router.put(
   updateProject
 );
 
-// ========================================
-// ADMIN ONLY - DELETE
-// ========================================
+
+// ==========================================
+// DELETE PROJECT
+// ==========================================
 
 router.delete(
   "/:id",
@@ -99,8 +149,10 @@ router.delete(
   deleteProject
 );
 
-// ========================================
-// EXPORT
-// ========================================
 
-module.exports = router;
+// ==========================================
+// EXPORT
+// ==========================================
+
+module.exports =
+  router;

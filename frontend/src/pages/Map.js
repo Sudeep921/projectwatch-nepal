@@ -6,288 +6,107 @@ import React, {
 } from "react";
 
 import {
-  MapContainer,
-  TileLayer,
-  Marker,
-  Popup,
-  useMap
-} from "react-leaflet";
+  useNavigate
+} from "react-router-dom";
 
 import L from "leaflet";
+
 import "leaflet/dist/leaflet.css";
 
-import { getProjects } from "../services/api";
+import {
+  getProjects
+} from "../services/api";
 
-/* =========================================
-   LEAFLET DEFAULT ICON FIX
-========================================= */
+const h = React.createElement;
 
-delete L.Icon.Default.prototype._getIconUrl;
+const MapPage = () => {
+  const navigate = useNavigate();
 
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
+  const mapContainerRef =
+    useRef(null);
 
-  iconUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
+  const mapRef =
+    useRef(null);
 
-  shadowUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png"
-});
+  const markersRef =
+    useRef([]);
 
-/* =========================================
-   NEPAL CENTER
-========================================= */
+  const tileLayerRef =
+    useRef(null);
 
-const NEPAL_CENTER = [
-  28.3949,
-  84.124
-];
-
-/* =========================================
-   MAP FLY COMPONENT
-========================================= */
-
-function MapController({
-  selectedProject,
-  searchedLocation
-}) {
-  const map = useMap();
-
-  useEffect(() => {
-    if (
-      selectedProject &&
-      selectedProject.latitude &&
-      selectedProject.longitude
-    ) {
-      map.flyTo(
-        [
-          Number(selectedProject.latitude),
-          Number(selectedProject.longitude)
-        ],
-        13,
-        {
-          duration: 1.2
-        }
-      );
-    }
-  }, [selectedProject, map]);
-
-  useEffect(() => {
-    if (
-      searchedLocation &&
-      searchedLocation.lat &&
-      searchedLocation.lon
-    ) {
-      map.flyTo(
-        [
-          Number(searchedLocation.lat),
-          Number(searchedLocation.lon)
-        ],
-        13,
-        {
-          duration: 1.2
-        }
-      );
-    }
-  }, [searchedLocation, map]);
-
-  return null;
-}
-
-/* =========================================
-   HELPERS
-========================================= */
-
-const normalizeProject = (item) => {
-  return {
-    ...item,
-
-    id:
-      item._id ||
-      item.id ||
-      item.projectId ||
-      Math.random(),
-
-    projectName:
-      item.projectName ||
-      item.name ||
-      "Unnamed Project",
-
-    projectId:
-      item.projectId ||
-      item.code ||
-      item._id ||
-      "N/A",
-
-    province:
-      item.province ||
-      "Unknown",
-
-    district:
-      item.district ||
-      "Unknown",
-
-    municipality:
-      item.municipality ||
-      "",
-
-    budget:
-      item.budget ||
-      0,
-
-    progress:
-      Number(item.progress || 0),
-
-    status:
-      item.status ||
-      "Active",
-
-    riskLevel:
-      item.riskLevel ||
-      item.risk ||
-      "Low",
-
-    latitude:
-      item.latitude ??
-      item.location?.latitude ??
-      item.location?.lat ??
-      null,
-
-    longitude:
-      item.longitude ??
-      item.location?.longitude ??
-      item.location?.lng ??
-      null
-  };
-};
-
-const formatBudget = (budget) => {
-  const value = Number(budget || 0);
-
-  if (!value) {
-    return "NPR 0";
-  }
-
-  if (value >= 1000000000) {
-    return (
-      "NPR " +
-      (value / 1000000000).toFixed(2) +
-      "B"
-    );
-  }
-
-  if (value >= 1000000) {
-    return (
-      "NPR " +
-      (value / 1000000).toFixed(2) +
-      "M"
-    );
-  }
-
-  if (value >= 1000) {
-    return (
-      "NPR " +
-      (value / 1000).toFixed(2) +
-      "K"
-    );
-  }
-
-  return "NPR " + value.toLocaleString();
-};
-
-/* =========================================
-   MAIN MAP PAGE
-========================================= */
-
-const Map = () => {
-  const [projects, setProjects] = useState([]);
+  const [projects, setProjects] =
+    useState([]);
 
   const [loading, setLoading] =
     useState(true);
 
-  const [error, setError] =
-    useState("");
-
-  /* Project search */
-  const [projectSearch, setProjectSearch] =
-    useState("");
-
-  /* Location search */
-  const [locationSearch, setLocationSearch] =
-    useState("");
-
-  const [locationResults, setLocationResults] =
-    useState([]);
-
-  const [locationLoading, setLocationLoading] =
-    useState(false);
-
-  const [locationError, setLocationError] =
-    useState("");
-
-  const [searchedLocation, setSearchedLocation] =
-    useState(null);
-
-  /* Filters */
-  const [province, setProvince] =
-    useState("All Provinces");
-
-  const [status, setStatus] =
-    useState("All Status");
-
-  const [risk, setRisk] =
-    useState("All Risk");
-
-  const [selectedProject, setSelectedProject] =
-    useState(null);
-
   const [refreshing, setRefreshing] =
     useState(false);
 
-  const searchTimer =
-    useRef(null);
+  const [error, setError] =
+    useState("");
 
-    
+  const [tileError, setTileError] =
+    useState(false);
+
+  const [search, setSearch] =
+    useState("");
+
+  const [statusFilter, setStatusFilter] =
+    useState("All Status");
+
+  const [riskFilter, setRiskFilter] =
+    useState("All Risk");
 
   /* =========================================
      LOAD PROJECTS
   ========================================= */
 
-  const loadProjects = async () => {
+  const loadProjects = async (
+    isRefresh = false
+  ) => {
     try {
-      setError("");
-
-      if (!refreshing) {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
         setLoading(true);
       }
 
-      const data =
+      setError("");
+
+      const result =
         await getProjects();
 
-      let list = [];
+      let data =
+        result?.projects ||
+        result?.data ||
+        result;
 
-      if (Array.isArray(data)) {
-        list = data;
-      } else if (Array.isArray(data.projects)) {
-        list = data.projects;
-      } else if (Array.isArray(data.data)) {
-        list = data.data;
+      if (
+        data &&
+        !Array.isArray(data) &&
+        Array.isArray(data.projects)
+      ) {
+        data = data.projects;
       }
 
-      setProjects(
-        list.map(normalizeProject)
-      );
+      if (!Array.isArray(data)) {
+        data = [];
+      }
+
+      setProjects(data);
+
     } catch (err) {
       console.error(
-        "Map projects error:",
+        "Map project loading error:",
         err
       );
 
       setError(
-        err.message ||
-        "Unable to load projects"
+        err?.message ||
+        "Failed to load projects."
       );
+
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -295,26 +114,49 @@ const Map = () => {
   };
 
   useEffect(() => {
-    loadProjects();
+    loadProjects(false);
   }, []);
 
   /* =========================================
-     PROVINCES
+     GET COORDINATES
   ========================================= */
 
-  const provinces = useMemo(() => {
-    const values =
-      projects
-        .map(
-          (project) =>
-            project.province
-        )
-        .filter(Boolean);
+  const getCoordinates = (
+    project
+  ) => {
+    const latitude =
+      Number(
+        project?.latitude ??
+        project?.lat ??
+        project?.location?.latitude ??
+        project?.location?.lat
+      );
 
-    return [
-      ...new Set(values)
-    ];
-  }, [projects]);
+    const longitude =
+      Number(
+        project?.longitude ??
+        project?.lng ??
+        project?.lon ??
+        project?.location?.longitude ??
+        project?.location?.lon
+      );
+
+    if (
+      Number.isFinite(latitude) &&
+      Number.isFinite(longitude) &&
+      latitude >= -90 &&
+      latitude <= 90 &&
+      longitude >= -180 &&
+      longitude <= 180
+    ) {
+      return {
+        latitude,
+        longitude
+      };
+    }
+
+    return null;
+  };
 
   /* =========================================
      FILTER PROJECTS
@@ -322,1246 +164,1144 @@ const Map = () => {
 
   const filteredProjects =
     useMemo(() => {
-      const search =
-        projectSearch
+
+      let result =
+        [...projects];
+
+      const query =
+        search
           .trim()
           .toLowerCase();
 
-      return projects.filter(
-        (project) => {
-          const matchesSearch =
-            !search ||
-            project.projectName
-              .toLowerCase()
-              .includes(search) ||
-            project.projectId
-              .toLowerCase()
-              .includes(search) ||
-            project.province
-              .toLowerCase()
-              .includes(search) ||
-            project.district
-              .toLowerCase()
-              .includes(search) ||
-            project.municipality
-              .toLowerCase()
-              .includes(search);
+      if (query) {
 
-          const matchesProvince =
-            province ===
-              "All Provinces" ||
-            project.province ===
-              province;
+        result =
+          result.filter(
+            (project) => {
 
-          const matchesStatus =
-            status === "All Status" ||
-            project.status === status;
+              const name =
+                project?.name ||
+                project?.projectName ||
+                "";
 
-          const matchesRisk =
-            risk === "All Risk" ||
-            project.riskLevel === risk;
+              const code =
+                project?.projectCode ||
+                project?.code ||
+                "";
 
-          return (
-            matchesSearch &&
-            matchesProvince &&
-            matchesStatus &&
-            matchesRisk
+              const province =
+                project?.province ||
+                "";
+
+              const district =
+                project?.district ||
+                "";
+
+              const municipality =
+                project?.municipality ||
+                "";
+
+              const location =
+                project?.location ||
+                "";
+
+              const text =
+                `${name} ${code} ${province} ${district} ${municipality} ${location}`
+                  .toLowerCase();
+
+              return text.includes(
+                query
+              );
+            }
           );
-        }
-      );
+      }
+
+      if (
+        statusFilter !==
+        "All Status"
+      ) {
+
+        result =
+          result.filter(
+            (project) =>
+              String(
+                project?.status ||
+                ""
+              ).toLowerCase() ===
+              statusFilter.toLowerCase()
+          );
+      }
+
+      if (
+        riskFilter !==
+        "All Risk"
+      ) {
+
+        result =
+          result.filter(
+            (project) =>
+              String(
+                project?.riskLevel ||
+                project?.risk ||
+                ""
+              ).toLowerCase() ===
+              riskFilter.toLowerCase()
+          );
+      }
+
+      return result;
+
     }, [
       projects,
-      projectSearch,
-      province,
-      status,
-      risk
+      search,
+      statusFilter,
+      riskFilter
     ]);
 
   /* =========================================
-     GPS PROJECTS
+     INITIALIZE LEAFLET MAP
   ========================================= */
 
-  const mappedProjects =
-    useMemo(() => {
-      return filteredProjects.filter(
-        (project) =>
-          project.latitude !== null &&
-          project.longitude !== null &&
-          project.latitude !== "" &&
-          project.longitude !== ""
+  useEffect(() => {
+
+    if (
+      loading ||
+      !mapContainerRef.current
+    ) {
+      return;
+    }
+
+    if (mapRef.current) {
+      return;
+    }
+
+    const map =
+      L.map(
+        mapContainerRef.current,
+        {
+          zoomControl: true,
+          attributionControl: true
+        }
       );
-    }, [filteredProjects]);
+
+    /* Nepal */
+
+    map.setView(
+      [28.3949, 84.1240],
+      7
+    );
+
+    /* OpenStreetMap */
+
+    const tileLayer =
+      L.tileLayer(
+        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        {
+          attribution:
+            "&copy; OpenStreetMap contributors",
+
+          maxZoom: 19,
+
+          minZoom: 5
+        }
+      );
+
+    tileLayer.addTo(map);
+
+    tileLayerRef.current =
+      tileLayer;
+
+    tileLayer.on(
+      "tileerror",
+      () => {
+
+        console.error(
+          "OpenStreetMap tile failed to load."
+        );
+
+        setTileError(true);
+      }
+    );
+
+    tileLayer.on(
+      "tileload",
+      () => {
+        setTileError(false);
+      }
+    );
+
+    mapRef.current =
+      map;
+
+    /* Scale */
+
+    L.control
+      .scale({
+        imperial: false
+      })
+      .addTo(map);
+
+    /* Fix map size */
+
+    setTimeout(() => {
+
+      if (map) {
+        map.invalidateSize(true);
+      }
+
+    }, 500);
+
+    window.setTimeout(() => {
+
+      if (map) {
+        map.invalidateSize(true);
+      }
+
+    }, 1200);
+
+    const handleResize =
+      () => {
+
+        if (mapRef.current) {
+          mapRef.current
+            .invalidateSize(true);
+        }
+
+      };
+
+    window.addEventListener(
+      "resize",
+      handleResize
+    );
+
+    return () => {
+
+      window.removeEventListener(
+        "resize",
+        handleResize
+      );
+
+      if (mapRef.current) {
+        mapRef.current.remove();
+      }
+
+      mapRef.current =
+        null;
+
+      tileLayerRef.current =
+        null;
+
+    };
+
+  }, [loading]);
 
   /* =========================================
-     STATISTICS
+     MARKER ICON
   ========================================= */
 
-  const totalProjects =
-    projects.length;
+  const createMarkerIcon = (
+    project
+  ) => {
 
-  const gpsProjects =
-    projects.filter(
+    const status =
+      String(
+        project?.status ||
+        ""
+      ).toLowerCase();
+
+    let symbol =
+      "●";
+
+    if (
+      status.includes(
+        "complete"
+      )
+    ) {
+      symbol = "✓";
+
+    } else if (
+      status.includes(
+        "delay"
+      )
+    ) {
+      symbol = "!";
+
+    } else if (
+      status.includes(
+        "critical"
+      )
+    ) {
+      symbol = "!";
+
+    }
+
+    return L.divIcon({
+
+      className:
+        "project-map-marker-wrapper",
+
+      html:
+        `<div class="project-map-marker">
+          ${symbol}
+        </div>`,
+
+      iconSize: [
+        34,
+        34
+      ],
+
+      iconAnchor: [
+        17,
+        17
+      ],
+
+      popupAnchor: [
+        0,
+        -17
+      ]
+
+    });
+  };
+
+  /* =========================================
+     UPDATE MARKERS
+  ========================================= */
+
+  useEffect(() => {
+
+    const map =
+      mapRef.current;
+
+    if (!map) {
+      return;
+    }
+
+    /* Remove old markers */
+
+    markersRef.current.forEach(
+      (marker) => {
+
+        try {
+          map.removeLayer(
+            marker
+          );
+        } catch (err) {
+          console.error(err);
+        }
+
+      }
+    );
+
+    markersRef.current =
+      [];
+
+    /* Find mapped projects */
+
+    const mappedProjects =
+      filteredProjects.filter(
+        (project) =>
+          getCoordinates(
+            project
+          )
+      );
+
+    /* Add markers */
+
+    mappedProjects.forEach(
+      (project) => {
+
+        const coordinates =
+          getCoordinates(
+            project
+          );
+
+        if (!coordinates) {
+          return;
+        }
+
+        const name =
+          project?.name ||
+          project?.projectName ||
+          "Unnamed Project";
+
+        const code =
+          project?.projectCode ||
+          project?.code ||
+          "N/A";
+
+        const status =
+          project?.status ||
+          "Unknown";
+
+        const risk =
+          project?.riskLevel ||
+          project?.risk ||
+          "Unknown";
+
+        const progress =
+          Number(
+            project?.progress ??
+            project?.completionPercentage ??
+            project?.completion ??
+            0
+          );
+
+        const safeProgress =
+          Math.min(
+            100,
+            Math.max(
+              0,
+              Number.isFinite(
+                progress
+              )
+                ? progress
+                : 0
+            )
+          );
+
+        const budget =
+          Number(
+            project?.budget ??
+            project?.totalBudget ??
+            0
+          );
+
+        const budgetText =
+          budget > 0
+            ? `NPR ${budget.toLocaleString(
+                "en-IN"
+              )}`
+            : "NPR 0";
+
+        const municipality =
+          project?.municipality ||
+          "N/A";
+
+        const district =
+          project?.district ||
+          "N/A";
+
+        const province =
+          project?.province ||
+          "N/A";
+
+        const projectId =
+          project?._id ||
+          project?.id;
+
+        const popup =
+          `
+          <div class="project-map-popup">
+
+            <div class="map-popup-code">
+              ${code}
+            </div>
+
+            <h3>
+              ${name}
+            </h3>
+
+            <div class="map-popup-location">
+              📍 ${municipality},
+              ${district},
+              ${province}
+            </div>
+
+            <div class="map-popup-row">
+              <span>Status</span>
+              <strong>${status}</strong>
+            </div>
+
+            <div class="map-popup-row">
+              <span>Risk</span>
+              <strong>${risk}</strong>
+            </div>
+
+            <div class="map-popup-row">
+              <span>Budget</span>
+              <strong>${budgetText}</strong>
+            </div>
+
+            <div class="map-popup-progress">
+
+              <div class="map-popup-progress-head">
+                <span>Progress</span>
+                <strong>${safeProgress}%</strong>
+              </div>
+
+              <div class="map-popup-progress-track">
+
+                <div
+                  class="map-popup-progress-fill"
+                  style="width:${safeProgress}%"
+                ></div>
+
+              </div>
+
+            </div>
+
+            ${
+              projectId
+                ? `
+                  <button
+                    class="map-popup-view-btn"
+                    data-project-id="${projectId}"
+                  >
+                    View Project
+                  </button>
+                `
+                : ""
+            }
+
+          </div>
+          `;
+
+        const marker =
+          L.marker(
+            [
+              coordinates.latitude,
+              coordinates.longitude
+            ],
+            {
+              icon:
+                createMarkerIcon(
+                  project
+                )
+            }
+          )
+            .addTo(map)
+            .bindPopup(
+              popup,
+              {
+                maxWidth: 320
+              }
+            );
+
+        marker.on(
+          "popupopen",
+          () => {
+
+            if (!projectId) {
+              return;
+            }
+
+            const button =
+              document.querySelector(
+                `[data-project-id="${projectId}"]`
+              );
+
+            if (button) {
+
+              button.onclick =
+                () => {
+
+                  navigate(
+                    `/projects/${projectId}`
+                  );
+
+                };
+
+            }
+
+          }
+        );
+
+        markersRef.current.push(
+          marker
+        );
+
+      }
+    );
+
+    /* =====================================
+       MAP VIEW
+    ===================================== */
+
+    if (
+      mappedProjects.length > 0
+    ) {
+
+      const bounds =
+        L.latLngBounds([]);
+
+      mappedProjects.forEach(
+        (project) => {
+
+          const coordinates =
+            getCoordinates(
+              project
+            );
+
+          if (coordinates) {
+
+            bounds.extend([
+              coordinates.latitude,
+              coordinates.longitude
+            ]);
+
+          }
+
+        }
+      );
+
+      if (
+        bounds.isValid()
+      ) {
+
+        map.fitBounds(
+          bounds,
+          {
+            padding: [
+              50,
+              50
+            ],
+            maxZoom: 12
+          }
+        );
+
+      }
+
+    } else {
+
+      /* Keep Nepal visible */
+
+      map.setView(
+        [28.3949, 84.1240],
+        7
+      );
+
+    }
+
+    setTimeout(() => {
+
+      map.invalidateSize(
+        true
+      );
+
+    }, 300);
+
+  }, [
+    filteredProjects,
+    navigate
+  ]);
+
+  /* =========================================
+     COUNTS
+  ========================================= */
+
+  const mappedCount =
+    filteredProjects.filter(
       (project) =>
-        project.latitude !== null &&
-        project.longitude !== null &&
-        project.latitude !== "" &&
-        project.longitude !== ""
+        getCoordinates(
+          project
+        )
     ).length;
 
-  const criticalProjects =
-    projects.filter(
-      (project) =>
-        project.riskLevel === "Critical"
-    ).length;
+  const unmappedCount =
+    filteredProjects.length -
+    mappedCount;
 
   /* =========================================
      CLEAR FILTERS
   ========================================= */
 
-  const clearFilters = () => {
-    setProjectSearch("");
-    setLocationSearch("");
-    setProvince("All Provinces");
-    setStatus("All Status");
-    setRisk("All Risk");
+  const clearFilters =
+    () => {
 
-    setLocationResults([]);
-    setLocationError("");
-    setSearchedLocation(null);
-    setSelectedProject(null);
-  };
+      setSearch("");
 
-  /* =========================================
-     LOCATION SEARCH
-  ========================================= */
-
-  const searchLocation = async (
-    event
-  ) => {
-    if (event) {
-      event.preventDefault();
-    }
-
-    const query =
-      locationSearch.trim();
-
-    if (!query) {
-      setLocationResults([]);
-      setLocationError(
-        "Type a location to search."
-      );
-      return;
-    }
-
-    try {
-      setLocationLoading(true);
-      setLocationError("");
-
-      const url =
-        "https://nominatim.openstreetmap.org/search" +
-        "?format=json" +
-        "&limit=5" +
-        "&countrycodes=np" +
-        "&q=" +
-        encodeURIComponent(query);
-
-      const response =
-        await fetch(url, {
-          headers: {
-            Accept:
-              "application/json"
-          }
-        });
-
-      if (!response.ok) {
-        throw new Error(
-          "Location search failed"
-        );
-      }
-
-      const data =
-        await response.json();
-
-      setLocationResults(data);
-
-      if (!data.length) {
-        setLocationError(
-          "No Nepal location found."
-        );
-      }
-    } catch (err) {
-      console.error(
-        "Location search:",
-        err
+      setStatusFilter(
+        "All Status"
       );
 
-      setLocationError(
-        "Unable to search location."
+      setRiskFilter(
+        "All Risk"
       );
-    } finally {
-      setLocationLoading(false);
-    }
-  };
 
-  /* =========================================
-     SELECT LOCATION
-  ========================================= */
-
-  const selectLocation = (
-    location
-  ) => {
-    setSearchedLocation({
-      lat: location.lat,
-      lon: location.lon,
-      displayName:
-        location.display_name
-    });
-
-    setLocationResults([]);
-    setLocationSearch(
-      location.display_name
-    );
-  };
-
-  /* =========================================
-     PROJECT SELECT
-  ========================================= */
-
-  const selectProject = (
-    project
-  ) => {
-    setSelectedProject(project);
-    setSearchedLocation(null);
-  };
-
-  /* =========================================
-     REFRESH
-  ========================================= */
-
-  const handleRefresh = async () => {
-    setRefreshing(true);
-
-    await loadProjects();
-  };
-
-  /* =========================================
-     SEARCH PROJECT LIVE
-  ========================================= */
-
-  useEffect(() => {
-    if (searchTimer.current) {
-      clearTimeout(
-        searchTimer.current
-      );
-    }
-
-    searchTimer.current =
-      setTimeout(() => {
-        /* filtering is handled by useMemo */
-      }, 150);
-
-    return () => {
-      if (searchTimer.current) {
-        clearTimeout(
-          searchTimer.current
-        );
-      }
     };
-  }, [projectSearch]);
 
   /* =========================================
-     STATUS CLASS
+     LOADING
   ========================================= */
 
-  const statusClass = (value) => {
-    return String(value || "")
-      .toLowerCase()
-      .replace(/\s+/g, "-");
-  };
+  if (loading) {
 
-  const riskClass = (value) => {
-    return String(value || "")
-      .toLowerCase()
-      .replace(/\s+/g, "-");
-  };
+    return h(
+      "div",
+      {
+        className:
+          "map-page-loading"
+      },
+
+      h(
+        "div",
+        {
+          className:
+            "map-loading-icon"
+        },
+        "⟳"
+      ),
+
+      h(
+        "h3",
+        null,
+        "Loading Project Map..."
+      ),
+
+      h(
+        "p",
+        null,
+        "Loading project locations."
+      )
+
+    );
+  }
 
   /* =========================================
-     RENDER
+     PAGE
   ========================================= */
 
-  return React.createElement(
+  return h(
     "div",
     {
       className:
-        "map-monitoring-page"
+        "page project-map-page"
     },
 
-    /* PAGE HEADER */
-    React.createElement(
+    /* HEADER */
+
+    h(
       "div",
       {
-        className: "page-header"
+        className:
+          "project-map-header"
       },
 
-      React.createElement(
+      h(
         "div",
         null,
 
-        React.createElement(
-          "span",
-          {
-            className:
-              "page-eyebrow"
-          },
-          "GEOSPATIAL MONITORING"
-        ),
-
-        React.createElement(
+        h(
           "h1",
           null,
           "Live Project Map"
         ),
 
-        React.createElement(
+        h(
           "p",
           null,
-          "Monitor government projects, locations, progress and risk across Nepal."
+          "Monitor government projects across Nepal"
         )
+
       ),
 
-      React.createElement(
-        "button",
-        {
-          className:
-            "primary-button",
-          onClick:
-            handleRefresh,
-          disabled:
-            refreshing
-        },
-        refreshing
-          ? "Refreshing..."
-          : "↻ Refresh Map"
-      )
-    ),
-
-    /* STATS */
-    React.createElement(
-      "div",
-      {
-        className:
-          "map-stats-grid"
-      },
-
-      React.createElement(
+      h(
         "div",
         {
           className:
-            "map-stat-card"
+            "project-map-header-actions"
         },
-        React.createElement(
-          "div",
-          {
-            className:
-              "map-stat-icon"
-          },
-          "◉"
-        ),
-        React.createElement(
-          "div",
-          null,
-          React.createElement(
-            "strong",
-            null,
-            totalProjects
-          ),
-          React.createElement(
-            "span",
-            null,
-            "Total Projects"
-          )
-        )
-      ),
 
-      React.createElement(
-        "div",
-        {
-          className:
-            "map-stat-card"
-        },
-        React.createElement(
-          "div",
-          {
-            className:
-              "map-stat-icon"
-          },
-          "⌖"
-        ),
-        React.createElement(
-          "div",
-          null,
-          React.createElement(
-            "strong",
-            null,
-            gpsProjects
-          ),
-          React.createElement(
-            "span",
-            null,
-            "GPS Located"
-          )
-        )
-      ),
-
-      React.createElement(
-        "div",
-        {
-          className:
-            "map-stat-card"
-        },
-        React.createElement(
-          "div",
-          {
-            className:
-              "map-stat-icon"
-          },
-          "⚠"
-        ),
-        React.createElement(
-          "div",
-          null,
-          React.createElement(
-            "strong",
-            null,
-            criticalProjects
-          ),
-          React.createElement(
-            "span",
-            null,
-            "Critical Risk"
-          )
-        )
-      ),
-
-      React.createElement(
-        "div",
-        {
-          className:
-            "map-stat-card"
-        },
-        React.createElement(
-          "div",
-          {
-            className:
-              "map-stat-icon"
-          },
-          "◎"
-        ),
-        React.createElement(
-          "div",
-          null,
-          React.createElement(
-            "strong",
-            null,
-            filteredProjects.length
-          ),
-          React.createElement(
-            "span",
-            null,
-            "Filtered Results"
-          )
-        )
-      )
-    ),
-
-    /* FILTER AREA */
-    React.createElement(
-      "div",
-      {
-        className:
-          "map-filter-panel"
-      },
-
-      React.createElement(
-        "div",
-        {
-          className:
-            "map-filter-heading"
-        },
-        React.createElement(
-          "div",
-          null,
-          React.createElement(
-            "h2",
-            null,
-            "Map Search & Filters"
-          ),
-          React.createElement(
-            "p",
-            null,
-            "Find projects or search any location in Nepal."
-          )
-        ),
-
-        React.createElement(
+        h(
           "button",
           {
             className:
-              "clear-filter-button",
+              "map-refresh-btn",
+
             onClick:
-              clearFilters
+              () =>
+                loadProjects(true),
+
+            disabled:
+              refreshing
           },
-          "Clear Filters"
+
+          refreshing
+            ? "⟳ Refreshing..."
+            : "↻ Refresh"
+
         )
-      ),
 
-      /* PROJECT SEARCH */
-      React.createElement(
-        "div",
-        {
-          className:
-            "map-filter-grid"
-        },
+      )
 
-        React.createElement(
-          "div",
-          {
-            className:
-              "map-search-field"
-          },
-
-          React.createElement(
-            "label",
-            null,
-            "Search Projects"
-          ),
-
-          React.createElement(
-            "div",
-            {
-              className:
-                "map-search-input"
-            },
-
-            React.createElement(
-              "span",
-              null,
-              "⌕"
-            ),
-
-            React.createElement(
-              "input",
-              {
-                type: "text",
-                placeholder:
-                  "Project name, ID, district...",
-                value:
-                  projectSearch,
-                onChange: (event) =>
-                  setProjectSearch(
-                    event.target.value
-                  )
-              }
-            )
-          )
-        ),
-
-        /* LOCATION SEARCH */
-        React.createElement(
-          "div",
-          {
-            className:
-              "map-search-field"
-          },
-
-          React.createElement(
-            "label",
-            null,
-            "Search Location"
-          ),
-
-          React.createElement(
-            "form",
-            {
-              className:
-                "map-location-search",
-              onSubmit:
-                searchLocation
-            },
-
-            React.createElement(
-              "input",
-              {
-                type: "text",
-                placeholder:
-                  "Kathmandu, Pokhara, Biratnagar...",
-                value:
-                  locationSearch,
-                onChange: (event) =>
-                  setLocationSearch(
-                    event.target.value
-                  )
-              }
-            ),
-
-            React.createElement(
-              "button",
-              {
-                type: "submit",
-                disabled:
-                  locationLoading
-              },
-              locationLoading
-                ? "..."
-                : "Search"
-            )
-          )
-        ),
-
-        /* PROVINCE */
-        React.createElement(
-          "div",
-          {
-            className:
-              "map-filter-field"
-          },
-
-          React.createElement(
-            "label",
-            null,
-            "Province"
-          ),
-
-          React.createElement(
-            "select",
-            {
-              value:
-                province,
-              onChange: (event) =>
-                setProvince(
-                  event.target.value
-                )
-            },
-
-            React.createElement(
-              "option",
-              null,
-              "All Provinces"
-            ),
-
-            provinces.map(
-              (item) =>
-                React.createElement(
-                  "option",
-                  {
-                    key: item,
-                    value: item
-                  },
-                  item
-                )
-            )
-          )
-        ),
-
-        /* STATUS */
-        React.createElement(
-          "div",
-          {
-            className:
-              "map-filter-field"
-          },
-
-          React.createElement(
-            "label",
-            null,
-            "Status"
-          ),
-
-          React.createElement(
-            "select",
-            {
-              value:
-                status,
-              onChange: (event) =>
-                setStatus(
-                  event.target.value
-                )
-            },
-
-            React.createElement(
-              "option",
-              null,
-              "All Status"
-            ),
-
-            React.createElement(
-              "option",
-              null,
-              "Active"
-            ),
-
-            React.createElement(
-              "option",
-              null,
-              "Delayed"
-            ),
-
-            React.createElement(
-              "option",
-              null,
-              "Completed"
-            ),
-
-            React.createElement(
-              "option",
-              null,
-              "Critical"
-            )
-          )
-        ),
-
-        /* RISK */
-        React.createElement(
-          "div",
-          {
-            className:
-              "map-filter-field"
-          },
-
-          React.createElement(
-            "label",
-            null,
-            "Risk Level"
-          ),
-
-          React.createElement(
-            "select",
-            {
-              value:
-                risk,
-              onChange: (event) =>
-                setRisk(
-                  event.target.value
-                )
-            },
-
-            React.createElement(
-              "option",
-              null,
-              "All Risk"
-            ),
-
-            React.createElement(
-              "option",
-              null,
-              "Low"
-            ),
-
-            React.createElement(
-              "option",
-              null,
-              "Medium"
-            ),
-
-            React.createElement(
-              "option",
-              null,
-              "High"
-            ),
-
-            React.createElement(
-              "option",
-              null,
-              "Critical"
-            )
-          )
-        )
-      ),
-
-      /* LOCATION RESULTS */
-      locationResults.length > 0 &&
-        React.createElement(
-          "div",
-          {
-            className:
-              "location-results"
-          },
-
-          React.createElement(
-            "div",
-            {
-              className:
-                "location-results-title"
-            },
-            "Location Results"
-          ),
-
-          locationResults.map(
-            (location, index) =>
-              React.createElement(
-                "button",
-                {
-                  key:
-                    location.place_id ||
-                    index,
-                  className:
-                    "location-result-item",
-                  onClick: () =>
-                    selectLocation(
-                      location
-                    )
-                },
-
-                React.createElement(
-                  "span",
-                  null,
-                  "⌖"
-                ),
-
-                React.createElement(
-                  "div",
-                  null,
-                  React.createElement(
-                    "strong",
-                    null,
-                    location.display_name
-                  ),
-                  React.createElement(
-                    "small",
-                    null,
-                    "Open location on map"
-                  )
-                )
-              )
-          )
-        ),
-
-      locationError &&
-        React.createElement(
-          "div",
-          {
-            className:
-              "map-search-error"
-          },
-          locationError
-        ),
-
-      searchedLocation &&
-        React.createElement(
-          "div",
-          {
-            className:
-              "selected-location-banner"
-          },
-
-          React.createElement(
-            "span",
-            null,
-            "⌖"
-          ),
-
-          React.createElement(
-            "div",
-            null,
-            React.createElement(
-              "strong",
-              null,
-              "Location selected"
-            ),
-            React.createElement(
-              "small",
-              null,
-              searchedLocation.displayName
-            )
-          ),
-
-          React.createElement(
-            "button",
-            {
-              onClick: () => {
-                setSearchedLocation(
-                  null
-                );
-                setLocationSearch("");
-              }
-            },
-            "×"
-          )
-        )
     ),
 
     /* ERROR */
-    error &&
-      React.createElement(
-        "div",
-        {
-          className:
-            "page-error"
-        },
-        React.createElement(
-          "strong",
-          null,
-          "Unable to load map data"
-        ),
-        React.createElement(
-          "span",
-          null,
+
+    error
+      ? h(
+          "div",
+          {
+            className:
+              "map-page-error"
+          },
+
+          "⚠️ ",
           error
         )
-      ),
+      : null,
 
-    /* MAP + PROJECT LIST */
-    React.createElement(
+    /* CONTROLS */
+
+    h(
       "div",
       {
         className:
-          "map-content-grid"
+          "project-map-controls"
       },
 
-      /* MAP */
-      React.createElement(
+      /* SEARCH */
+
+      h(
         "div",
         {
           className:
-            "live-map-card"
+            "map-search-box"
         },
 
-        React.createElement(
-          "div",
+        h(
+          "span",
           {
             className:
-              "map-card-header"
+              "map-search-icon"
           },
-
-          React.createElement(
-            "div",
-            null,
-            React.createElement(
-              "h2",
-              null,
-              "Nepal Project Map"
-            ),
-            React.createElement(
-              "p",
-              null,
-              mappedProjects.length +
-                " projects currently visible"
-            )
-          ),
-
-          React.createElement(
-            "span",
-            {
-              className:
-                "map-live-badge"
-            },
-            "● LIVE"
-          )
+          "⌕"
         ),
 
-        React.createElement(
-          "div",
+        h(
+          "input",
           {
-            className:
-              "project-map"
-          },
+            type: "text",
 
-          loading
-            ? React.createElement(
-                "div",
-                {
-                  className:
-                    "map-loading"
-                },
-                "Loading project map..."
-              )
-            : React.createElement(
-                MapContainer,
-                {
-                  center:
-                    NEPAL_CENTER,
-                  zoom: 7,
-                  scrollWheelZoom: true,
-                  className:
-                    "leaflet-map"
-                },
+            value:
+              search,
 
-                React.createElement(
-                  TileLayer,
-                  {
-                    attribution:
-                      '&copy; OpenStreetMap contributors',
-                    url:
-                      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  }
-                ),
+            placeholder:
+              "Search project, code, province, district...",
 
-                React.createElement(
-                  MapController,
-                  {
-                    selectedProject:
-                      selectedProject,
-                    searchedLocation:
-                      searchedLocation
-                  }
-                ),
-
-                mappedProjects.map(
-                  (project) =>
-                    React.createElement(
-                      Marker,
-                      {
-                        key:
-                          project.id,
-                        position: [
-                          Number(
-                            project.latitude
-                          ),
-                          Number(
-                            project.longitude
-                          )
-                        ],
-                        eventHandlers: {
-                          click: () =>
-                            setSelectedProject(
-                              project
-                            )
-                        }
-                      },
-
-                      React.createElement(
-                        Popup,
-                        null,
-
-                        React.createElement(
-                          "div",
-                          {
-                            className:
-                              "map-popup"
-                          },
-
-                          React.createElement(
-                            "strong",
-                            null,
-                            project.projectName
-                          ),
-
-                          React.createElement(
-                            "span",
-                            null,
-                            project.projectId
-                          ),
-
-                          React.createElement(
-                            "p",
-                            null,
-                            project.district +
-                              ", " +
-                              project.province
-                          ),
-
-                          React.createElement(
-                            "div",
-                            {
-                              className:
-                                "popup-progress"
-                            },
-
-                            React.createElement(
-                              "span",
-                              null,
-                              "Progress"
-                            ),
-
-                            React.createElement(
-                              "b",
-                              null,
-                              project.progress +
-                                "%"
-                            )
-                          )
-                        )
-                      )
-                    )
+            onChange:
+              (event) =>
+                setSearch(
+                  event.target.value
                 )
-              )
+          }
         )
+
       ),
 
-      /* PROJECT LIST */
-      React.createElement(
+      /* STATUS */
+
+      h(
+        "select",
+        {
+          value:
+            statusFilter,
+
+          onChange:
+            (event) =>
+              setStatusFilter(
+                event.target.value
+              )
+        },
+
+        h(
+          "option",
+          null,
+          "All Status"
+        ),
+
+        h(
+          "option",
+          null,
+          "Active"
+        ),
+
+        h(
+          "option",
+          null,
+          "Delayed"
+        ),
+
+        h(
+          "option",
+          null,
+          "Completed"
+        ),
+
+        h(
+          "option",
+          null,
+          "Critical"
+        )
+
+      ),
+
+      /* RISK */
+
+      h(
+        "select",
+        {
+          value:
+            riskFilter,
+
+          onChange:
+            (event) =>
+              setRiskFilter(
+                event.target.value
+              )
+        },
+
+        h(
+          "option",
+          null,
+          "All Risk"
+        ),
+
+        h(
+          "option",
+          null,
+          "Low"
+        ),
+
+        h(
+          "option",
+          null,
+          "Medium"
+        ),
+
+        h(
+          "option",
+          null,
+          "High"
+        ),
+
+        h(
+          "option",
+          null,
+          "Critical"
+        )
+
+      ),
+
+      /* CLEAR */
+
+      h(
+        "button",
+        {
+          className:
+            "map-clear-btn",
+
+          onClick:
+            clearFilters
+        },
+
+        "Clear Filters"
+
+      )
+
+    ),
+
+    /* STATS */
+
+    h(
+      "div",
+      {
+        className:
+          "map-mini-stats"
+      },
+
+      h(
         "div",
         {
           className:
-            "map-project-list-card"
+            "map-mini-stat"
         },
 
-        React.createElement(
-          "div",
-          {
-            className:
-              "map-card-header"
-          },
-
-          React.createElement(
-            "div",
-            null,
-            React.createElement(
-              "h2",
-              null,
-              "Project Registry"
-            ),
-            React.createElement(
-              "p",
-              null,
-              filteredProjects.length +
-                " matching projects"
-            )
-          )
+        h(
+          "span",
+          null,
+          "Projects Found"
         ),
 
-        React.createElement(
+        h(
+          "strong",
+          null,
+          filteredProjects.length
+        )
+
+      ),
+
+      h(
+        "div",
+        {
+          className:
+            "map-mini-stat"
+        },
+
+        h(
+          "span",
+          null,
+          "Mapped"
+        ),
+
+        h(
+          "strong",
+          null,
+          mappedCount
+        )
+
+      ),
+
+      h(
+        "div",
+        {
+          className:
+            "map-mini-stat"
+        },
+
+        h(
+          "span",
+          null,
+          "No Coordinates"
+        ),
+
+        h(
+          "strong",
+          null,
+          unmappedCount
+        )
+
+      )
+
+    ),
+
+    /* MAP CARD */
+
+    h(
+      "div",
+      {
+        className:
+          "project-map-card"
+      },
+
+      h(
+        "div",
+        {
+          className:
+            "project-map-card-header"
+        },
+
+        h(
+          "div",
+          null,
+
+          h(
+            "h3",
+            null,
+            "🗺️ Project Locations"
+          ),
+
+          h(
+            "p",
+            null,
+            "Click a marker to view project information"
+          )
+
+        ),
+
+        h(
+          "span",
+          {
+            className:
+              "map-live-badge"
+          },
+
+          "● LIVE"
+
+        )
+
+      ),
+
+      /* ACTUAL MAP */
+
+      h(
+        "div",
+        {
+          ref:
+            mapContainerRef,
+
+          className:
+            "project-map-container"
+        }
+      ),
+
+      /* TILE ERROR */
+
+      tileError
+        ? h(
+            "div",
+            {
+              className:
+                "map-tile-error"
+            },
+
+            h(
+              "strong",
+              null,
+              "⚠️ Map tiles could not be loaded"
+            ),
+
+            h(
+              "span",
+              null,
+              "Please check your internet connection."
+            )
+
+          )
+        : null
+
+    ),
+
+    /* NO COORDINATES */
+
+    unmappedCount > 0
+      ? h(
           "div",
           {
             className:
-              "map-project-list"
+              "map-coordinate-notice"
           },
 
-          filteredProjects.length === 0
-            ? React.createElement(
-                "div",
-                {
-                  className:
-                    "map-empty-state"
-                },
-                React.createElement(
-                  "div",
-                  null,
-                  "⌕"
-                ),
-                React.createElement(
-                  "h3",
-                  null,
-                  "No projects found"
-                ),
-                React.createElement(
-                  "p",
-                  null,
-                  "Try changing your search or filters."
-                )
-              )
-            : filteredProjects.map(
-                (project) =>
-                  React.createElement(
-                    "button",
-                    {
-                      key:
-                        project.id,
-                      className:
-                        "mapped-project-item" +
-                        (selectedProject &&
-                        selectedProject.id ===
-                          project.id
-                          ? " selected"
-                          : ""),
-                      onClick: () =>
-                        selectProject(
-                          project
-                        )
-                    },
+          h(
+            "strong",
+            null,
+            "📍 "
+          ),
 
-                    React.createElement(
-                      "div",
-                      {
-                        className:
-                          "mapped-project-top"
-                      },
+          h(
+            "span",
+            null,
 
-                      React.createElement(
-                        "div",
-                        {
-                          className:
-                            "mapped-project-icon"
-                        },
-                        "⌖"
-                      ),
+            `${unmappedCount} project${
+              unmappedCount === 1
+                ? ""
+                : "s"
+            } ${
+              unmappedCount === 1
+                ? "does"
+                : "do"
+            } not have valid latitude/longitude coordinates, so ${
+              unmappedCount === 1
+                ? "it is"
+                : "they are"
+            } not shown on the map.`
 
-                      React.createElement(
-                        "div",
-                        {
-                          className:
-                            "mapped-project-info"
-                        },
+          )
 
-                        React.createElement(
-                          "strong",
-                          null,
-                          project.projectName
-                        ),
-
-                        React.createElement(
-                          "small",
-                          null,
-                          project.projectId
-                        )
-                      )
-                    ),
-
-                    React.createElement(
-                      "div",
-                      {
-                        className:
-                          "mapped-project-location"
-                      },
-                      project.district +
-                        ", " +
-                        project.province
-                    ),
-
-                    React.createElement(
-                      "div",
-                      {
-                        className:
-                          "mapped-project-bottom"
-                      },
-
-                      React.createElement(
-                        "span",
-                        {
-                          className:
-                            "status-badge " +
-                            statusClass(
-                              project.status
-                            )
-                        },
-                        project.status
-                      ),
-
-                      React.createElement(
-                        "span",
-                        {
-                          className:
-                            "risk-badge " +
-                            riskClass(
-                              project.riskLevel
-                            )
-                        },
-                        project.riskLevel
-                      ),
-
-                      React.createElement(
-                        "b",
-                        null,
-                        project.progress +
-                          "%"
-                      )
-                    )
-                  )
-              )
         )
-      )
-    )
+      : null
+
   );
 };
 
-export default Map;
+export default MapPage;

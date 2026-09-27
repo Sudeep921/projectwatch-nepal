@@ -78,6 +78,15 @@ import PublicMap
 import AdminLogin
   from "./pages/AdminLogin";
 
+import EditProjectPage
+  from "./pages/EditProjectPage";
+
+import SystemTest
+  from "./pages/SystemTest";
+
+import ApiTest
+  from "./pages/ApiTest";
+
 
 const h = React.createElement;
 
@@ -87,22 +96,38 @@ const h = React.createElement;
 ========================================= */
 
 const ProtectedRoutes = () => {
+
   const {
     user,
     loading
   } = useAuth();
 
+
+  /* =======================================
+     AUTH LOADING
+  ======================================= */
+
   if (loading) {
+
     return h(
       "div",
       {
-        className: "app-loading"
+        className:
+          "app-loading"
       },
+
       "Loading ProjectWatch Nepal..."
     );
+
   }
 
+
+  /* =======================================
+     NOT LOGGED IN
+  ======================================= */
+
   if (!user) {
+
     return h(
       Navigate,
       {
@@ -110,11 +135,44 @@ const ProtectedRoutes = () => {
         replace: true
       }
     );
+
   }
+
+
+  /* =======================================
+     ROLE CHECK
+  ======================================= */
+
+  const role =
+    String(
+      user?.role || ""
+    ).toLowerCase();
+
+
+  if (
+    role !== "admin" &&
+    role !== "officer"
+  ) {
+
+    return h(
+      Navigate,
+      {
+        to: "/admin-login",
+        replace: true
+      }
+    );
+
+  }
+
+
+  /* =======================================
+     ADMIN LAYOUT
+  ======================================= */
 
   return h(
     DashboardLayout
   );
+
 };
 
 
@@ -123,6 +181,7 @@ const ProtectedRoutes = () => {
 ========================================= */
 
 const App = () => {
+
   return h(
     BrowserRouter,
     null,
@@ -130,6 +189,7 @@ const App = () => {
     h(
       Routes,
       null,
+
 
       /* =====================================
          PUBLIC HOME
@@ -145,6 +205,7 @@ const App = () => {
         }
       ),
 
+
       /* =====================================
          PUBLIC PORTAL
       ===================================== */
@@ -159,6 +220,7 @@ const App = () => {
         }
       ),
 
+
       /* =====================================
          PUBLIC PROJECT DETAILS
       ===================================== */
@@ -166,12 +228,32 @@ const App = () => {
       h(
         Route,
         {
-          path: "/public/projects/:id",
+          path:
+            "/public/projects/:id",
+
           element: h(
             PublicProjectDetails
           )
         }
       ),
+
+
+      /* =====================================
+         PUBLIC COMPLAINT FORM
+      ===================================== */
+
+      h(
+        Route,
+        {
+          path:
+            "/public/report",
+
+          element: h(
+            PublicComplaintForm
+          )
+        }
+      ),
+
 
       /* =====================================
          PUBLIC COMPLAINT
@@ -180,22 +262,15 @@ const App = () => {
       h(
         Route,
         {
-          path: "/public/report",
-          element: h(
-            PublicComplaintForm
-          )
-        }
-      ),
+          path:
+            "/complaints-public",
 
-      h(
-        Route,
-        {
-          path: "/complaints-public",
           element: h(
             PublicComplaint
           )
         }
       ),
+
 
       /* =====================================
          PUBLIC MAP
@@ -204,12 +279,15 @@ const App = () => {
       h(
         Route,
         {
-          path: "/public-map",
+          path:
+            "/public-map",
+
           element: h(
             PublicMap
           )
         }
       ),
+
 
       /* =====================================
          ADMIN LOGIN
@@ -218,12 +296,49 @@ const App = () => {
       h(
         Route,
         {
-          path: "/admin-login",
+          path:
+            "/admin-login",
+
           element: h(
             AdminLogin
           )
         }
       ),
+
+
+      /* =====================================
+         SYSTEM TEST
+      ===================================== */
+
+      h(
+        Route,
+        {
+          path:
+            "/system-test",
+
+          element: h(
+            SystemTest
+          )
+        }
+      ),
+
+
+      /* =====================================
+         API TEST
+      ===================================== */
+
+      h(
+        Route,
+        {
+          path:
+            "/api-test",
+
+          element: h(
+            ApiTest
+          )
+        }
+      ),
+
 
       /* =====================================
          PROTECTED ADMIN AREA
@@ -232,11 +347,14 @@ const App = () => {
       h(
         Route,
         {
-          path: "/admin",
+          path:
+            "/admin",
+
           element: h(
             ProtectedRoutes
           )
         },
+
 
         /* ===================================
            ADMIN DEFAULT
@@ -246,15 +364,19 @@ const App = () => {
           Route,
           {
             index: true,
+
             element: h(
               Navigate,
               {
-                to: "/admin/dashboard",
+                to:
+                  "/admin/dashboard",
+
                 replace: true
               }
             )
           }
         ),
+
 
         /* ===================================
            DASHBOARD
@@ -263,12 +385,15 @@ const App = () => {
         h(
           Route,
           {
-            path: "dashboard",
+            path:
+              "dashboard",
+
             element: h(
               Dashboard
             )
           }
         ),
+
 
         /* ===================================
            PROJECTS
@@ -277,12 +402,15 @@ const App = () => {
         h(
           Route,
           {
-            path: "projects",
+            path:
+              "projects",
+
             element: h(
               Projects
             )
           }
         ),
+
 
         /* ===================================
            ADD PROJECT
@@ -291,12 +419,15 @@ const App = () => {
         h(
           Route,
           {
-            path: "projects/new",
+            path:
+              "projects/new",
+
             element: h(
               AddProjectPage
             )
           }
         ),
+
 
         /* ===================================
            PROJECT DETAILS
@@ -305,12 +436,32 @@ const App = () => {
         h(
           Route,
           {
-            path: "projects/:id",
+            path:
+              "projects/:id",
+
             element: h(
               ProjectDetails
             )
           }
         ),
+
+
+        /* ===================================
+           EDIT PROJECT
+        =================================== */
+
+        h(
+          Route,
+          {
+            path:
+              "projects/:id/edit",
+
+            element: h(
+              EditProjectPage
+            )
+          }
+        ),
+
 
         /* ===================================
            MAP
@@ -319,12 +470,15 @@ const App = () => {
         h(
           Route,
           {
-            path: "map",
+            path:
+              "map",
+
             element: h(
               Map
             )
           }
         ),
+
 
         /* ===================================
            FIELD REPORTS
@@ -333,12 +487,15 @@ const App = () => {
         h(
           Route,
           {
-            path: "field-reports",
+            path:
+              "field-reports",
+
             element: h(
               FieldReports
             )
           }
         ),
+
 
         /* ===================================
            COMPLAINTS
@@ -347,12 +504,15 @@ const App = () => {
         h(
           Route,
           {
-            path: "complaints",
+            path:
+              "complaints",
+
             element: h(
               Complaints
             )
           }
         ),
+
 
         /* ===================================
            EVIDENCE
@@ -361,12 +521,15 @@ const App = () => {
         h(
           Route,
           {
-            path: "evidence",
+            path:
+              "evidence",
+
             element: h(
               Evidence
             )
           }
         ),
+
 
         /* ===================================
            ALERTS
@@ -375,12 +538,15 @@ const App = () => {
         h(
           Route,
           {
-            path: "alerts",
+            path:
+              "alerts",
+
             element: h(
               Alerts
             )
           }
         ),
+
 
         /* ===================================
            NOTIFICATIONS
@@ -389,12 +555,15 @@ const App = () => {
         h(
           Route,
           {
-            path: "notifications",
+            path:
+              "notifications",
+
             element: h(
               Notifications
             )
           }
         ),
+
 
         /* ===================================
            REPORTS
@@ -403,12 +572,15 @@ const App = () => {
         h(
           Route,
           {
-            path: "reports",
+            path:
+              "reports",
+
             element: h(
               Reports
             )
           }
         ),
+
 
         /* ===================================
            SETTINGS
@@ -417,12 +589,15 @@ const App = () => {
         h(
           Route,
           {
-            path: "settings",
+            path:
+              "settings",
+
             element: h(
               Settings
             )
           }
         ),
+
 
         /* ===================================
            USERS
@@ -431,12 +606,15 @@ const App = () => {
         h(
           Route,
           {
-            path: "users",
+            path:
+              "users",
+
             element: h(
               UserManagement
             )
           }
         ),
+
 
         /* ===================================
            AUDIT LOGS
@@ -445,12 +623,15 @@ const App = () => {
         h(
           Route,
           {
-            path: "audit-logs",
+            path:
+              "audit-logs",
+
             element: h(
               AuditLogs
             )
           }
         ),
+
 
         /* ===================================
            SYSTEM SETTINGS
@@ -459,13 +640,17 @@ const App = () => {
         h(
           Route,
           {
-            path: "system-settings",
+            path:
+              "system-settings",
+
             element: h(
               SystemSettings
             )
           }
         )
+
       ),
+
 
       /* =====================================
          UNKNOWN ROUTE
@@ -475,6 +660,7 @@ const App = () => {
         Route,
         {
           path: "*",
+
           element: h(
             Navigate,
             {
@@ -484,8 +670,11 @@ const App = () => {
           )
         }
       )
+
     )
+
   );
+
 };
 
 

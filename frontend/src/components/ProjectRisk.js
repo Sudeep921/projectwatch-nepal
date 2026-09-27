@@ -2,20 +2,17 @@ import React from "react";
 
 const h = React.createElement;
 
-const ProjectRisk = ({
-  risk = "Low"
-}) => {
-  const className =
-    `risk-badge risk-${String(
-      risk
-    ).toLowerCase()}`;
+const ProjectRisk = ({ risk }) => {
+  const value = risk || "Low";
 
   return h(
     "span",
     {
-      className
+      className:
+        "project-risk project-risk-" +
+        value.toLowerCase()
     },
-    risk
+    value
   );
 };
 

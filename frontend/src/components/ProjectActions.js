@@ -8,26 +8,17 @@ const ProjectActions = ({
   onEdit,
   onDelete
 }) => {
-  if (!project) {
-    return null;
-  }
+  if (!project) return null;
 
   return h(
     "div",
-    {
-      className: "project-actions"
-    },
+    { className: "project-actions" },
 
     h(
       "button",
       {
         type: "button",
-        className: "project-action-view",
-        onClick: function () {
-          if (onView) {
-            onView(project);
-          }
-        }
+        onClick: () => onView && onView(project)
       },
       "View"
     ),
@@ -36,12 +27,7 @@ const ProjectActions = ({
       "button",
       {
         type: "button",
-        className: "project-action-edit",
-        onClick: function () {
-          if (onEdit) {
-            onEdit(project);
-          }
-        }
+        onClick: () => onEdit && onEdit(project)
       },
       "Edit"
     ),
@@ -50,12 +36,7 @@ const ProjectActions = ({
       "button",
       {
         type: "button",
-        className: "project-action-delete",
-        onClick: function () {
-          if (onDelete) {
-            onDelete(project);
-          }
-        }
+        onClick: () => onDelete && onDelete(project)
       },
       "Delete"
     )

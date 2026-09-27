@@ -2,6 +2,10 @@ const mongoose = require("mongoose");
 
 const projectSchema = new mongoose.Schema(
     {
+        // ==========================================
+        // PROJECT INFORMATION
+        // ==========================================
+
         projectName: {
             type: String,
             required: true,
@@ -17,33 +21,47 @@ const projectSchema = new mongoose.Schema(
 
         province: {
             type: String,
-            required: true
+            required: true,
+            trim: true
         },
 
         district: {
             type: String,
-            required: true
+            required: true,
+            trim: true
         },
 
         municipality: {
             type: String,
-            required: true
+            required: true,
+            trim: true
         },
 
         contractor: {
             type: String,
-            required: true
+            required: true,
+            trim: true
         },
+
         assignedOfficer: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
             default: null
-     },
+        },
+
+        // ==========================================
+        // FINANCIAL INFORMATION
+        // ==========================================
 
         budget: {
             type: Number,
-            required: true
+            required: true,
+            min: 0
         },
+
+        // ==========================================
+        // PROJECT PROGRESS
+        // ==========================================
 
         progress: {
             type: Number,
@@ -51,6 +69,10 @@ const projectSchema = new mongoose.Schema(
             min: 0,
             max: 100
         },
+
+        // ==========================================
+        // PROJECT STATUS
+        // ==========================================
 
         status: {
             type: String,
@@ -63,6 +85,10 @@ const projectSchema = new mongoose.Schema(
             default: "Active"
         },
 
+        // ==========================================
+        // RISK LEVEL
+        // ==========================================
+
         riskLevel: {
             type: String,
             enum: [
@@ -74,10 +100,47 @@ const projectSchema = new mongoose.Schema(
             default: "Low"
         },
 
+        // ==========================================
+        // DESCRIPTION
+        // ==========================================
+
         description: {
             type: String,
-            default: ""
+            default: "",
+            trim: true
         },
+
+        // ==========================================
+        // PROJECT LOCATION TEXT
+        // ==========================================
+
+        location: {
+            type: String,
+            default: "",
+            trim: true
+        },
+
+        // ==========================================
+        // MAP COORDINATES
+        // ==========================================
+
+        latitude: {
+            type: Number,
+            min: -90,
+            max: 90,
+            default: null
+        },
+
+        longitude: {
+            type: Number,
+            min: -180,
+            max: 180,
+            default: null
+        },
+
+        // ==========================================
+        // PROJECT DATES
+        // ==========================================
 
         startDate: {
             type: Date
@@ -87,14 +150,32 @@ const projectSchema = new mongoose.Schema(
             type: Date
         },
 
+        // ==========================================
+        // PUBLIC VISIBILITY
+        // ==========================================
+
         isPublished: {
             type: Boolean,
             default: false
         }
     },
+
+    // ==========================================
+    // AUTOMATIC CREATED / UPDATED DATES
+    // ==========================================
+
     {
         timestamps: true
     }
 );
 
-module.exports = mongoose.model("Project", projectSchema);
+
+// ==========================================
+// EXPORT MODEL
+// ==========================================
+
+module.exports =
+    mongoose.model(
+        "Project",
+        projectSchema
+    );

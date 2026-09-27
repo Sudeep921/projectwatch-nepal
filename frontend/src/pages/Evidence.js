@@ -10,37 +10,64 @@ import {
 } from "../services/api";
 
 const Evidence = () => {
-  const [evidence, setEvidence] =
-    useState([]);
+  const [
+    evidence,
+    setEvidence
+  ] = useState([]);
 
-  const [projects, setProjects] =
-    useState([]);
+  const [
+    projects,
+    setProjects
+  ] = useState([]);
 
-  const [loading, setLoading] =
-    useState(true);
+  const [
+    loading,
+    setLoading
+  ] = useState(true);
 
-  const [uploading, setUploading] =
-    useState(false);
+  const [
+    uploading,
+    setUploading
+  ] = useState(false);
 
-  const [showForm, setShowForm] =
-    useState(false);
+  const [
+    showForm,
+    setShowForm
+  ] = useState(false);
 
-  const [error, setError] =
-    useState("");
+  const [
+    error,
+    setError
+  ] = useState("");
 
-  const [file, setFile] =
-    useState(null);
+  const [
+    success,
+    setSuccess
+  ] = useState("");
 
-  const [form, setForm] =
-    useState({
-      project: "",
-      evidenceType: "Photo",
-      description: ""
-    });
+  const [
+    file,
+    setFile
+  ] = useState(null);
+
+  const [
+    form,
+    setForm
+  ] = useState({
+    project: "",
+    evidenceType: "Photo",
+    description: ""
+  });
+
+
+  // ========================================
+  // LOAD DATA
+  // ========================================
 
   const loadData = async () => {
     try {
       setLoading(true);
+      setError("");
 
       const [
         evidenceResponse,
@@ -52,15 +79,16 @@ const Evidence = () => {
 
       setEvidence(
         evidenceResponse?.evidence ||
-          evidenceResponse?.data ||
-          []
+        evidenceResponse?.data ||
+        []
       );
 
       setProjects(
         projectResponse?.projects ||
-          projectResponse?.data ||
-          []
+        projectResponse?.data ||
+        []
       );
+
     } catch (err) {
       console.error(
         "Evidence loading failed:",
@@ -69,34 +97,118 @@ const Evidence = () => {
 
       setError(
         err.message ||
-          "Unable to load evidence."
+        "Unable to load evidence."
       );
+
     } finally {
       setLoading(false);
     }
   };
 
+
   useEffect(() => {
     loadData();
   }, []);
 
-  const handleChange = (
-    event
-  ) => {
-    const {
-      name,
-      value
-    } = event.target;
 
-    setForm((previous) => ({
-      ...previous,
-      [name]: value
-    }));
+  // ========================================
+  // FORM CHANGE
+  // ========================================
+
+  const handleChange =
+    (event) => {
+      const {
+        name,
+        value
+      } = event.target;
+
+      setForm(
+        (previous) => ({
+          ...previous,
+          [name]: value
+        })
+      );
+
+      setError("");
+      setSuccess("");
+    };
+
+
+  // ========================================
+  // FILE CHANGE
+  // ========================================
+
+  const handleFileChange =
+    (event) => {
+      const selected =
+        event.target.files?.[0] ||
+        null;
+
+      if (!selected) {
+        setFile(null);
+        return;
+      }
+
+      // 50 MB limit
+
+      const maxSize =
+        50 * 1024 * 1024;
+
+      if (
+        selected.size >
+        maxSize
+      ) {
+        setFile(null);
+
+        event.target.value = "";
+
+        setError(
+          "File size must be less than 50 MB."
+        );
+
+        return;
+      }
+
+      setFile(selected);
+      setError("");
+      setSuccess("");
+    };
+
+
+  // ========================================
+  // RESET FORM
+  // ========================================
+
+  const resetForm = () => {
+    setFile(null);
+
+    setForm({
+      project: "",
+      evidenceType: "Photo",
+      description: ""
+    });
+
+    setError("");
   };
+
+
+  // ========================================
+  // UPLOAD
+  // ========================================
 
   const handleUpload =
     async (event) => {
       event.preventDefault();
+
+      setError("");
+      setSuccess("");
+
+      if (!form.project) {
+        setError(
+          "Please select a project."
+        );
+        return;
+      }
 
       if (!file) {
         setError(
@@ -107,7 +219,6 @@ const Evidence = () => {
 
       try {
         setUploading(true);
-        setError("");
 
         const formData =
           new FormData();
@@ -136,17 +247,16 @@ const Evidence = () => {
           formData
         );
 
-        setFile(null);
-
-        setForm({
-          project: "",
-          evidenceType: "Photo",
-          description: ""
-        });
+        resetForm();
 
         setShowForm(false);
 
+        setSuccess(
+          "Evidence uploaded successfully."
+        );
+
         await loadData();
+
       } catch (err) {
         console.error(
           "Evidence upload failed:",
@@ -155,12 +265,46 @@ const Evidence = () => {
 
         setError(
           err.message ||
-            "Unable to upload evidence."
+          "Unable to upload evidence."
         );
+
       } finally {
         setUploading(false);
       }
     };
+
+
+  // ========================================
+  // FILE URL
+  // ========================================
+
+  const getFileUrl =
+    (item) => {
+      const path =
+        item.fileUrl ||
+        item.url ||
+        item.file ||
+        item.path;
+
+      if (!path) {
+        return "";
+      }
+
+      if (
+        path.startsWith("http")
+      ) {
+        return path;
+      }
+
+      return `http://localhost:8000/${String(
+        path
+      ).replace(/^\/+/, "")}`;
+    };
+
+
+  // ========================================
+  // RENDER
+  // ========================================
 
   return React.createElement(
     "div",
@@ -168,6 +312,9 @@ const Evidence = () => {
       className:
         "page-container"
     },
+
+
+    // HEADER
 
     React.createElement(
       "div",
@@ -203,20 +350,64 @@ const Evidence = () => {
       ),
 
       React.createElement(
-        "button",
+        "div",
         {
           className:
-            "primary-button",
-          onClick: () =>
-            setShowForm(
-              !showForm
-            )
+            "header-actions"
         },
-        showForm
-          ? "Close Upload"
-          : "+ Upload Evidence"
+
+        React.createElement(
+          "button",
+          {
+            className:
+              "secondary-button",
+            onClick:
+              loadData,
+            disabled:
+              loading
+          },
+          loading
+            ? "Refreshing..."
+            : "↻ Refresh"
+        ),
+
+        React.createElement(
+          "button",
+          {
+            className:
+              "primary-button",
+            onClick: () => {
+              setShowForm(
+                !showForm
+              );
+              setError("");
+              setSuccess("");
+            }
+          },
+          showForm
+            ? "Close Upload"
+            : "+ Upload Evidence"
+        )
       )
     ),
+
+
+    // SUCCESS
+
+    success
+      ? React.createElement(
+          "div",
+          {
+            className:
+              "success-message"
+          },
+          "✓ ",
+          success
+        )
+      : null,
+
+
+    // ERROR
 
     error
       ? React.createElement(
@@ -229,6 +420,9 @@ const Evidence = () => {
           error
         )
       : null,
+
+
+    // FORM
 
     showForm
       ? React.createElement(
@@ -273,6 +467,9 @@ const Evidence = () => {
                   "form-grid"
               },
 
+
+              // PROJECT
+
               React.createElement(
                 "div",
                 {
@@ -316,11 +513,17 @@ const Evidence = () => {
                           value:
                             project._id
                         },
-                        project.name
+                        project.name ||
+                        project.projectName ||
+                        project.projectCode ||
+                        "Government Project"
                       )
                   )
                 )
               ),
+
+
+              // TYPE
 
               React.createElement(
                 "div",
@@ -375,6 +578,9 @@ const Evidence = () => {
                 )
               ),
 
+
+              // FILE
+
               React.createElement(
                 "div",
                 {
@@ -393,20 +599,37 @@ const Evidence = () => {
                   {
                     type:
                       "file",
+
                     accept:
-                      "image/*,video/*,.pdf",
+                      form.evidenceType ===
+                      "Photo"
+                        ? "image/*"
+                        : form.evidenceType ===
+                          "Video"
+                        ? "video/*"
+                        : ".pdf,.doc,.docx",
+
                     onChange:
-                      (event) =>
-                        setFile(
-                          event
-                            .target
-                            .files?.[0] ||
-                          null
-                        ),
+                      handleFileChange,
+
                     required: true
                   }
-                )
+                ),
+
+                file
+                  ? React.createElement(
+                      "small",
+                      {
+                        className:
+                          "selected-file"
+                      },
+                      `Selected: ${file.name}`
+                    )
+                  : null
               ),
+
+
+              // DESCRIPTION
 
               React.createElement(
                 "div",
@@ -438,6 +661,9 @@ const Evidence = () => {
               )
             ),
 
+
+            // ACTIONS
+
             React.createElement(
               "div",
               {
@@ -452,10 +678,12 @@ const Evidence = () => {
                     "button",
                   className:
                     "secondary-button",
-                  onClick: () =>
+                  onClick: () => {
+                    resetForm();
                     setShowForm(
                       false
-                    )
+                    );
+                  }
                 },
                 "Cancel"
               ),
@@ -479,6 +707,9 @@ const Evidence = () => {
         )
       : null,
 
+
+    // LIST
+
     loading
       ? React.createElement(
           "div",
@@ -488,7 +719,9 @@ const Evidence = () => {
           },
           "Loading evidence..."
         )
+
       : evidence.length === 0
+
       ? React.createElement(
           "div",
           {
@@ -521,6 +754,7 @@ const Evidence = () => {
             "+ Upload First Evidence"
           )
         )
+
       : React.createElement(
           "div",
           {
@@ -529,8 +763,11 @@ const Evidence = () => {
           },
 
           evidence.map(
-            (item) =>
-              React.createElement(
+            (item) => {
+              const fileUrl =
+                getFileUrl(item);
+
+              return React.createElement(
                 "div",
                 {
                   className:
@@ -551,8 +788,9 @@ const Evidence = () => {
                     "strong",
                     null,
                     item.project?.name ||
-                      item.project ||
-                      "Government Project"
+                    item.project?.projectName ||
+                    item.project ||
+                    "Government Project"
                   ),
 
                   React.createElement(
@@ -562,8 +800,8 @@ const Evidence = () => {
                         "status-badge"
                     },
                     item.evidenceType ||
-                      item.type ||
-                      "Evidence"
+                    item.type ||
+                    "Evidence"
                   )
                 ),
 
@@ -571,7 +809,7 @@ const Evidence = () => {
                   "p",
                   null,
                   item.description ||
-                    "Project evidence record."
+                  "Project evidence record."
                 ),
 
                 React.createElement(
@@ -585,8 +823,8 @@ const Evidence = () => {
                     "span",
                     null,
                     item.originalName ||
-                      item.filename ||
-                      "Uploaded file"
+                    item.filename ||
+                    "Uploaded file"
                   ),
 
                   React.createElement(
@@ -597,9 +835,27 @@ const Evidence = () => {
                           item.createdAt
                         ).toLocaleDateString()
                       : "Recent"
-                  )
+                  ),
+
+                  fileUrl
+                    ? React.createElement(
+                        "a",
+                        {
+                          href:
+                            fileUrl,
+                          target:
+                            "_blank",
+                          rel:
+                            "noreferrer",
+                          className:
+                            "operation-btn"
+                        },
+                        "View File"
+                      )
+                    : null
                 )
-              )
+              );
+            }
           )
         )
   );

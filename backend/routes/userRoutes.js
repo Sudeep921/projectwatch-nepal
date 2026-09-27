@@ -1,7 +1,9 @@
 const express = require("express");
 
 const {
-  getUsers
+  getUsers,
+  getMySettings,
+  updateMySettings
 } = require("../controllers/userController");
 
 const {
@@ -20,6 +22,7 @@ const router = express.Router();
 
 // ========================================
 // GET ALL USERS
+// ADMIN ONLY
 // ========================================
 
 router.get(
@@ -31,7 +34,32 @@ router.get(
 
 
 // ========================================
+// GET MY SETTINGS
+// ADMIN / OFFICER
+// ========================================
+
+router.get(
+  "/settings",
+  authMiddleware,
+  getMySettings
+);
+
+
+// ========================================
+// UPDATE MY SETTINGS
+// ADMIN / OFFICER
+// ========================================
+
+router.put(
+  "/settings",
+  authMiddleware,
+  updateMySettings
+);
+
+
+// ========================================
 // UPDATE USER STATUS
+// ADMIN ONLY
 // ========================================
 
 router.put(
@@ -44,6 +72,7 @@ router.put(
 
 // ========================================
 // UPDATE USER ROLE
+// ADMIN ONLY
 // ========================================
 
 router.put(

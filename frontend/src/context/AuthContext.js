@@ -7,131 +7,513 @@ import React, {
 
 import {
   loginUser,
-  registerUser,
   getCurrentUser,
   logoutUser
 } from "../services/api";
 
-const AuthContext =
-  createContext(null);
+
+// ========================================
+// AUTH CONTEXT
+// ========================================
+
+const AuthContext = createContext(null);
+
+
+// ========================================
+// AUTH PROVIDER
+// ========================================
 
 export const AuthProvider = ({
   children
 }) => {
-  const [
-    user,
-    setUser
-  ] = useState(null);
 
-  const [
-    loading,
-    setLoading
-  ] = useState(true);
+  const [user, setUser] =
+    useState(null);
+
+  const [loading, setLoading] =
+    useState(true);
+
+
+  // ======================================
+  // LOAD USER
+  // ======================================
 
   useEffect(() => {
-    const token =
-      localStorage.getItem(
-        "projectwatch_token"
-      );
 
-    if (!token) {
-      setLoading(false);
-      return;
-    }
+    const loadUser = async () => {
 
-    getCurrentUser()
-      .then((data) => {
-        if (data.user) {
-          setUser(data.user);
+      try {
+
+        const token =
+          localStorage.getItem(
+            "projectwatch_token"
+          );
+
+        const savedUser =
+          localStorage.getItem(
+            "projectwatch_user"
+          );
+
+
+        // --------------------------------
+        // NO TOKEN
+        // --------------------------------
+
+        if (!token) {
+
+          setUser(null);
+          setLoading(false);
+
+          return;
         }
-      })
-      .catch(() => {
-        logoutUser();
+
+
+        // --------------------------------
+        // LOAD SAVED USER
+        // --------------------------------
+
+        if (savedUser) {
+
+          try {
+
+            const parsedUser =
+              JSON.parse(savedUser);
+
+            if (
+              parsedUser &&
+              typeof parsedUser === "object"
+            ) {
+
+              setUser(parsedUser);
+
+            }
+
+          } catch (error) {
+
+            console.warn(
+              "Invalid saved user data:",
+              error
+            );
+
+            localStorage.removeItem(
+              "projectwatch_user"
+            );
+
+          }
+
+        }
+
+
+        // --------------------------------
+        // VERIFY USER FROM BACKEND
+        // --------------------------------
+
+        try {
+
+          const response =
+            await getCurrentUser();
+
+
+          /*
+            Supported responses:
+
+            {
+              user: {...}
+            }
+
+            OR
+
+            {
+              data: {
+                user: {...}
+              }
+            }
+
+            OR
+
+            {
+              data: {...user}
+            }
+          */
+
+          const currentUser =
+            response?.data?.user ||
+            response?.user ||
+            response?.data ||
+            response;
+
+
+          if (
+            currentUser &&
+            typeof currentUser === "object"
+          ) {
+
+            setUser(currentUser);
+
+            localStorage.setItem(
+              "projectwatch_user",
+              JSON.stringify(
+                currentUser
+              )
+            );
+
+          }
+
+        } catch (error) {
+
+          console.warn(
+            "Could not verify current user:",
+            error
+          );
+
+
+          // --------------------------------
+          // INVALID TOKEN
+          // --------------------------------
+
+          const message =
+            error?.message
+              ?.toLowerCase() || "";
+
+
+          if (
+            message.includes(
+              "invalid"
+            ) ||
+            message.includes(
+              "expired"
+            ) ||
+            message.includes(
+              "jwt"
+            ) ||
+            message.includes(
+              "unauthorized"
+            )
+          ) {
+
+            localStorage.removeItem(
+              "projectwatch_token"
+            );
+
+            localStorage.removeItem(
+              "projectwatch_user"
+            );
+
+            setUser(null);
+
+          }
+
+        }
+
+      } catch (error) {
+
+        console.error(
+          "AUTH LOAD ERROR:",
+          error
+        );
+
         setUser(null);
-      })
-      .finally(() => {
+
+      } finally {
+
         setLoading(false);
-      });
+
+      }
+
+    };
+
+
+    loadUser();
+
   }, []);
 
-  const login =
-    async (
-      email,
-      password
-    ) => {
-      const data =
+
+  // ========================================
+  // LOGIN
+  // ========================================
+
+  const login = async (
+    email,
+    password
+  ) => {
+
+    try {
+
+      console.log(
+        "AUTH LOGIN START:",
+        email
+      );
+
+
+      // ------------------------------------
+      // IMPORTANT
+      // loginUser expects:
+      // loginUser(email, password)
+      // ------------------------------------
+
+      const response =
         await loginUser(
           email,
           password
         );
 
-      if (data.token) {
+
+      console.log(
+        "AUTH LOGIN RESPONSE:",
+        response
+      );
+
+
+      /*
+        Supported response formats:
+
+        {
+          token,
+          user
+        }
+
+        OR
+
+        {
+          data: {
+            token,
+            user
+          }
+        }
+      */
+
+      const authData =
+        response?.data ||
+        response;
+
+
+      const token =
+        authData?.token ||
+        authData?.accessToken ||
+        response?.token ||
+        response?.accessToken;
+
+
+      const loggedInUser =
+        authData?.user ||
+        response?.user ||
+        null;
+
+
+      // ------------------------------------
+      // SAVE TOKEN
+      // ------------------------------------
+
+      if (token) {
+
         localStorage.setItem(
           "projectwatch_token",
-          data.token
+          token
         );
+
       }
 
-      if (data.user) {
+
+      // ------------------------------------
+      // SAVE USER
+      // ------------------------------------
+
+      if (loggedInUser) {
+
         localStorage.setItem(
           "projectwatch_user",
           JSON.stringify(
-            data.user
+            loggedInUser
           )
         );
 
-        setUser(data.user);
-      }
-
-      return data;
-    };
-
-  const register =
-    async (
-      userData
-    ) => {
-      const data =
-        await registerUser(
-          userData
+        setUser(
+          loggedInUser
         );
 
-      if (data.token) {
-        localStorage.setItem(
-          "projectwatch_token",
-          data.token
+      }
+
+
+      // ------------------------------------
+      // CHECK LOGIN DATA
+      // ------------------------------------
+
+      if (!token) {
+
+        console.warn(
+          "Login successful but token was not found."
         );
+
       }
 
-      if (data.user) {
-        setUser(data.user);
+
+      if (!loggedInUser) {
+
+        console.warn(
+          "Login successful but user data was not found."
+        );
+
       }
 
-      return data;
-    };
+
+      console.log(
+        "AUTH LOGIN SUCCESS:",
+        {
+          tokenExists: !!token,
+          user: loggedInUser
+        }
+      );
+
+
+      // ------------------------------------
+      // RETURN LOGIN RESULT
+      // ------------------------------------
+
+      return {
+        ...authData,
+        token,
+        user: loggedInUser
+      };
+
+    } catch (error) {
+
+      console.error(
+        "AUTH LOGIN ERROR:",
+        error
+      );
+
+      throw error;
+
+    }
+
+  };
+
+
+  // ========================================
+  // LOGOUT
+  // ========================================
 
   const logout = () => {
-    logoutUser();
+
+    try {
+
+      logoutUser();
+
+    } catch (error) {
+
+      console.warn(
+        "Logout API error:",
+        error
+      );
+
+      // Safety cleanup
+      localStorage.removeItem(
+        "projectwatch_token"
+      );
+
+      localStorage.removeItem(
+        "projectwatch_user"
+      );
+
+    }
+
+
     setUser(null);
+
   };
+
+
+  // ========================================
+  // UPDATE USER
+  // ========================================
+
+  const updateUser = (
+    updatedUser
+  ) => {
+
+    setUser(
+      updatedUser
+    );
+
+
+    if (updatedUser) {
+
+      localStorage.setItem(
+        "projectwatch_user",
+        JSON.stringify(
+          updatedUser
+        )
+      );
+
+    } else {
+
+      localStorage.removeItem(
+        "projectwatch_user"
+      );
+
+    }
+
+  };
+
+
+  // ========================================
+  // CONTEXT VALUE
+  // ========================================
+
+  const value = {
+
+    user,
+
+    loading,
+
+    login,
+
+    logout,
+
+    setUser: updateUser
+
+  };
+
+
+  // ========================================
+  // PROVIDER
+  // ========================================
 
   return React.createElement(
     AuthContext.Provider,
     {
-      value: {
-        user,
-        loading,
-        login,
-        register,
-        logout,
-        isAuthenticated:
-          Boolean(user)
-      }
+      value
     },
     children
   );
+
 };
 
-export const useAuth = () =>
-  useContext(
-    AuthContext
-  );
+
+// ========================================
+// USE AUTH
+// ========================================
+
+export const useAuth = () => {
+
+  const context =
+    useContext(
+      AuthContext
+    );
+
+
+  if (!context) {
+
+    throw new Error(
+      "useAuth must be used inside AuthProvider"
+    );
+
+  }
+
+
+  return context;
+
+};
+
+
+export default AuthContext;

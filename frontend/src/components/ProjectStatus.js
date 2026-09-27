@@ -2,20 +2,17 @@ import React from "react";
 
 const h = React.createElement;
 
-const ProjectStatus = ({
-  status = "Active"
-}) => {
-  const className =
-    `status-badge status-${String(
-      status
-    ).toLowerCase()}`;
+const ProjectStatus = ({ status }) => {
+  const value = status || "Active";
 
   return h(
     "span",
     {
-      className
+      className:
+        "project-status project-status-" +
+        value.toLowerCase().replace(/\s+/g, "-")
     },
-    status
+    value
   );
 };
 

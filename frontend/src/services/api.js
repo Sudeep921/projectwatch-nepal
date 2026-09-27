@@ -1,7 +1,6 @@
 const API_BASE_URL =
   "http://localhost:8000/api";
 
-
 // ========================================
 // API REQUEST
 // ========================================
@@ -16,8 +15,12 @@ const apiRequest = async (
     );
 
   const headers = {
-    ...(options.headers || {}),
+    ...(options.headers || {})
   };
+
+  // ======================================
+  // JSON CONTENT TYPE
+  // ======================================
 
   if (
     options.body &&
@@ -27,33 +30,45 @@ const apiRequest = async (
       "application/json";
   }
 
+  // ======================================
+  // JWT AUTHORIZATION
+  // ======================================
+
   if (token) {
     headers.Authorization =
       `Bearer ${token}`;
   }
 
   try {
-    const response = await fetch(
-      `${API_BASE_URL}${endpoint}`,
-      {
-        ...options,
-        headers,
-      }
-    );
+    const response =
+      await fetch(
+        `${API_BASE_URL}${endpoint}`,
+        {
+          ...options,
+          headers
+        }
+      );
 
     let data = {};
 
     try {
-      data = await response.json();
+      data =
+        await response.json();
     } catch (error) {
       data = {};
     }
 
     if (!response.ok) {
-      throw new Error(
-        data.message ||
+      const error =
+        new Error(
+          data.message ||
           `Server error: ${response.status}`
-      );
+        );
+
+      error.status =
+        response.status;
+
+      throw error;
     }
 
     return data;
@@ -82,32 +97,85 @@ const apiRequest = async (
 // AUTH
 // ========================================
 
-export const loginUser = (
+// LOGIN
+
+export const loginUser = async (
   email,
   password
-) =>
-  apiRequest("/auth/login", {
-    method: "POST",
-    body: JSON.stringify({
-      email,
-      password,
-    }),
-  });
+) => {
+  const data =
+    await apiRequest(
+      "/auth/login",
+      {
+        method: "POST",
 
+        body:
+          JSON.stringify({
+            email,
+            password
+          })
+      }
+    );
+
+  const authData =
+    data?.data ||
+    data;
+
+  const token =
+    authData?.token ||
+    authData?.accessToken;
+
+  const user =
+    authData?.user ||
+    data?.user ||
+    null;
+
+  if (token) {
+    localStorage.setItem(
+      "projectwatch_token",
+      token
+    );
+  }
+
+  if (user) {
+    localStorage.setItem(
+      "projectwatch_user",
+      JSON.stringify(user)
+    );
+  }
+
+  return {
+    ...authData,
+    token,
+    user
+  };
+};
+
+
+// REGISTER
 
 export const registerUser = (
   userData
 ) =>
-  apiRequest("/auth/register", {
-    method: "POST",
-    body: JSON.stringify(
-      userData
-    ),
-  });
+  apiRequest(
+    "/auth/register",
+    {
+      method: "POST",
 
+      body:
+        JSON.stringify(
+          userData
+        )
+    }
+  );
+
+
+// CURRENT USER
 
 export const getCurrentUser = () =>
-  apiRequest("/auth/me");
+  apiRequest(
+    "/auth/me"
+  );
 
 
 // ========================================
@@ -115,7 +183,9 @@ export const getCurrentUser = () =>
 // ========================================
 
 export const getProjects = () =>
-  apiRequest("/projects");
+  apiRequest(
+    "/projects"
+  );
 
 
 export const getProject = (
@@ -129,12 +199,17 @@ export const getProject = (
 export const createProject = (
   projectData
 ) =>
-  apiRequest("/projects", {
-    method: "POST",
-    body: JSON.stringify(
-      projectData
-    ),
-  });
+  apiRequest(
+    "/projects",
+    {
+      method: "POST",
+
+      body:
+        JSON.stringify(
+          projectData
+        )
+    }
+  );
 
 
 export const updateProject = (
@@ -145,9 +220,11 @@ export const updateProject = (
     `/projects/${id}`,
     {
       method: "PUT",
-      body: JSON.stringify(
-        projectData
-      ),
+
+      body:
+        JSON.stringify(
+          projectData
+        )
     }
   );
 
@@ -158,7 +235,7 @@ export const deleteProject = (
   apiRequest(
     `/projects/${id}`,
     {
-      method: "DELETE",
+      method: "DELETE"
     }
   );
 
@@ -210,8 +287,40 @@ export const getProjectOverview = (
 // ========================================
 
 export const getUsers = () =>
-  apiRequest("/users");
+  apiRequest(
+    "/users"
+  );
 
+
+// ========================================
+// MY SETTINGS
+// ========================================
+
+export const getMySettings = () =>
+  apiRequest(
+    "/users/settings"
+  );
+
+
+export const updateMySettings = (
+  settings
+) =>
+  apiRequest(
+    "/users/settings",
+    {
+      method: "PUT",
+
+      body:
+        JSON.stringify(
+          settings
+        )
+    }
+  );
+
+
+// ========================================
+// UPDATE USER STATUS
+// ========================================
 
 export const updateUserStatus = (
   id,
@@ -221,12 +330,18 @@ export const updateUserStatus = (
     `/users/${id}/status`,
     {
       method: "PUT",
-      body: JSON.stringify({
-        isActive,
-      }),
+
+      body:
+        JSON.stringify({
+          isActive
+        })
     }
   );
 
+
+// ========================================
+// UPDATE USER ROLE
+// ========================================
 
 export const updateUserRole = (
   id,
@@ -236,9 +351,11 @@ export const updateUserRole = (
     `/users/${id}/role`,
     {
       method: "PUT",
-      body: JSON.stringify({
-        role,
-      }),
+
+      body:
+        JSON.stringify({
+          role
+        })
     }
   );
 
@@ -248,36 +365,43 @@ export const updateUserRole = (
 // ========================================
 
 export const getAuditLogs = () =>
-  apiRequest("/audit");
+  apiRequest(
+    "/audit"
+  );
 
 
 export const getSystemHealth = () =>
-  apiRequest("/health");
+  apiRequest(
+    "/health"
+  );
+
+
+export const checkApiHealth = () =>
+  apiRequest(
+    "/health"
+  );
 
 
 // ========================================
 // DASHBOARD
 // ========================================
 
-export const getDashboardStats =
-  () =>
-    apiRequest(
-      "/dashboard/stats"
-    );
+export const getDashboardStats = () =>
+  apiRequest(
+    "/dashboard/stats"
+  );
 
 
-export const getProjectStatusSummary =
-  () =>
-    apiRequest(
-      "/dashboard/project-status"
-    );
+export const getProjectStatusSummary = () =>
+  apiRequest(
+    "/dashboard/project-status"
+  );
 
 
-export const getProvinceSummary =
-  () =>
-    apiRequest(
-      "/dashboard/provinces"
-    );
+export const getProvinceSummary = () =>
+  apiRequest(
+    "/dashboard/provinces"
+  );
 
 
 // ========================================
@@ -297,7 +421,9 @@ export const createFieldReport = (
     "/field-reports",
     {
       method: "POST",
-      body: JSON.stringify(data),
+
+      body:
+        JSON.stringify(data)
     }
   );
 
@@ -310,7 +436,20 @@ export const updateFieldReport = (
     `/field-reports/${id}`,
     {
       method: "PUT",
-      body: JSON.stringify(data),
+
+      body:
+        JSON.stringify(data)
+    }
+  );
+
+
+export const deleteFieldReport = (
+  id
+) =>
+  apiRequest(
+    `/field-reports/${id}`,
+    {
+      method: "DELETE"
     }
   );
 
@@ -332,7 +471,9 @@ export const createComplaint = (
     "/complaints",
     {
       method: "POST",
-      body: JSON.stringify(data),
+
+      body:
+        JSON.stringify(data)
     }
   );
 
@@ -345,42 +486,48 @@ export const updateComplaint = (
     `/complaints/${id}`,
     {
       method: "PUT",
-      body: JSON.stringify(data),
+
+      body:
+        JSON.stringify(data)
     }
   );
 
 
-export const updateComplaintStatus =
-  (
-    id,
-    status,
-    response = ""
-  ) =>
-    apiRequest(
-      `/complaints/${id}/status`,
-      {
-        method: "PUT",
-        body: JSON.stringify({
+export const updateComplaintStatus = (
+  id,
+  status,
+  response = ""
+) =>
+  apiRequest(
+    `/complaints/${id}/status`,
+    {
+      method: "PUT",
+
+      body:
+        JSON.stringify({
           status,
-          response,
-        }),
-      }
-    );
+          response
+        })
+    }
+  );
 
 
 // ========================================
 // PUBLIC COMPLAINT
 // ========================================
 
-export const submitPublicComplaint =
-  (data) =>
-    apiRequest(
-      "/complaints",
-      {
-        method: "POST",
-        body: JSON.stringify(data),
-      }
-    );
+export const submitPublicComplaint = (
+  data
+) =>
+  apiRequest(
+    "/complaints",
+    {
+      method: "POST",
+
+      body:
+        JSON.stringify(data)
+    }
+  );
 
 
 // ========================================
@@ -400,7 +547,8 @@ export const uploadEvidence = (
     "/evidence/upload",
     {
       method: "POST",
-      body: formData,
+
+      body: formData
     }
   );
 
@@ -412,7 +560,9 @@ export const createEvidence = (
     "/evidence",
     {
       method: "POST",
-      body: JSON.stringify(data),
+
+      body:
+        JSON.stringify(data)
     }
   );
 
@@ -421,88 +571,93 @@ export const createEvidence = (
 // REVIEW EVIDENCE
 // ========================================
 
-export const reviewEvidence =
-  (
-    id,
-    status,
-    reviewNote = ""
-  ) =>
-    apiRequest(
-      `/evidence/${id}/review`,
-      {
-        method: "PUT",
-        body: JSON.stringify({
+export const reviewEvidence = (
+  id,
+  status,
+  reviewNote = ""
+) =>
+  apiRequest(
+    `/evidence/${id}/review`,
+    {
+      method: "PUT",
+
+      body:
+        JSON.stringify({
           status,
-          reviewNote,
-        }),
-      }
-    );
+          reviewNote
+        })
+    }
+  );
 
 
 // ========================================
 // ANALYZE EVIDENCE
 // ========================================
 
-export const analyzeEvidence =
-  (
-    id,
-    projectProgress,
-    reportedProgress
-  ) =>
-    apiRequest(
-      `/evidence/${id}/analyze`,
-      {
-        method: "POST",
-        body: JSON.stringify({
+export const analyzeEvidence = (
+  id,
+  projectProgress,
+  reportedProgress
+) =>
+  apiRequest(
+    `/evidence/${id}/analyze`,
+    {
+      method: "POST",
+
+      body:
+        JSON.stringify({
           projectProgress,
-          reportedProgress,
-        }),
-      }
-    );
+          reportedProgress
+        })
+    }
+  );
 
 
 // ========================================
 // VERIFICATION
 // ========================================
 
-export const getVerifications =
-  () =>
-    apiRequest(
-      "/verifications"
-    );
+export const getVerifications = () =>
+  apiRequest(
+    "/verifications"
+  );
 
 
-export const createVerification =
-  (data) =>
-    apiRequest(
-      "/verifications",
-      {
-        method: "POST",
-        body: JSON.stringify(data),
-      }
-    );
+export const createVerification = (
+  data
+) =>
+  apiRequest(
+    "/verifications",
+    {
+      method: "POST",
+
+      body:
+        JSON.stringify(data)
+    }
+  );
 
 
 // ========================================
 // REVIEW VERIFICATION
 // ========================================
 
-export const reviewVerification =
-  (
-    id,
-    status,
-    note = ""
-  ) =>
-    apiRequest(
-      `/verifications/${id}/review`,
-      {
-        method: "PUT",
-        body: JSON.stringify({
+export const reviewVerification = (
+  id,
+  status,
+  note = ""
+) =>
+  apiRequest(
+    `/verifications/${id}/review`,
+    {
+      method: "PUT",
+
+      body:
+        JSON.stringify({
           status,
-          note,
-        }),
-      }
-    );
+          note
+        })
+    }
+  );
 
 
 // ========================================
@@ -527,15 +682,16 @@ export const getMyNotifications = () =>
 
 export const getUnreadNotificationCount =
   async () => {
+
     const data =
-      await apiRequest(
-        "/notifications/mine"
-      );
+      await getMyNotifications();
 
     const notifications =
       Array.isArray(data)
         ? data
-        : data.notifications || [];
+        : data?.notifications ||
+          data?.data ||
+          [];
 
     return notifications.filter(
       (notification) =>
@@ -555,28 +711,15 @@ export const createNotification = (
     "/notifications",
     {
       method: "POST",
-      body: JSON.stringify(data),
+
+      body:
+        JSON.stringify(data)
     }
   );
 
 
 // ========================================
-// MARK NOTIFICATION AS READ
-// ========================================
-
-export const markNotificationAsRead = (
-  id
-) =>
-  apiRequest(
-    `/notifications/${id}/read`,
-    {
-      method: "PUT",
-    }
-  );
-
-
-// ========================================
-// MARK NOTIFICATION READ ALIAS
+// MARK NOTIFICATION READ
 // ========================================
 
 export const markNotificationRead = (
@@ -585,23 +728,34 @@ export const markNotificationRead = (
   apiRequest(
     `/notifications/${id}/read`,
     {
-      method: "PUT",
+      method: "PUT"
     }
   );
 
 
+export const markNotificationAsRead = (
+  id
+) =>
+  markNotificationRead(id);
+
+
 // ========================================
-// MARK ALL NOTIFICATIONS AS READ
+// MARK ALL NOTIFICATIONS READ
 // ========================================
 
-export const markAllNotificationsAsRead =
+export const markAllNotificationsRead =
   () =>
     apiRequest(
       "/notifications/read-all",
       {
-        method: "PUT",
+        method: "PUT"
       }
     );
+
+
+export const markAllNotificationsAsRead =
+  () =>
+    markAllNotificationsRead();
 
 
 // ========================================
@@ -614,7 +768,7 @@ export const deleteNotification = (
   apiRequest(
     `/notifications/${id}`,
     {
-      method: "DELETE",
+      method: "DELETE"
     }
   );
 
@@ -635,7 +789,7 @@ export const resolveAlert = (
   apiRequest(
     `/alerts/${id}/resolve`,
     {
-      method: "PUT",
+      method: "PUT"
     }
   );
 
@@ -644,7 +798,7 @@ export const generateAlerts = () =>
   apiRequest(
     "/alerts/generate",
     {
-      method: "POST",
+      method: "POST"
     }
   );
 
@@ -674,11 +828,17 @@ export const getPublicSummary = () =>
     "/public/summary"
   );
 
+
+// ========================================
+// GENERATE PROJECT CODE
+// ========================================
+
 export const generateProjectCode =
   () =>
     apiRequest(
       "/projects/generate-code"
     );
+
 
 // ========================================
 // REPORTS
@@ -695,6 +855,7 @@ export const getProjectReport = () =>
 // ========================================
 
 export const logoutUser = () => {
+
   localStorage.removeItem(
     "projectwatch_token"
   );
@@ -703,3 +864,10 @@ export const logoutUser = () => {
     "projectwatch_user"
   );
 };
+
+
+// ========================================
+// DEFAULT EXPORT
+// ========================================
+
+export default apiRequest;

@@ -206,17 +206,20 @@ const getPublicSummary = async (req, res) => {
     const provinceMap = {};
 
     projects.forEach((project) => {
+
       const province =
         project.province ||
         "Unknown";
 
       if (!provinceMap[province]) {
+
         provinceMap[province] = {
           province,
           projects: 0,
           budget: 0,
           progress: 0
         };
+
       }
 
       provinceMap[province].projects += 1;
@@ -226,12 +229,14 @@ const getPublicSummary = async (req, res) => {
 
       provinceMap[province].progress +=
         Number(project.progress || 0);
+
     });
 
     const provinces =
       Object.values(
         provinceMap
       ).map((item) => ({
+
         ...item,
 
         averageProgress:
@@ -243,17 +248,25 @@ const getPublicSummary = async (req, res) => {
                 ).toFixed(2)
               )
             : 0
+
       }));
 
     res.json({
+
       success: true,
 
       summary: {
+
         totalProjects,
+
         activeProjects,
+
         delayedProjects,
+
         completedProjects,
+
         criticalProjects,
+
         totalBudget,
 
         averageProgress:
@@ -262,20 +275,27 @@ const getPublicSummary = async (req, res) => {
           ),
 
         provinces
+
       }
+
     });
 
   } catch (error) {
+
     console.error(
       "Public summary error:",
       error
     );
 
     res.status(500).json({
+
       success: false,
+
       message:
         "Failed to generate public summary"
+
     });
+
   }
 };
 
@@ -286,7 +306,9 @@ const getPublicSummary = async (req, res) => {
 
 const getPublicStatistics =
   async (req, res) => {
+
     try {
+
       const projects =
         await Project.find({
           isPublic: {
@@ -294,7 +316,9 @@ const getPublicStatistics =
           }
         });
 
+
       const statistics = {
+
         total:
           projects.length,
 
@@ -321,25 +345,164 @@ const getPublicStatistics =
             (project) =>
               project.status === "Critical"
           ).length
+
       };
+
 
       res.json(
         statistics
       );
 
     } catch (error) {
+
       console.error(
         "Public statistics error:",
         error
       );
 
       res.status(500).json({
+
         message:
           "Failed to load public statistics",
+
         error:
           error.message
+
       });
+
     }
+
+  };
+
+
+// ==========================================
+// UPDATE PROJECT
+// ==========================================
+
+const updateProject =
+  async (req, res) => {
+
+    try {
+
+      const project =
+        await Project.findByIdAndUpdate(
+
+          req.params.id,
+
+          req.body,
+
+          {
+            new: true,
+            runValidators: true
+          }
+
+        );
+
+
+      if (!project) {
+
+        return res.status(404).json({
+
+          success: false,
+
+          message:
+            "Project not found"
+
+        });
+
+      }
+
+
+      res.json({
+
+        success: true,
+
+        message:
+          "Project updated successfully",
+
+        project
+
+      });
+
+    } catch (error) {
+
+      console.error(
+        "Update project error:",
+        error
+      );
+
+      res.status(500).json({
+
+        success: false,
+
+        message:
+          error.message ||
+          "Failed to update project"
+
+      });
+
+    }
+
+  };
+
+
+// ==========================================
+// DELETE PROJECT
+// ==========================================
+
+const deleteProject =
+  async (req, res) => {
+
+    try {
+
+      const project =
+        await Project.findByIdAndDelete(
+          req.params.id
+        );
+
+
+      if (!project) {
+
+        return res.status(404).json({
+
+          success: false,
+
+          message:
+            "Project not found"
+
+        });
+
+      }
+
+
+      res.json({
+
+        success: true,
+
+        message:
+          "Project deleted successfully"
+
+      });
+
+    } catch (error) {
+
+      console.error(
+        "Delete project error:",
+        error
+      );
+
+      res.status(500).json({
+
+        success: false,
+
+        message:
+          error.message ||
+          "Failed to delete project"
+
+      });
+
+    }
+
   };
 
 
@@ -348,8 +511,17 @@ const getPublicStatistics =
 // ==========================================
 
 module.exports = {
+
   getPublicProjects,
+
   getPublicProject,
+
   getPublicSummary,
-  getPublicStatistics
+
+  getPublicStatistics,
+
+  updateProject,
+
+  deleteProject
+
 };

@@ -4,9 +4,15 @@ const {
   getPublicProjects,
   getPublicProject,
   getPublicSummary
-} = require(
-  "../controllers/publicController"
-);
+} = require("../controllers/publicController");
+
+const {
+  updateProject,
+  deleteProject
+} = require("../controllers/projectController");
+
+const authMiddleware =
+  require("../middleware/authMiddleware");
 
 const router = express.Router();
 
@@ -35,6 +41,26 @@ router.get(
 router.get(
   "/projects/:id",
   getPublicProject
+);
+
+// ========================================
+// UPDATE PROJECT
+// ========================================
+
+router.put(
+  "/:id",
+  authMiddleware,
+  updateProject
+);
+
+// ========================================
+// DELETE PROJECT
+// ========================================
+
+router.delete(
+  "/:id",
+  authMiddleware,
+  deleteProject
 );
 
 // ========================================

@@ -37,6 +37,37 @@ const userSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true
+    },
+
+    // ========================================
+    // USER SETTINGS
+    // ========================================
+
+    settings: {
+      notifications: {
+        type: Boolean,
+        default: true
+      },
+
+      criticalAlerts: {
+        type: Boolean,
+        default: true
+      },
+
+      fieldReports: {
+        type: Boolean,
+        default: true
+      },
+
+      complaintUpdates: {
+        type: Boolean,
+        default: true
+      },
+
+      completionAlerts: {
+        type: Boolean,
+        default: true
+      }
     }
   },
   {
