@@ -6,48 +6,44 @@ import React, {
 
 import {
   getFieldReports,
-  createFieldReport,
-  getProjects
+  getProjects,
+  deleteFieldReport
 } from "../services/api";
 
 const h = React.createElement;
 
 const FieldReports = () => {
-  const [reports, setReports] = useState([]);
-  const [projects, setProjects] = useState([]);
+  const [reports, setReports] =
+    useState([]);
 
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
+  const [projects, setProjects] =
+    useState([]);
 
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [loading, setLoading] =
+    useState(true);
 
-  const [showForm, setShowForm] = useState(false);
-
-  const [selectedProject, setSelectedProject] =
-    useState("all");
-
-  const [searchTerm, setSearchTerm] =
+  const [error, setError] =
     useState("");
 
-  const [progressFilter, setProgressFilter] =
+  const [search, setSearch] =
+    useState("");
+
+  const [projectFilter, setProjectFilter] =
     useState("all");
 
-  const [sortOrder, setSortOrder] =
-    useState("newest");
+  const [statusFilter, setStatusFilter] =
+    useState("all");
 
-  const [form, setForm] = useState({
-    project: "",
-    reportedProgress: "",
-    observation: "",
-    location: "",
-    latitude: "",
-    longitude: ""
-  });
+  const [officerFilter, setOfficerFilter] =
+    useState("all");
 
-  // ========================================
-  // LOAD DATA
-  // ========================================
+  const [dateFilter, setDateFilter] =
+    useState("all");
+
+  const [page, setPage] =
+    useState(1);
+
+  const pageSize = 8;
 
   const loadData = async () => {
     try {
@@ -55,23 +51,21 @@ const FieldReports = () => {
       setError("");
 
       const [
-        reportsResult,
-        projectsResult
+        reportResponse,
+        projectResponse
       ] = await Promise.all([
         getFieldReports(),
         getProjects()
       ]);
 
       const reportData =
-        reportsResult?.reports ??
-        reportsResult?.data ??
-        reportsResult ??
+        reportResponse?.reports ||
+        reportResponse?.data ||
         [];
 
       const projectData =
-        projectsResult?.projects ??
-        projectsResult?.data ??
-        projectsResult ??
+        projectResponse?.projects ||
+        projectResponse?.data ||
         [];
 
       setReports(
@@ -92,7 +86,7 @@ const FieldReports = () => {
       );
 
       setError(
-        err?.message ||
+        err.message ||
         "Failed to load field reports."
       );
     } finally {
@@ -104,568 +98,381 @@ const FieldReports = () => {
     loadData();
   }, []);
 
-  // ========================================
-  // FORM CHANGE
-  // ========================================
-
-  const handleChange = (event) => {
-    const {
-      name,
-      value
-    } = event.target;
-
-    setForm((previous) => ({
-      ...previous,
-      [name]: value
-    }));
-  };
-
-  // ========================================
-  // PROJECT HELPERS
-  // ========================================
-
-  const getProjectId = (project) => {
-    if (!project) {
-      return "";
-    }
-
-    if (typeof project === "string") {
-      return project;
-    }
-
-    return (
-      project._id ||
-      project.id ||
-      ""
-    );
-  };
-
-  const getReportProjectId = (report) => {
-    if (!report) {
-      return "";
-    }
-
+  const getProjectName = (report) => {
     if (
-      typeof report.project === "string"
-    ) {
-      return report.project;
-    }
-
-    return (
-      report.project?._id ||
-      report.project?.id ||
-      report.projectId ||
-      ""
-    );
-  };
-
-  const getReportProjectName = (report) => {
-    if (!report) {
-      return "Unknown Project";
-    }
-
-    if (
-      typeof report.project === "object" &&
-      report.project
+      report.project &&
+      typeof report.project ===
+        "object"
     ) {
       return (
-        report.project.projectName ||
         report.project.name ||
-        report.project.title ||
+        report.project.projectName ||
+        report.project.projectCode ||
         "Unknown Project"
       );
     }
 
-    const project = projects.find(
-      (item) =>
-        String(
-          getProjectId(item)
-        ) ===
-        String(
-          getReportProjectId(report)
-        )
-    );
+    const project =
+      projects.find(
+        (item) =>
+          String(item._id) ===
+          String(report.project)
+      );
 
     return (
-      project?.projectName ||
       project?.name ||
-      project?.title ||
+      project?.projectName ||
+      project?.projectCode ||
       "Unknown Project"
     );
   };
 
-  // ========================================
-  // PROGRESS
-  // ========================================
-
-  const getProgress = (report) => {
-    const value = Number(
-      report?.reportedProgress ??
-      report?.progress ??
-      0
-    );
-
-    if (Number.isNaN(value)) {
-      return 0;
+  const getOfficerName = (report) => {
+    if (
+      report.officer &&
+      typeof report.officer ===
+        "object"
+    ) {
+      return (
+        report.officer.name ||
+        report.officer.fullName ||
+        report.officer.email ||
+        "Unknown Officer"
+      );
     }
 
-    return Math.min(
-      100,
-      Math.max(0, value)
+    return (
+      report.officerName ||
+      report.createdByName ||
+      "Unknown Officer"
     );
   };
 
-  // ========================================
-  // SEARCH
-  // ========================================
+  const getProgress = (report) => {
+    const value =
+      report.progress ??
+      report.reportedProgress ??
+      report.projectProgress ??
+      0;
 
-  const searchedReports = useMemo(() => {
-    const search =
-      searchTerm
-        .trim()
-        .toLowerCase();
+    const number =
+      Number(value);
 
-    if (!search) {
-      return reports;
-    }
+    return Number.isFinite(number)
+      ? Math.min(
+          100,
+          Math.max(0, number)
+        )
+      : 0;
+  };
 
-    return reports.filter(
-      (report) => {
-        const projectName =
-          getReportProjectName(
-            report
-          );
+  const getStatus = (report) => {
+    return String(
+      report.status ||
+      report.reportStatus ||
+      "Submitted"
+    ).toLowerCase();
+  };
 
-        const observation =
-          report?.observation ||
-          "";
-
-        const location =
-          report?.location ||
-          "";
-
-        return (
-          projectName
-            .toLowerCase()
-            .includes(search) ||
-          observation
-            .toLowerCase()
-            .includes(search) ||
-          location
-            .toLowerCase()
-            .includes(search)
-        );
-      }
+  const getDate = (report) => {
+    return (
+      report.reportDate ||
+      report.createdAt ||
+      report.date
     );
-  }, [
-    reports,
-    searchTerm,
-    projects
-  ]);
+  };
 
-  // ========================================
-  // FILTER
-  // ========================================
+  const officers = useMemo(() => {
+    const names = reports
+      .map(getOfficerName)
+      .filter(Boolean);
 
-  const filteredReports = useMemo(() => {
-    let result = [
-      ...searchedReports
-    ];
+    return [
+      ...new Set(names)
+    ].sort();
+  }, [reports, projects]);
 
-    if (
-      selectedProject !== "all"
-    ) {
-      result = result.filter(
-        (report) =>
-          String(
-            getReportProjectId(
-              report
-            )
-          ) ===
-          String(
-            selectedProject
-          )
-      );
-    }
+  const filteredReports =
+    useMemo(() => {
+      const query =
+        search
+          .trim()
+          .toLowerCase();
 
-    if (
-      progressFilter ===
-      "completed"
-    ) {
-      result = result.filter(
-        (report) =>
-          getProgress(report) >= 100
-      );
-    }
-
-    if (
-      progressFilter ===
-      "critical"
-    ) {
-      result = result.filter(
-        (report) =>
-          getProgress(report) < 30
-      );
-    }
-
-    if (
-      progressFilter ===
-      "in-progress"
-    ) {
-      result = result.filter(
+      return reports.filter(
         (report) => {
-          const progress =
-            getProgress(report);
+          const projectName =
+            getProjectName(
+              report
+            ).toLowerCase();
+
+          const officerName =
+            getOfficerName(
+              report
+            ).toLowerCase();
+
+          const remarks =
+            String(
+              report.remarks ||
+              report.description ||
+              report.notes ||
+              ""
+            ).toLowerCase();
+
+          const matchesSearch =
+            !query ||
+            projectName.includes(
+              query
+            ) ||
+            officerName.includes(
+              query
+            ) ||
+            remarks.includes(
+              query
+            );
+
+          const reportProject =
+            report.project &&
+            typeof report.project ===
+              "object"
+              ? report.project._id
+              : report.project;
+
+          const matchesProject =
+            projectFilter === "all" ||
+            String(
+              reportProject
+            ) ===
+              String(
+                projectFilter
+              );
+
+          const matchesStatus =
+            statusFilter === "all" ||
+            getStatus(report) ===
+              statusFilter;
+
+          const matchesOfficer =
+            officerFilter === "all" ||
+            getOfficerName(
+              report
+            ) === officerFilter;
+
+          let matchesDate = true;
+
+          if (dateFilter !== "all") {
+            const dateValue =
+              getDate(report);
+
+            if (dateValue) {
+              const reportDate =
+                new Date(
+                  dateValue
+                );
+
+              const now =
+                new Date();
+
+              const diff =
+                now.getTime() -
+                reportDate.getTime();
+
+              const days =
+                diff /
+                (1000 * 60 * 60 * 24);
+
+              if (
+                dateFilter === "today"
+              ) {
+                matchesDate =
+                  reportDate.toDateString() ===
+                  now.toDateString();
+              }
+
+              if (
+                dateFilter === "7days"
+              ) {
+                matchesDate =
+                  days >= 0 &&
+                  days <= 7;
+              }
+
+              if (
+                dateFilter === "30days"
+              ) {
+                matchesDate =
+                  days >= 0 &&
+                  days <= 30;
+              }
+            }
+          }
 
           return (
-            progress >= 30 &&
-            progress < 100
+            matchesSearch &&
+            matchesProject &&
+            matchesStatus &&
+            matchesOfficer &&
+            matchesDate
           );
         }
       );
-    }
+    }, [
+      reports,
+      projects,
+      search,
+      projectFilter,
+      statusFilter,
+      officerFilter,
+      dateFilter
+    ]);
 
-    return result;
+  useEffect(() => {
+    setPage(1);
   }, [
-    searchedReports,
-    selectedProject,
-    progressFilter
+    search,
+    projectFilter,
+    statusFilter,
+    officerFilter,
+    dateFilter
   ]);
 
-  // ========================================
-  // SORT
-  // ========================================
-
-  const sortedReports = useMemo(() => {
-    return [
-      ...filteredReports
-    ].sort(
-      (a, b) => {
-        const dateA =
-          new Date(
-            a.createdAt ||
-            a.date ||
-            0
-          ).getTime();
-
-        const dateB =
-          new Date(
-            b.createdAt ||
-            b.date ||
-            0
-          ).getTime();
-
-        if (
-          sortOrder === "oldest"
-        ) {
-          return dateA - dateB;
-        }
-
-        return dateB - dateA;
-      }
-    );
-  }, [
-    filteredReports,
-    sortOrder
-  ]);
-
-  // ========================================
-  // LATEST REPORT PER PROJECT
-  // ========================================
-
-  const latestReports = useMemo(() => {
-    const map = {};
-
-    sortedReports.forEach(
-      (report) => {
-        const projectId =
-          getReportProjectId(
-            report
-          );
-
-        if (!projectId) {
-          return;
-        }
-
-        if (!map[projectId]) {
-          map[projectId] =
-            report;
-        }
-      }
+  const totalPages =
+    Math.max(
+      1,
+      Math.ceil(
+        filteredReports.length /
+          pageSize
+      )
     );
 
-    return map;
-  }, [
-    sortedReports
-  ]);
+  const safePage =
+    Math.min(
+      page,
+      totalPages
+    );
 
-  // ========================================
-  // SUMMARY
-  // ========================================
+  const paginatedReports =
+    filteredReports.slice(
+      (safePage - 1) *
+        pageSize,
+      safePage *
+        pageSize
+    );
 
   const summary = useMemo(() => {
     const total =
-      sortedReports.length;
+      reports.length;
 
     const completed =
-      sortedReports.filter(
+      reports.filter(
         (report) =>
-          getProgress(report) >= 100
-      ).length;
-
-    const critical =
-      sortedReports.filter(
-        (report) =>
-          getProgress(report) < 30
+          getStatus(report) ===
+          "completed"
       ).length;
 
     const inProgress =
-      sortedReports.filter(
-        (report) => {
-          const progress =
-            getProgress(report);
-
-          return (
-            progress >= 30 &&
-            progress < 100
-          );
-        }
+      reports.filter(
+        (report) =>
+          getStatus(report) ===
+          "in progress" ||
+          getStatus(report) ===
+          "in_progress"
       ).length;
+
+    const critical =
+      reports.filter(
+        (report) =>
+          getStatus(report) ===
+            "critical" ||
+          Number(
+            report.progress ??
+            report.reportedProgress ??
+            0
+          ) >= 100
+      ).length;
+
+    const average =
+      total
+        ? Math.round(
+            reports.reduce(
+              (sum, report) =>
+                sum +
+                getProgress(
+                  report
+                ),
+              0
+            ) / total
+          )
+        : 0;
 
     return {
       total,
       completed,
+      inProgress,
       critical,
-      inProgress
+      average
     };
-  }, [
-    sortedReports
-  ]);
+  }, [reports]);
 
-  // ========================================
-  // SUBMIT REPORT
-  // ========================================
+  const formatDate = (value) => {
+    if (!value) return "—";
 
-  const handleSubmit = async (
-    event
+    try {
+      return new Date(
+        value
+      ).toLocaleDateString(
+        "en-US",
+        {
+          year: "numeric",
+          month: "short",
+          day: "numeric"
+        }
+      );
+    } catch {
+      return "—";
+    }
+  };
+
+  const clearFilters = () => {
+    setSearch("");
+    setProjectFilter("all");
+    setStatusFilter("all");
+    setOfficerFilter("all");
+    setDateFilter("all");
+  };
+
+  const handleDelete = async (
+    report
   ) => {
-    event.preventDefault();
-
-    setError("");
-    setSuccess("");
-
-    if (!form.project) {
-      setError(
-        "Please select a project."
-      );
-      return;
-    }
-
-    const progress =
-      Number(
-        form.reportedProgress
+    const confirmed =
+      window.confirm(
+        "Are you sure you want to delete this field report?"
       );
 
-    if (
-      Number.isNaN(progress) ||
-      progress < 0 ||
-      progress > 100
-    ) {
-      setError(
-        "Progress must be between 0 and 100."
-      );
-      return;
-    }
-
-    if (
-      !Number.isInteger(progress)
-    ) {
-      setError(
-        "Progress must be a whole number."
-      );
-      return;
-    }
-
-    if (
-      form.latitude !== ""
-    ) {
-      const latitude =
-        Number(form.latitude);
-
-      if (
-        Number.isNaN(latitude) ||
-        latitude < -90 ||
-        latitude > 90
-      ) {
-        setError(
-          "Latitude must be between -90 and 90."
-        );
-        return;
-      }
-    }
-
-    if (
-      form.longitude !== ""
-    ) {
-      const longitude =
-        Number(form.longitude);
-
-      if (
-        Number.isNaN(longitude) ||
-        longitude < -180 ||
-        longitude > 180
-      ) {
-        setError(
-          "Longitude must be between -180 and 180."
-        );
-        return;
-      }
-    }
-
-    if (
-      !form.observation.trim()
-    ) {
-      setError(
-        "Please enter an observation."
-      );
+    if (!confirmed) {
       return;
     }
 
     try {
-      setSubmitting(true);
-
-      const payload = {
-        project:
-          form.project,
-
-        reportedProgress:
-          progress,
-
-        observation:
-          form.observation.trim(),
-
-        location:
-          form.location.trim()
-      };
-
-      if (
-        form.latitude !== ""
-      ) {
-        payload.latitude =
-          Number(form.latitude);
-      }
-
-      if (
-        form.longitude !== ""
-      ) {
-        payload.longitude =
-          Number(form.longitude);
-      }
-
-      await createFieldReport(
-        payload
+      await deleteFieldReport(
+        report._id
       );
 
-      setSuccess(
-        progress >= 100
-          ? "Field report submitted. Project completed notification should be created automatically."
-          : progress < 30
-          ? "Field report submitted. Critical alert should be created automatically."
-          : "Field report submitted successfully."
+      setReports(
+        (current) =>
+          current.filter(
+            (item) =>
+              item._id !==
+              report._id
+          )
       );
-
-      setForm({
-        project: "",
-        reportedProgress: "",
-        observation: "",
-        location: "",
-        latitude: "",
-        longitude: ""
-      });
-
-      setShowForm(false);
-
-      await loadData();
     } catch (err) {
-      console.error(
-        "FIELD REPORT CREATE ERROR:",
-        err
+      window.alert(
+        err.message ||
+        "Failed to delete field report."
       );
-
-      setError(
-        err?.message ||
-        "Failed to create field report."
-      );
-    } finally {
-      setSubmitting(false);
     }
   };
-
-  // ========================================
-  // GPS
-  // ========================================
-
-  const handleGPS = () => {
-    setError("");
-
-    if (
-      !navigator.geolocation
-    ) {
-      setError(
-        "Geolocation is not supported by this browser."
-      );
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setForm(
-          (previous) => ({
-            ...previous,
-
-            latitude:
-              position.coords.latitude.toFixed(
-                6
-              ),
-
-            longitude:
-              position.coords.longitude.toFixed(
-                6
-              )
-          })
-        );
-
-        setSuccess(
-          "Current GPS location added."
-        );
-      },
-      () => {
-        setError(
-          "Unable to get your current location."
-        );
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
-      }
-    );
-  };
-
-  // ========================================
-  // RESET FILTERS
-  // ========================================
-
-  const clearFilters = () => {
-    setSearchTerm("");
-    setSelectedProject("all");
-    setProgressFilter("all");
-    setSortOrder("newest");
-  };
-
-  // ========================================
-  // LOADING
-  // ========================================
 
   if (loading) {
     return h(
@@ -674,21 +481,16 @@ const FieldReports = () => {
         className:
           "field-reports-page"
       },
-
       h(
         "div",
         {
           className:
-            "field-reports-loading"
+            "page-loading"
         },
         "Loading field reports..."
       )
     );
   }
-
-  // ========================================
-  // MAIN UI
-  // ========================================
 
   return h(
     "div",
@@ -696,10 +498,6 @@ const FieldReports = () => {
       className:
         "field-reports-page"
     },
-
-    // ======================================
-    // HEADER
-    // ======================================
 
     h(
       "div",
@@ -721,7 +519,7 @@ const FieldReports = () => {
         h(
           "p",
           null,
-          "Monitor project progress from field updates."
+          "Monitor field progress and project implementation reports."
         )
       ),
 
@@ -729,61 +527,29 @@ const FieldReports = () => {
         "button",
         {
           className:
-            "field-report-add-button",
-
-          onClick: () => {
-            setShowForm(
-              !showForm
-            );
-
-            setError("");
-            setSuccess("");
-          }
+            "field-report-refresh-btn",
+          onClick: loadData
         },
-
-        showForm
-          ? "✕ Close"
-          : "+ New Field Report"
+        "↻ Refresh"
       )
     ),
 
-    // ======================================
-    // SUCCESS
-    // ======================================
-
-    success &&
-      h(
-        "div",
-        {
-          className:
-            "field-report-success"
-        },
-        success
-      ),
-
-    // ======================================
-    // ERROR
-    // ======================================
-
-    error &&
-      h(
-        "div",
-        {
-          className:
-            "field-report-error"
-        },
-        error
-      ),
-
-    // ======================================
-    // SUMMARY
-    // ======================================
+    error
+      ? h(
+          "div",
+          {
+            className:
+              "field-report-error"
+          },
+          error
+        )
+      : null,
 
     h(
       "div",
       {
         className:
-          "field-report-summary-grid"
+          "field-report-summary"
       },
 
       h(
@@ -792,29 +558,34 @@ const FieldReports = () => {
           className:
             "field-report-summary-card"
         },
-
         h(
-          "span",
+          "div",
           {
             className:
               "field-report-summary-icon"
           },
           "📋"
         ),
-
         h(
           "div",
-          null,
-
+          {
+            className:
+              "field-report-summary-content"
+          },
           h(
             "strong",
-            null,
+            {
+              className:
+                "field-report-summary-value"
+            },
             summary.total
           ),
-
           h(
             "span",
-            null,
+            {
+              className:
+                "field-report-summary-label"
+            },
             "Total Reports"
           )
         )
@@ -826,29 +597,34 @@ const FieldReports = () => {
           className:
             "field-report-summary-card"
         },
-
         h(
-          "span",
+          "div",
           {
             className:
               "field-report-summary-icon"
           },
           "🔄"
         ),
-
         h(
           "div",
-          null,
-
+          {
+            className:
+              "field-report-summary-content"
+          },
           h(
             "strong",
-            null,
+            {
+              className:
+                "field-report-summary-value"
+            },
             summary.inProgress
           ),
-
           h(
             "span",
-            null,
+            {
+              className:
+                "field-report-summary-label"
+            },
             "In Progress"
           )
         )
@@ -860,29 +636,34 @@ const FieldReports = () => {
           className:
             "field-report-summary-card"
         },
-
         h(
-          "span",
+          "div",
           {
             className:
               "field-report-summary-icon"
           },
           "✓"
         ),
-
         h(
           "div",
-          null,
-
+          {
+            className:
+              "field-report-summary-content"
+          },
           h(
             "strong",
-            null,
+            {
+              className:
+                "field-report-summary-value"
+            },
             summary.completed
           ),
-
           h(
             "span",
-            null,
+            {
+              className:
+                "field-report-summary-label"
+            },
             "Completed"
           )
         )
@@ -894,442 +675,73 @@ const FieldReports = () => {
           className:
             "field-report-summary-card"
         },
-
         h(
-          "span",
+          "div",
           {
             className:
               "field-report-summary-icon"
           },
-          "⚠"
+          "📈"
         ),
-
         h(
           "div",
-          null,
-
+          {
+            className:
+              "field-report-summary-content"
+          },
           h(
             "strong",
-            null,
-            summary.critical
+            {
+              className:
+                "field-report-summary-value"
+            },
+            `${summary.average}%`
           ),
-
           h(
             "span",
-            null,
-            "Critical Progress"
+            {
+              className:
+                "field-report-summary-label"
+            },
+            "Average Progress"
           )
         )
       )
     ),
 
-    // ======================================
-    // FORM
-    // ======================================
-
-    showForm &&
-      h(
-        "div",
-        {
-          className:
-            "field-report-form-card"
-        },
-
-        h(
-          "div",
-          {
-            className:
-              "field-report-form-title"
-          },
-          "Submit Field Report"
-        ),
-
-        h(
-          "form",
-          {
-            onSubmit:
-              handleSubmit,
-
-            className:
-              "field-report-form"
-          },
-
-          h(
-            "div",
-            {
-              className:
-                "field-report-form-grid"
-            },
-
-            // PROJECT
-            h(
-              "div",
-              {
-                className:
-                  "field-report-field"
-              },
-
-              h(
-                "label",
-                null,
-                "Project"
-              ),
-
-              h(
-                "select",
-                {
-                  name: "project",
-                  value:
-                    form.project,
-                  onChange:
-                    handleChange,
-                  required: true
-                },
-
-                h(
-                  "option",
-                  {
-                    value: ""
-                  },
-                  "Select Project"
-                ),
-
-                projects.map(
-                  (project) =>
-                    h(
-                      "option",
-                      {
-                        key:
-                          getProjectId(
-                            project
-                          ),
-
-                        value:
-                          getProjectId(
-                            project
-                          )
-                      },
-
-                      project.projectName ||
-                        project.name ||
-                        project.title ||
-                        "Unnamed Project"
-                    )
-                )
-              )
-            ),
-
-            // PROGRESS
-            h(
-              "div",
-              {
-                className:
-                  "field-report-field"
-              },
-
-              h(
-                "label",
-                null,
-                "Reported Progress (%)"
-              ),
-
-              h(
-                "input",
-                {
-                  type: "number",
-
-                  name:
-                    "reportedProgress",
-
-                  value:
-                    form.reportedProgress,
-
-                  onChange:
-                    handleChange,
-
-                  min: 0,
-                  max: 100,
-                  step: 1,
-
-                  placeholder:
-                    "Example: 65",
-
-                  required: true
-                }
-              )
-            ),
-
-            // OBSERVATION
-            h(
-              "div",
-              {
-                className:
-                  "field-report-field field-report-full"
-              },
-
-              h(
-                "label",
-                null,
-                "Observation"
-              ),
-
-              h(
-                "textarea",
-                {
-                  name:
-                    "observation",
-
-                  value:
-                    form.observation,
-
-                  onChange:
-                    handleChange,
-
-                  rows: 4,
-
-                  placeholder:
-                    "Describe the current field condition...",
-
-                  required: true
-                }
-              )
-            ),
-
-            // LOCATION
-            h(
-              "div",
-              {
-                className:
-                  "field-report-field"
-              },
-
-              h(
-                "label",
-                null,
-                "Location"
-              ),
-
-              h(
-                "input",
-                {
-                  type: "text",
-
-                  name:
-                    "location",
-
-                  value:
-                    form.location,
-
-                  onChange:
-                    handleChange,
-
-                  placeholder:
-                    "Example: Kathmandu"
-                }
-              )
-            ),
-
-            // LATITUDE
-            h(
-              "div",
-              {
-                className:
-                  "field-report-field"
-              },
-
-              h(
-                "label",
-                null,
-                "Latitude"
-              ),
-
-              h(
-                "input",
-                {
-                  type: "number",
-
-                  name:
-                    "latitude",
-
-                  value:
-                    form.latitude,
-
-                  onChange:
-                    handleChange,
-
-                  step: "any",
-
-                  placeholder:
-                    "27.7172"
-                }
-              )
-            ),
-
-            // LONGITUDE
-            h(
-              "div",
-              {
-                className:
-                  "field-report-field"
-              },
-
-              h(
-                "label",
-                null,
-                "Longitude"
-              ),
-
-              h(
-                "input",
-                {
-                  type: "number",
-
-                  name:
-                    "longitude",
-
-                  value:
-                    form.longitude,
-
-                  onChange:
-                    handleChange,
-
-                  step: "any",
-
-                  placeholder:
-                    "85.3240"
-                }
-              )
-            )
-          ),
-
-          // FORM ACTIONS
-          h(
-            "div",
-            {
-              className:
-                "field-report-form-actions"
-            },
-
-            h(
-              "button",
-              {
-                type: "button",
-
-                className:
-                  "field-report-gps-button",
-
-                onClick:
-                  handleGPS
-              },
-
-              "📍 Use Current GPS"
-            ),
-
-            h(
-              "button",
-              {
-                type: "button",
-
-                className:
-                  "field-report-cancel-button",
-
-                onClick: () => {
-                  setShowForm(false);
-                  setError("");
-                }
-              },
-
-              "Cancel"
-            ),
-
-            h(
-              "button",
-              {
-                type: "submit",
-
-                className:
-                  "field-report-submit-button",
-
-                disabled:
-                  submitting
-              },
-
-              submitting
-                ? "Submitting..."
-                : "Submit Report"
-            )
-          )
-        )
-      ),
-
-    // ======================================
-    // TOOLBAR
-    // ======================================
-
     h(
       "div",
       {
         className:
-          "field-report-toolbar"
+          "field-report-filters"
       },
 
       h(
         "input",
         {
-          type: "search",
-
-          className:
-            "field-report-search",
-
-          value:
-            searchTerm,
-
-          onChange: (event) =>
-            setSearchTerm(
-              event.target.value
+          type: "text",
+          value: search,
+          onChange: (e) =>
+            setSearch(
+              e.target.value
             ),
-
           placeholder:
-            "Search project, observation..."
+            "Search project, officer, remarks..."
         }
-      ),
-
-      h(
-        "div",
-        {
-          className:
-            "field-report-count"
-        },
-
-        h(
-          "strong",
-          null,
-          sortedReports.length
-        ),
-
-        " field reports"
       ),
 
       h(
         "select",
         {
-          value:
-            selectedProject,
-
-          onChange: (event) =>
-            setSelectedProject(
-              event.target.value
-            ),
-
-          className:
-            "field-report-project-filter"
+          value: projectFilter,
+          onChange: (e) =>
+            setProjectFilter(
+              e.target.value
+            )
         },
-
         h(
           "option",
-          {
-            value: "all"
-          },
+          { value: "all" },
           "All Projects"
         ),
 
@@ -1339,20 +751,13 @@ const FieldReports = () => {
               "option",
               {
                 key:
-                  getProjectId(
-                    project
-                  ),
-
+                  project._id,
                 value:
-                  getProjectId(
-                    project
-                  )
+                  project._id
               },
-
-              project.projectName ||
-                project.name ||
-                project.title ||
-                "Unnamed Project"
+              project.name ||
+                project.projectName ||
+                project.projectCode
             )
         )
       ),
@@ -1360,85 +765,104 @@ const FieldReports = () => {
       h(
         "select",
         {
-          value:
-            progressFilter,
-
-          onChange: (event) =>
-            setProgressFilter(
-              event.target.value
-            ),
-
-          className:
-            "field-report-progress-filter"
+          value: officerFilter,
+          onChange: (e) =>
+            setOfficerFilter(
+              e.target.value
+            )
         },
-
         h(
           "option",
-          {
-            value: "all"
-          },
-          "All Progress"
+          { value: "all" },
+          "All Officers"
         ),
 
-        h(
-          "option",
-          {
-            value:
-              "in-progress"
-          },
-          "In Progress"
-        ),
-
-        h(
-          "option",
-          {
-            value:
-              "completed"
-          },
-          "Completed"
-        ),
-
-        h(
-          "option",
-          {
-            value:
-              "critical"
-          },
-          "Critical (<30%)"
+        officers.map(
+          (officer) =>
+            h(
+              "option",
+              {
+                key: officer,
+                value: officer
+              },
+              officer
+            )
         )
       ),
 
       h(
         "select",
         {
-          value:
-            sortOrder,
-
-          onChange: (event) =>
-            setSortOrder(
-              event.target.value
-            ),
-
-          className:
-            "field-report-sort"
+          value: statusFilter,
+          onChange: (e) =>
+            setStatusFilter(
+              e.target.value
+            )
         },
 
         h(
           "option",
-          {
-            value:
-              "newest"
-          },
-          "Newest First"
+          { value: "all" },
+          "All Status"
         ),
 
         h(
           "option",
-          {
-            value:
-              "oldest"
-          },
-          "Oldest First"
+          { value: "submitted" },
+          "Submitted"
+        ),
+
+        h(
+          "option",
+          { value: "in progress" },
+          "In Progress"
+        ),
+
+        h(
+          "option",
+          { value: "completed" },
+          "Completed"
+        ),
+
+        h(
+          "option",
+          { value: "critical" },
+          "Critical"
+        )
+      ),
+
+      h(
+        "select",
+        {
+          value: dateFilter,
+          onChange: (e) =>
+            setDateFilter(
+              e.target.value
+            )
+        },
+
+        h(
+          "option",
+          { value: "all" },
+          "All Dates"
+        ),
+
+        h(
+          "option",
+          { value: "today" },
+          "Today"
+        ),
+
+        h(
+          "option",
+          { value: "7days" },
+          "Last 7 Days"
+        ),
+
+        h(
+          "option",
+          { value: "30days" },
+          "Last 30 Days"
         )
       ),
 
@@ -1446,333 +870,315 @@ const FieldReports = () => {
         "button",
         {
           className:
-            "field-report-clear-button",
-
-          onClick:
-            clearFilters
+            "field-report-clear-btn",
+          onClick: clearFilters
         },
-
-   
-      ),
-
-      h(
-        "button",
-        {
-          className:
-            "field-report-refresh-button",
-
-          onClick:
-            loadData
-        },
-
-        "↻ Refresh"
+        "Clear Filters"
       )
     ),
 
-    // ======================================
-    // EMPTY STATE
-    // ======================================
+    h(
+      "div",
+      {
+        className:
+          "field-report-results-info"
+      },
+      `Showing ${
+        filteredReports.length
+      } of ${
+        reports.length
+      } reports`
+    ),
 
-    sortedReports.length === 0
+    h(
+      "div",
+      {
+        className:
+          "field-report-table-wrapper"
+      },
 
-      ? h(
-          "div",
-          {
-            className:
-              "field-report-empty"
-          },
+      filteredReports.length ===
+      0
+        ? h(
+            "div",
+            {
+              className:
+                "field-report-empty"
+            },
 
-          searchTerm ||
-          selectedProject !== "all" ||
-          progressFilter !== "all"
+            h(
+              "div",
+              null,
+              "📋"
+            ),
 
-            ? "No field reports match your filters."
+            h(
+              "strong",
+              null,
+              "No field reports found"
+            ),
 
-            : "No field reports found."
-        )
+            h(
+              "p",
+              null,
+              "Try changing your search or filters."
+            )
+          )
+        : h(
+            "table",
+            {
+              className:
+                "field-report-table"
+            },
 
-      // ====================================
-      // REPORT LIST
-      // ====================================
+            h(
+              "thead",
+              null,
 
-      : h(
-          "div",
-          {
-            className:
-              "field-reports-list"
-          },
+              h(
+                "tr",
+                null,
 
-          sortedReports.map(
-            (report, index) => {
-              const progress =
-                getProgress(
-                  report
-                );
-
-              const projectName =
-                getReportProjectName(
-                  report
-                );
-
-              const reportDate =
-                report.createdAt ||
-                report.date;
-
-              const projectId =
-                getReportProjectId(
-                  report
-                );
-
-              const latestReport =
-                latestReports[
-                  projectId
-                ];
-
-              const isLatest =
-                latestReport ===
-                report;
-
-              return h(
-                "div",
-                {
-                  key:
-                    report._id ||
-                    report.id ||
-                    index,
-
-                  className:
-                    "field-report-card"
-                },
-
-                // CARD TOP
                 h(
-                  "div",
-                  {
-                    className:
-                      "field-report-card-top"
-                  },
+                  "th",
+                  null,
+                  "Project"
+                ),
 
-                  h(
-                    "div",
-                    null,
+                h(
+                  "th",
+                  null,
+                  "Officer"
+                ),
+
+                h(
+                  "th",
+                  null,
+                  "Progress"
+                ),
+
+                h(
+                  "th",
+                  null,
+                  "Status"
+                ),
+
+                h(
+                  "th",
+                  null,
+                  "Report Date"
+                ),
+
+                h(
+                  "th",
+                  null,
+                  "Remarks"
+                ),
+
+                h(
+                  "th",
+                  null,
+                  "Action"
+                )
+              )
+            ),
+
+            h(
+              "tbody",
+              null,
+
+              paginatedReports.map(
+                (report) => {
+                  const progress =
+                    getProgress(
+                      report
+                    );
+
+                  const status =
+                    getStatus(
+                      report
+                    );
+
+                  return h(
+                    "tr",
+                    {
+                      key:
+                        report._id
+                    },
 
                     h(
-                      "div",
-                      {
-                        className:
-                          "field-report-project-name"
-                      },
+                      "td",
+                      null,
 
-                      projectName
+                      h(
+                        "strong",
+                        null,
+                        getProjectName(
+                          report
+                        )
+                      )
                     ),
 
-                    reportDate &&
+                    h(
+                      "td",
+                      null,
+                      getOfficerName(
+                        report
+                      )
+                    ),
+
+                    h(
+                      "td",
+                      null,
+
                       h(
                         "div",
                         {
                           className:
-                            "field-report-date"
+                            "field-report-progress"
                         },
 
-                        new Date(
-                          reportDate
-                        ).toLocaleString()
+                        h(
+                          "div",
+                          {
+                            className:
+                              "field-report-progress-track"
+                          },
+
+                          h(
+                            "div",
+                            {
+                              className:
+                                "field-report-progress-fill",
+                              style: {
+                                width:
+                                  `${progress}%`
+                              }
+                            }
+                          )
+                        ),
+
+                        h(
+                          "span",
+                          null,
+                          `${progress}%`
+                        )
                       )
-                  ),
-
-                  h(
-                    "div",
-                    {
-                      className:
-                        "field-report-progress-number"
-                    },
-
-                    progress +
-                      "%"
-                  )
-                ),
-
-                // STATUS BADGE
-                progress >= 100
-                  ? h(
-                      "span",
-                      {
-                        className:
-                          "field-report-completed-badge"
-                      },
-
-                      "✓ Completed"
-                    )
-
-                  : progress < 30
-                  ? h(
-                      "span",
-                      {
-                        className:
-                          "field-report-critical-badge"
-                      },
-
-                      "⚠ Critical Progress"
-                    )
-
-                  : h(
-                      "span",
-                      {
-                        className:
-                          "field-report-active-badge"
-                      },
-
-                      "● In Progress"
-                    ),
-
-                // LATEST BADGE
-                isLatest &&
-                  h(
-                    "span",
-                    {
-                      className:
-                        "field-report-latest"
-                    },
-
-                    "Latest Update"
-                  ),
-
-                // PROGRESS BAR
-                h(
-                  "div",
-                  {
-                    className:
-                      "field-report-progress-track"
-                  },
-
-                  h(
-                    "div",
-                    {
-                      className:
-                        "field-report-progress-fill",
-
-                      style: {
-                        width:
-                          progress +
-                          "%"
-                      }
-                    }
-                  )
-                ),
-
-                // PROGRESS LABEL
-                h(
-                  "div",
-                  {
-                    className:
-                      "field-report-card-progress-label"
-                  },
-
-                  "Reported project progress: ",
-
-                  h(
-                    "strong",
-                    null,
-
-                    progress +
-                      "%"
-                  )
-                ),
-
-                // OBSERVATION
-                report.observation &&
-                  h(
-                    "div",
-                    {
-                      className:
-                        "field-report-observation"
-                    },
-
-                    h(
-                      "strong",
-                      null,
-                      "Observation"
                     ),
 
                     h(
-                      "p",
+                      "td",
                       null,
 
-                      report.observation
+                      h(
+                        "span",
+                        {
+                          className:
+                            `field-report-status ${status.replace(
+                              /\s+/g,
+                              "-"
+                            )}`
+                        },
+                        status
+                      )
+                    ),
+
+                    h(
+                      "td",
+                      null,
+                      formatDate(
+                        getDate(
+                          report
+                        )
+                      )
+                    ),
+
+                    h(
+                      "td",
+                      {
+                        className:
+                          "field-report-remarks"
+                      },
+                      report.remarks ||
+                        report.description ||
+                        report.notes ||
+                        "—"
+                    ),
+
+                    h(
+                      "td",
+                      null,
+
+                      h(
+                        "button",
+                        {
+                          className:
+                            "field-report-delete-btn",
+                          onClick: () =>
+                            handleDelete(
+                              report
+                            )
+                        },
+                        "Delete"
+                      )
                     )
-                  ),
+                  );
+                }
+              )
+            )
+          )
+    ),
 
-                // LOCATION
-                (
-                  report.location ||
-                  report.latitude ||
-                  report.longitude
-                ) &&
-                  h(
-                    "div",
-                    {
-                      className:
-                        "field-report-location"
-                    },
+    totalPages > 1
+      ? h(
+          "div",
+          {
+            className:
+              "field-report-pagination"
+          },
 
-                    "📍 ",
+          h(
+            "button",
+            {
+              disabled:
+                safePage <= 1,
+              onClick: () =>
+                setPage(
+                  (current) =>
+                    Math.max(
+                      1,
+                      current - 1
+                    )
+                )
+            },
+            "← Previous"
+          ),
 
-                    report.location ||
-                      "Field Location",
+          h(
+            "span",
+            null,
+            `Page ${safePage} of ${totalPages}`
+          ),
 
-                    report.latitude &&
-                    report.longitude
-                      ? " (" +
-                        report.latitude +
-                        ", " +
-                        report.longitude +
-                        ")"
-                      : ""
-                  ),
-
-                // OFFICER
-                (
-                  report.officer ||
-                  report.createdBy
-                ) &&
-                  h(
-                    "div",
-                    {
-                      className:
-                        "field-report-officer"
-                    },
-
-                    "👤 ",
-
-                    typeof report.officer ===
-                      "object"
-
-                      ? (
-                          report.officer.name ||
-                          report.officer.fullName ||
-                          report.officer.email ||
-                          "Field Officer"
-                        )
-
-                      : typeof report.createdBy ===
-                        "object"
-
-                      ? (
-                          report.createdBy.name ||
-                          report.createdBy.fullName ||
-                          report.createdBy.email ||
-                          "Field Officer"
-                        )
-
-                      : (
-                          report.officer ||
-                          report.createdBy
-                        )
-                  )
-              );
-            }
+          h(
+            "button",
+            {
+              disabled:
+                safePage >=
+                totalPages,
+              onClick: () =>
+                setPage(
+                  (current) =>
+                    Math.min(
+                      totalPages,
+                      current + 1
+                    )
+                )
+            },
+            "Next →"
           )
         )
+      : null
   );
 };
 

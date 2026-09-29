@@ -1,863 +1,701 @@
 import React, {
   useEffect,
+  useMemo,
   useState
 } from "react";
 
 import {
   getEvidence,
+  getProjects,
   uploadEvidence,
-  getProjects
+  reviewEvidence,
+  deleteEvidence
 } from "../services/api";
 
+const h = React.createElement;
+
 const Evidence = () => {
-  const [
-    evidence,
-    setEvidence
-  ] = useState([]);
-
-  const [
-    projects,
-    setProjects
-  ] = useState([]);
-
-  const [
-    loading,
-    setLoading
-  ] = useState(true);
-
-  const [
-    uploading,
-    setUploading
-  ] = useState(false);
-
-  const [
-    showForm,
-    setShowForm
-  ] = useState(false);
-
-  const [
-    error,
-    setError
-  ] = useState("");
-
-  const [
-    success,
-    setSuccess
-  ] = useState("");
-
-  const [
-    file,
-    setFile
-  ] = useState(null);
-
-  const [
-    form,
-    setForm
-  ] = useState({
-    project: "",
-    evidenceType: "Photo",
-    description: ""
-  });
-
-
-  // ========================================
-  // LOAD DATA
-  // ========================================
+  const [evidence, setEvidence] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [search, setSearch] = useState("");
+  const [projectFilter, setProjectFilter] = useState("all");
+  const [reviewFilter, setReviewFilter] = useState("all");
+  const [file, setFile] = useState(null);
+  const [selectedProject, setSelectedProject] = useState("");
+  const [description, setDescription] = useState("");
+  const [error, setError] = useState("");
 
   const loadData = async () => {
     try {
       setLoading(true);
       setError("");
 
-      const [
-        evidenceResponse,
-        projectResponse
-      ] = await Promise.all([
-        getEvidence(),
-        getProjects()
-      ]);
+      const [evidenceResponse, projectResponse] =
+        await Promise.all([
+          getEvidence(),
+          getProjects()
+        ]);
 
-      setEvidence(
+      const evidenceData =
         evidenceResponse?.evidence ||
         evidenceResponse?.data ||
-        []
+        [];
+
+      const projectData =
+        projectResponse?.projects ||
+        projectResponse?.data ||
+        [];
+
+      setEvidence(
+        Array.isArray(evidenceData)
+          ? evidenceData
+          : []
       );
 
       setProjects(
-        projectResponse?.projects ||
-        projectResponse?.data ||
-        []
+        Array.isArray(projectData)
+          ? projectData
+          : []
       );
-
     } catch (err) {
-      console.error(
-        "Evidence loading failed:",
-        err
-      );
-
+      console.error(err);
       setError(
         err.message ||
-        "Unable to load evidence."
+        "Failed to load evidence."
       );
-
     } finally {
       setLoading(false);
     }
   };
 
-
   useEffect(() => {
     loadData();
   }, []);
 
-
-  // ========================================
-  // FORM CHANGE
-  // ========================================
-
-  const handleChange =
-    (event) => {
-      const {
-        name,
-        value
-      } = event.target;
-
-      setForm(
-        (previous) => ({
-          ...previous,
-          [name]: value
-        })
+  const projectName = (item) => {
+    if (
+      item.project &&
+      typeof item.project === "object"
+    ) {
+      return (
+        item.project.name ||
+        item.project.projectName ||
+        item.project.projectCode ||
+        "Unknown Project"
       );
+    }
 
-      setError("");
-      setSuccess("");
-    };
+    const project = projects.find(
+      (p) =>
+        String(p._id) ===
+        String(item.project)
+    );
 
-
-  // ========================================
-  // FILE CHANGE
-  // ========================================
-
-  const handleFileChange =
-    (event) => {
-      const selected =
-        event.target.files?.[0] ||
-        null;
-
-      if (!selected) {
-        setFile(null);
-        return;
-      }
-
-      // 50 MB limit
-
-      const maxSize =
-        50 * 1024 * 1024;
-
-      if (
-        selected.size >
-        maxSize
-      ) {
-        setFile(null);
-
-        event.target.value = "";
-
-        setError(
-          "File size must be less than 50 MB."
-        );
-
-        return;
-      }
-
-      setFile(selected);
-      setError("");
-      setSuccess("");
-    };
-
-
-  // ========================================
-  // RESET FORM
-  // ========================================
-
-  const resetForm = () => {
-    setFile(null);
-
-    setForm({
-      project: "",
-      evidenceType: "Photo",
-      description: ""
-    });
-
-    setError("");
+    return (
+      project?.name ||
+      project?.projectName ||
+      project?.projectCode ||
+      "Unknown Project"
+    );
   };
 
+  const reviewStatus = (item) =>
+    String(
+      item.reviewStatus ||
+      item.status ||
+      "Pending"
+    ).toLowerCase();
 
-  // ========================================
-  // UPLOAD
-  // ========================================
+  const filtered = useMemo(() => {
+    const q = search
+      .trim()
+      .toLowerCase();
 
-  const handleUpload =
-    async (event) => {
-      event.preventDefault();
+    return evidence.filter((item) => {
+      const name =
+        String(
+          item.fileName ||
+          item.filename ||
+          item.name ||
+          ""
+        ).toLowerCase();
 
-      setError("");
-      setSuccess("");
+      const desc =
+        String(
+          item.description ||
+          ""
+        ).toLowerCase();
 
-      if (!form.project) {
-        setError(
-          "Please select a project."
-        );
-        return;
-      }
+      const pName =
+        projectName(item).toLowerCase();
 
-      if (!file) {
-        setError(
-          "Please select a file."
-        );
-        return;
-      }
+      const matchesSearch =
+        !q ||
+        name.includes(q) ||
+        desc.includes(q) ||
+        pName.includes(q);
 
-      try {
-        setUploading(true);
+      const itemProject =
+        item.project &&
+        typeof item.project === "object"
+          ? item.project._id
+          : item.project;
 
-        const formData =
-          new FormData();
+      const matchesProject =
+        projectFilter === "all" ||
+        String(itemProject) ===
+          String(projectFilter);
 
+      const matchesReview =
+        reviewFilter === "all" ||
+        reviewStatus(item) ===
+          reviewFilter;
+
+      return (
+        matchesSearch &&
+        matchesProject &&
+        matchesReview
+      );
+    });
+  }, [
+    evidence,
+    projects,
+    search,
+    projectFilter,
+    reviewFilter
+  ]);
+
+  const handleUpload = async () => {
+    if (!file) {
+      window.alert(
+        "Please select a file first."
+      );
+      return;
+    }
+
+    try {
+      setUploading(true);
+
+      const formData = new FormData();
+
+      formData.append(
+        "file",
+        file
+      );
+
+      if (selectedProject) {
         formData.append(
           "project",
-          form.project
+          selectedProject
         );
+      }
 
-        formData.append(
-          "evidenceType",
-          form.evidenceType
-        );
-
+      if (description.trim()) {
         formData.append(
           "description",
-          form.description
+          description.trim()
         );
-
-        formData.append(
-          "file",
-          file
-        );
-
-        await uploadEvidence(
-          formData
-        );
-
-        resetForm();
-
-        setShowForm(false);
-
-        setSuccess(
-          "Evidence uploaded successfully."
-        );
-
-        await loadData();
-
-      } catch (err) {
-        console.error(
-          "Evidence upload failed:",
-          err
-        );
-
-        setError(
-          err.message ||
-          "Unable to upload evidence."
-        );
-
-      } finally {
-        setUploading(false);
-      }
-    };
-
-
-  // ========================================
-  // FILE URL
-  // ========================================
-
-  const getFileUrl =
-    (item) => {
-      const path =
-        item.fileUrl ||
-        item.url ||
-        item.file ||
-        item.path;
-
-      if (!path) {
-        return "";
       }
 
-      if (
-        path.startsWith("http")
-      ) {
-        return path;
+      await uploadEvidence(
+        formData
+      );
+
+      setFile(null);
+      setSelectedProject("");
+      setDescription("");
+
+      const input =
+        document.getElementById(
+          "evidence-file-input"
+        );
+
+      if (input) {
+        input.value = "";
       }
 
-      return `http://localhost:8000/${String(
-        path
-      ).replace(/^\/+/, "")}`;
-    };
+      await loadData();
 
+      window.alert(
+        "Evidence uploaded successfully."
+      );
+    } catch (err) {
+      window.alert(
+        err.message ||
+        "Evidence upload failed."
+      );
+    } finally {
+      setUploading(false);
+    }
+  };
 
-  // ========================================
-  // RENDER
-  // ========================================
+  const handleReview = async (
+    item,
+    status
+  ) => {
+    try {
+      await reviewEvidence(
+        item._id,
+        status
+      );
 
-  return React.createElement(
-    "div",
-    {
-      className:
-        "page-container"
-    },
+      await loadData();
+    } catch (err) {
+      window.alert(
+        err.message ||
+        "Review update failed."
+      );
+    }
+  };
 
+  const handleDelete = async (
+    item
+  ) => {
+    if (
+      !window.confirm(
+        "Delete this evidence?"
+      )
+    ) {
+      return;
+    }
 
-    // HEADER
+    try {
+      await deleteEvidence(
+        item._id
+      );
 
-    React.createElement(
+      setEvidence((current) =>
+        current.filter(
+          (x) =>
+            x._id !== item._id
+        )
+      );
+    } catch (err) {
+      window.alert(
+        err.message ||
+        "Delete failed."
+      );
+    }
+  };
+
+  const formatDate = (value) => {
+    if (!value) return "—";
+
+    try {
+      return new Date(
+        value
+      ).toLocaleDateString(
+        "en-US",
+        {
+          year: "numeric",
+          month: "short",
+          day: "numeric"
+        }
+      );
+    } catch {
+      return "—";
+    }
+  };
+
+  if (loading) {
+    return h(
       "div",
       {
         className:
-          "page-header"
+          "evidence-page"
+      },
+      h(
+        "div",
+        {
+          className:
+            "page-loading"
+        },
+        "Loading evidence..."
+      )
+    );
+  }
+
+  return h(
+    "div",
+    {
+      className:
+        "evidence-page"
+    },
+
+    h(
+      "div",
+      {
+        className:
+          "evidence-header"
       },
 
-      React.createElement(
+      h(
         "div",
         null,
 
-        React.createElement(
-          "span",
-          {
-            className:
-              "page-eyebrow"
-          },
-          "PROJECT EVIDENCE"
-        ),
-
-        React.createElement(
+        h(
           "h1",
           null,
           "Evidence"
         ),
 
-        React.createElement(
+        h(
           "p",
           null,
-          "Manage photos, videos and documents collected from project sites."
+          "Manage project photos, documents and field evidence."
         )
       ),
 
-      React.createElement(
-        "div",
+      h(
+        "button",
         {
           className:
-            "header-actions"
+            "evidence-refresh-btn",
+          onClick: loadData
         },
-
-        React.createElement(
-          "button",
-          {
-            className:
-              "secondary-button",
-            onClick:
-              loadData,
-            disabled:
-              loading
-          },
-          loading
-            ? "Refreshing..."
-            : "↻ Refresh"
-        ),
-
-        React.createElement(
-          "button",
-          {
-            className:
-              "primary-button",
-            onClick: () => {
-              setShowForm(
-                !showForm
-              );
-              setError("");
-              setSuccess("");
-            }
-          },
-          showForm
-            ? "Close Upload"
-            : "+ Upload Evidence"
-        )
+        "↻ Refresh"
       )
     ),
 
-
-    // SUCCESS
-
-    success
-      ? React.createElement(
-          "div",
-          {
-            className:
-              "success-message"
-          },
-          "✓ ",
-          success
-        )
-      : null,
-
-
-    // ERROR
-
     error
-      ? React.createElement(
+      ? h(
           "div",
           {
             className:
-              "form-error"
+              "evidence-error"
           },
-          "⚠ ",
           error
         )
       : null,
 
+    h(
+      "div",
+      {
+        className:
+          "evidence-upload-card"
+      },
 
-    // FORM
+      h(
+        "h2",
+        null,
+        "Upload Evidence"
+      ),
 
-    showForm
-      ? React.createElement(
-          "div",
+      h(
+        "div",
+        {
+          className:
+            "evidence-upload-grid"
+        },
+
+        h(
+          "input",
           {
-            className:
-              "report-form-card evidence-form-card"
+            id:
+              "evidence-file-input",
+            type: "file",
+            onChange: (e) =>
+              setFile(
+                e.target.files?.[0] ||
+                null
+              )
+          }
+        ),
+
+        h(
+          "select",
+          {
+            value:
+              selectedProject,
+            onChange: (e) =>
+              setSelectedProject(
+                e.target.value
+              )
           },
 
-          React.createElement(
-            "span",
+          h(
+            "option",
+            { value: "" },
+            "Select Project"
+          ),
+
+          projects.map(
+            (project) =>
+              h(
+                "option",
+                {
+                  key:
+                    project._id,
+                  value:
+                    project._id
+                },
+                project.name ||
+                  project.projectName ||
+                  project.projectCode
+              )
+          )
+        ),
+
+        h(
+          "input",
+          {
+            type: "text",
+            value:
+              description,
+            onChange: (e) =>
+              setDescription(
+                e.target.value
+              ),
+            placeholder:
+              "Evidence description"
+          }
+        ),
+
+        h(
+          "button",
+          {
+            className:
+              "evidence-upload-btn",
+            onClick:
+              handleUpload,
+            disabled:
+              uploading
+          },
+          uploading
+            ? "Uploading..."
+            : "Upload Evidence"
+        )
+      )
+    ),
+
+    h(
+      "div",
+      {
+        className:
+          "evidence-filters"
+      },
+
+      h(
+        "input",
+        {
+          value: search,
+          onChange: (e) =>
+            setSearch(
+              e.target.value
+            ),
+          placeholder:
+            "Search evidence..."
+        }
+      ),
+
+      h(
+        "select",
+        {
+          value:
+            projectFilter,
+          onChange: (e) =>
+            setProjectFilter(
+              e.target.value
+            )
+        },
+
+        h(
+          "option",
+          { value: "all" },
+          "All Projects"
+        ),
+
+        projects.map(
+          (project) =>
+            h(
+              "option",
+              {
+                key:
+                  project._id,
+                value:
+                  project._id
+              },
+              project.name ||
+                project.projectName ||
+                project.projectCode
+            )
+        )
+      ),
+
+      h(
+        "select",
+        {
+          value:
+            reviewFilter,
+          onChange: (e) =>
+            setReviewFilter(
+              e.target.value
+            )
+        },
+
+        h(
+          "option",
+          { value: "all" },
+          "All Reviews"
+        ),
+
+        h(
+          "option",
+          { value: "pending" },
+          "Pending"
+        ),
+
+        h(
+          "option",
+          { value: "approved" },
+          "Approved"
+        ),
+
+        h(
+          "option",
+          { value: "rejected" },
+          "Rejected"
+        )
+      )
+    ),
+
+    h(
+      "div",
+      {
+        className:
+          "evidence-grid"
+      },
+
+      filtered.map(
+        (item) =>
+          h(
+            "div",
             {
+              key:
+                item._id,
               className:
-                "page-eyebrow"
-            },
-            "FIELD EVIDENCE"
-          ),
-
-          React.createElement(
-            "h2",
-            null,
-            "Upload Project Evidence"
-          ),
-
-          React.createElement(
-            "p",
-            null,
-            "Upload verified field evidence associated with a government project."
-          ),
-
-          React.createElement(
-            "form",
-            {
-              onSubmit:
-                handleUpload
+                "evidence-card"
             },
 
-            React.createElement(
+            h(
               "div",
               {
                 className:
-                  "form-grid"
+                  "evidence-card-icon"
               },
-
-
-              // PROJECT
-
-              React.createElement(
-                "div",
-                {
-                  className:
-                    "form-group"
-                },
-
-                React.createElement(
-                  "label",
-                  null,
-                  "Project"
-                ),
-
-                React.createElement(
-                  "select",
-                  {
-                    name:
-                      "project",
-                    value:
-                      form.project,
-                    onChange:
-                      handleChange,
-                    required: true
-                  },
-
-                  React.createElement(
-                    "option",
-                    {
-                      value: ""
-                    },
-                    "Select project"
-                  ),
-
-                  projects.map(
-                    (project) =>
-                      React.createElement(
-                        "option",
-                        {
-                          key:
-                            project._id,
-                          value:
-                            project._id
-                        },
-                        project.name ||
-                        project.projectName ||
-                        project.projectCode ||
-                        "Government Project"
-                      )
-                  )
-                )
-              ),
-
-
-              // TYPE
-
-              React.createElement(
-                "div",
-                {
-                  className:
-                    "form-group"
-                },
-
-                React.createElement(
-                  "label",
-                  null,
-                  "Evidence Type"
-                ),
-
-                React.createElement(
-                  "select",
-                  {
-                    name:
-                      "evidenceType",
-                    value:
-                      form.evidenceType,
-                    onChange:
-                      handleChange
-                  },
-
-                  React.createElement(
-                    "option",
-                    {
-                      value:
-                        "Photo"
-                    },
-                    "Photo"
-                  ),
-
-                  React.createElement(
-                    "option",
-                    {
-                      value:
-                        "Video"
-                    },
-                    "Video"
-                  ),
-
-                  React.createElement(
-                    "option",
-                    {
-                      value:
-                        "Document"
-                    },
-                    "Document"
-                  )
-                )
-              ),
-
-
-              // FILE
-
-              React.createElement(
-                "div",
-                {
-                  className:
-                    "form-group full"
-                },
-
-                React.createElement(
-                  "label",
-                  null,
-                  "Evidence File"
-                ),
-
-                React.createElement(
-                  "input",
-                  {
-                    type:
-                      "file",
-
-                    accept:
-                      form.evidenceType ===
-                      "Photo"
-                        ? "image/*"
-                        : form.evidenceType ===
-                          "Video"
-                        ? "video/*"
-                        : ".pdf,.doc,.docx",
-
-                    onChange:
-                      handleFileChange,
-
-                    required: true
-                  }
-                ),
-
-                file
-                  ? React.createElement(
-                      "small",
-                      {
-                        className:
-                          "selected-file"
-                      },
-                      `Selected: ${file.name}`
-                    )
-                  : null
-              ),
-
-
-              // DESCRIPTION
-
-              React.createElement(
-                "div",
-                {
-                  className:
-                    "form-group full"
-                },
-
-                React.createElement(
-                  "label",
-                  null,
-                  "Description"
-                ),
-
-                React.createElement(
-                  "textarea",
-                  {
-                    name:
-                      "description",
-                    value:
-                      form.description,
-                    onChange:
-                      handleChange,
-                    rows: 5,
-                    placeholder:
-                      "Describe what this evidence shows..."
-                  }
-                )
-              )
+              "📎"
             ),
 
-
-            // ACTIONS
-
-            React.createElement(
+            h(
               "div",
               {
                 className:
-                  "modal-footer"
+                  "evidence-card-body"
               },
 
-              React.createElement(
-                "button",
-                {
-                  type:
-                    "button",
-                  className:
-                    "secondary-button",
-                  onClick: () => {
-                    resetForm();
-                    setShowForm(
-                      false
-                    );
-                  }
-                },
-                "Cancel"
+              h(
+                "strong",
+                null,
+                item.fileName ||
+                  item.filename ||
+                  item.name ||
+                  "Evidence File"
               ),
 
-              React.createElement(
-                "button",
+              h(
+                "span",
+                null,
+                projectName(item)
+              ),
+
+              h(
+                "p",
+                null,
+                item.description ||
+                  "No description"
+              ),
+
+              h(
+                "small",
+                null,
+                formatDate(
+                  item.createdAt ||
+                  item.uploadedAt
+                )
+              ),
+
+              h(
+                "span",
                 {
-                  type:
-                    "submit",
                   className:
-                    "primary-button",
-                  disabled:
-                    uploading
+                    `evidence-review-status ${reviewStatus(
+                      item
+                    )}`
                 },
-                uploading
-                  ? "Uploading..."
-                  : "Upload Evidence"
+                reviewStatus(item)
+              ),
+
+              h(
+                "div",
+                {
+                  className:
+                    "evidence-actions"
+                },
+
+                h(
+                  "button",
+                  {
+                    onClick: () =>
+                      handleReview(
+                        item,
+                        "approved"
+                      )
+                  },
+                  "Approve"
+                ),
+
+                h(
+                  "button",
+                  {
+                    onClick: () =>
+                      handleReview(
+                        item,
+                        "rejected"
+                      )
+                  },
+                  "Reject"
+                ),
+
+                h(
+                  "button",
+                  {
+                    className:
+                      "danger",
+                    onClick: () =>
+                      handleDelete(
+                        item
+                      )
+                  },
+                  "Delete"
+                )
               )
             )
           )
-        )
-      : null,
+      )
+    ),
 
-
-    // LIST
-
-    loading
-      ? React.createElement(
+    !filtered.length
+      ? h(
           "div",
           {
             className:
-              "page-loading"
+              "evidence-empty"
           },
-          "Loading evidence..."
+          "No evidence found."
         )
-
-      : evidence.length === 0
-
-      ? React.createElement(
-          "div",
-          {
-            className:
-              "empty-state"
-          },
-
-          React.createElement(
-            "h3",
-            null,
-            "No evidence uploaded"
-          ),
-
-          React.createElement(
-            "p",
-            null,
-            "Photos, videos and documents collected during field inspections will appear here."
-          ),
-
-          React.createElement(
-            "button",
-            {
-              className:
-                "primary-button",
-              onClick: () =>
-                setShowForm(
-                  true
-                )
-            },
-            "+ Upload First Evidence"
-          )
-        )
-
-      : React.createElement(
-          "div",
-          {
-            className:
-              "reports-list"
-          },
-
-          evidence.map(
-            (item) => {
-              const fileUrl =
-                getFileUrl(item);
-
-              return React.createElement(
-                "div",
-                {
-                  className:
-                    "report-card",
-                  key:
-                    item._id ||
-                    item.id
-                },
-
-                React.createElement(
-                  "div",
-                  {
-                    className:
-                      "report-card-header"
-                  },
-
-                  React.createElement(
-                    "strong",
-                    null,
-                    item.project?.name ||
-                    item.project?.projectName ||
-                    item.project ||
-                    "Government Project"
-                  ),
-
-                  React.createElement(
-                    "span",
-                    {
-                      className:
-                        "status-badge"
-                    },
-                    item.evidenceType ||
-                    item.type ||
-                    "Evidence"
-                  )
-                ),
-
-                React.createElement(
-                  "p",
-                  null,
-                  item.description ||
-                  "Project evidence record."
-                ),
-
-                React.createElement(
-                  "div",
-                  {
-                    className:
-                      "report-meta"
-                  },
-
-                  React.createElement(
-                    "span",
-                    null,
-                    item.originalName ||
-                    item.filename ||
-                    "Uploaded file"
-                  ),
-
-                  React.createElement(
-                    "span",
-                    null,
-                    item.createdAt
-                      ? new Date(
-                          item.createdAt
-                        ).toLocaleDateString()
-                      : "Recent"
-                  ),
-
-                  fileUrl
-                    ? React.createElement(
-                        "a",
-                        {
-                          href:
-                            fileUrl,
-                          target:
-                            "_blank",
-                          rel:
-                            "noreferrer",
-                          className:
-                            "operation-btn"
-                        },
-                        "View File"
-                      )
-                    : null
-                )
-              );
-            }
-          )
-        )
+      : null
   );
 };
 

@@ -16,8 +16,7 @@ import {
 const h = React.createElement;
 
 const NotificationBell = () => {
-  const navigate =
-    useNavigate();
+  const navigate = useNavigate();
 
   const [
     notifications,
@@ -29,59 +28,25 @@ const NotificationBell = () => {
     setOpen
   ] = useState(false);
 
-  const [
-    loading,
-    setLoading
-  ] = useState(false);
-
-
-  // ========================================
-  // LOAD NOTIFICATIONS
-  // ========================================
-
   const load = async () => {
     try {
-      setLoading(true);
-
       const data =
         await getNotifications();
 
-      const notificationData =
-        Array.isArray(data)
-          ? data
-          : data?.notifications ||
-            data?.data ||
-            [];
-
       setNotifications(
-        Array.isArray(notificationData)
-          ? notificationData
-          : []
+        data?.notifications ||
+        data?.data ||
+        []
       );
-
     } catch (error) {
-
       console.error(
         "NOTIFICATION LOAD ERROR:",
         error
       );
-
-      setNotifications([]);
-
-    } finally {
-
-      setLoading(false);
-
     }
   };
 
-
-  // ========================================
-  // INITIAL LOAD + AUTO REFRESH
-  // ========================================
-
   useEffect(() => {
-
     load();
 
     const timer =
@@ -92,13 +57,7 @@ const NotificationBell = () => {
 
     return () =>
       clearInterval(timer);
-
   }, []);
-
-
-  // ========================================
-  // UNREAD COUNT
-  // ========================================
 
   const unread =
     notifications.filter(
@@ -107,126 +66,47 @@ const NotificationBell = () => {
         !item.read
     ).length;
 
-
-  // ========================================
-  // OPEN NOTIFICATIONS PAGE
-  // ========================================
-
-  const openNotifications =
-    () => {
-
-      setOpen(false);
-
-      navigate(
-        "/admin/notifications"
-      );
-
-    };
-
-
-  // ========================================
-  // READ SINGLE NOTIFICATION
-  // ========================================
-
-  const read =
+  const readNotification =
     async (item) => {
-
       try {
-
-        if (
-          item?._id &&
-          !item.isRead &&
-          !item.read
-        ) {
-
+        if (item?._id) {
           await markNotificationRead(
             item._id
           );
-
-          setNotifications(
-            (previous) =>
-              previous.map(
-                (notification) =>
-                  notification._id ===
-                  item._id
-                    ? {
-                        ...notification,
-                        isRead: true,
-                        read: true
-                      }
-                    : notification
-              )
-          );
         }
 
+        await load();
       } catch (error) {
-
-        console.error(
-          "READ NOTIFICATION ERROR:",
-          error
-        );
-
+        console.error(error);
       }
-
     };
-
-
-  // ========================================
-  // MARK ALL AS READ
-  // ========================================
 
   const readAll =
-    async (event) => {
-
-      if (event) {
-        event.stopPropagation();
-      }
-
+    async () => {
       try {
-
         await markAllNotificationsAsRead();
-
-        setNotifications(
-          (previous) =>
-            previous.map(
-              (notification) => ({
-                ...notification,
-                isRead: true,
-                read: true
-              })
-            )
-        );
-
+        await load();
       } catch (error) {
-
-        console.error(
-          "MARK ALL ERROR:",
-          error
-        );
-
+        console.error(error);
       }
-
     };
-
-
-  // ========================================
-  // BELL CLICK
-  // ========================================
 
   const handleBellClick =
-    () => {
+    async () => {
+      const willOpen = !open;
 
-      setOpen(
-        (previous) =>
-          !previous
-      );
+      setOpen(willOpen);
 
+      if (
+        willOpen &&
+        unread > 0
+      ) {
+        await readAll();
+      }
     };
 
-
-  // ========================================
-  // RENDER
-  // ========================================
+  const visible =
+    notifications.slice(0, 5);
 
   return h(
     "div",
@@ -235,26 +115,17 @@ const NotificationBell = () => {
         "notification-wrapper"
     },
 
-
-    // ======================================
-    // BELL BUTTON
-    // ======================================
-
     h(
       "button",
       {
         type: "button",
-
         className:
           "notification-button",
-
         onClick:
           handleBellClick,
-
         title:
           "Notifications"
       },
-
       "🔔",
 
       unread > 0
@@ -264,19 +135,12 @@ const NotificationBell = () => {
               className:
                 "notification-count"
             },
-
             unread > 99
               ? "99+"
               : unread
           )
-
         : null
     ),
-
-
-    // ======================================
-    // NOTIFICATION PANEL
-    // ======================================
 
     open
       ? h(
@@ -285,11 +149,6 @@ const NotificationBell = () => {
             className:
               "notification-panel"
           },
-
-
-          // =================================
-          // HEADER
-          // =================================
 
           h(
             "div",
@@ -305,179 +164,92 @@ const NotificationBell = () => {
             ),
 
             h(
-              "div",
+              "button",
               {
-                className:
-                  "notification-header-actions"
+                type: "button",
+                onClick: readAll
               },
-
-              unread > 0
-                ? h(
-                    "button",
-                    {
-                      type: "button",
-
-                      onClick:
-                        readAll
-                    },
-
-                    "Mark all"
-                  )
-
-                : null,
-
-              h(
-                "button",
-                {
-                  type: "button",
-
-                  onClick:
-                    openNotifications,
-
-                  className:
-                    "notification-view-all"
-                },
-
-                "View all"
-              )
+              "Mark all"
             )
           ),
 
+          visible.length
+            ? visible.map(
+                (item) =>
+                  h(
+                    "div",
+                    {
+                      key:
+                        item._id,
+                      className:
+                        "notification-item",
+                      onClick:
+                        async () => {
+                          await readNotification(
+                            item
+                          );
 
-          // =================================
-          // LOADING
-          // =================================
+                          navigate(
+                            "/admin/notifications"
+                          );
 
-          loading
+                          setOpen(false);
+                        }
+                    },
 
-            ? h(
-                "div",
-                {
-                  className:
-                    "notification-empty"
-                },
+                    h(
+                      "strong",
+                      null,
+                      item.title ||
+                        "Notification"
+                    ),
 
-                "Loading notifications..."
-              )
+                    h(
+                      "p",
+                      null,
+                      item.message ||
+                        ""
+                    ),
 
-            : null,
-
-
-          // =================================
-          // NOTIFICATION LIST
-          // =================================
-
-          !loading &&
-          notifications.length > 0
-
-            ? h(
-                "div",
-                {
-                  className:
-                    "notification-list"
-                },
-
-                notifications
-                  .slice(0, 5)
-                  .map(
-                    (item) =>
-                      h(
-                        "div",
-                        {
-                          key:
-                            item._id,
-
-                          className:
-                            `notification-item ${
-                              !item.isRead &&
-                              !item.read
-                                ? "unread"
-                                : ""
-                            }`,
-
-                          onClick:
-                            () =>
-                              read(item)
-                        },
-
-                        h(
-                          "strong",
-                          null,
-
-                          item.title ||
-                            "Notification"
-                        ),
-
-                        h(
-                          "p",
-                          null,
-
-                          item.message ||
-                            ""
-                        ),
-
-                        h(
-                          "small",
-                          null,
-
-                          item.createdAt
-                            ? new Date(
-                                item.createdAt
-                              ).toLocaleString()
-                            : ""
-                        )
-                      )
+                    h(
+                      "small",
+                      null,
+                      item.createdAt
+                        ? new Date(
+                            item.createdAt
+                          ).toLocaleString()
+                        : ""
+                    )
                   )
               )
-
-            : null,
-
-
-          // =================================
-          // EMPTY
-          // =================================
-
-          !loading &&
-          notifications.length === 0
-
-            ? h(
+            : h(
                 "div",
                 {
                   className:
                     "notification-empty"
                 },
-
                 "No notifications"
-              )
+              ),
 
-            : null,
-
-
-          // =================================
-          // VIEW ALL FOOTER
-          // =================================
-
-          !loading &&
           notifications.length > 5
-
             ? h(
                 "button",
                 {
                   type: "button",
-
                   className:
-                    "notification-view-all-bottom",
+                    "notification-view-all",
+                  onClick: () => {
+                    navigate(
+                      "/admin/notifications"
+                    );
 
-                  onClick:
-                    openNotifications
+                    setOpen(false);
+                  }
                 },
-
                 "View all notifications →"
               )
-
             : null
         )
-
       : null
   );
 };

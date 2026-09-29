@@ -158,6 +158,74 @@ const PublicPortal = () => {
   );
 
   /* ===================================
+     LOCAL PROJECT FILTER
+  =================================== */
+
+  const filteredProjects =
+    projects.filter((project) => {
+      const q =
+        search
+          .trim()
+          .toLowerCase();
+
+      const name =
+        String(
+          project.name ||
+          project.projectName ||
+          ""
+        ).toLowerCase();
+
+      const code =
+        String(
+          project.projectCode ||
+          ""
+        ).toLowerCase();
+
+      const district =
+        String(
+          project.district ||
+          ""
+        ).toLowerCase();
+
+      const matchesSearch =
+        !q ||
+        name.includes(q) ||
+        code.includes(q) ||
+        district.includes(q);
+
+      const matchesProvince =
+        province === "All Provinces" ||
+        String(
+          project.province ||
+          ""
+        ).toLowerCase() ===
+          province.toLowerCase();
+
+      const matchesStatus =
+        status === "All Status" ||
+        String(
+          project.status ||
+          ""
+        ).toLowerCase() ===
+          status.toLowerCase();
+
+      const matchesRisk =
+        risk === "All Risk" ||
+        String(
+          project.riskLevel ||
+          ""
+        ).toLowerCase() ===
+          risk.toLowerCase();
+
+      return (
+        matchesSearch &&
+        matchesProvince &&
+        matchesStatus &&
+        matchesRisk
+      );
+    });
+
+  /* ===================================
      LOAD PROJECTS
   =================================== */
 
@@ -186,17 +254,20 @@ const PublicPortal = () => {
           ]);
 
         setProjects(
-          p.projects || []
+          p?.projects || []
         );
 
         setSummary(
-          s.summary || {}
+          s?.summary || {}
         );
       } catch (error) {
         console.error(
           "Failed to load public projects:",
           error
         );
+
+        setProjects([]);
+        setSummary({});
       } finally {
         setLoading(false);
       }
@@ -255,36 +326,102 @@ const PublicPortal = () => {
 
   const handleProvinceChange =
     (event) => {
-      setProvince(
-        event.target.value
-      );
+      const value =
+        event.target.value;
+
+      setProvince(value);
 
       setTimeout(
-        load,
+        () => {
+          const query =
+            buildQuery({
+              search,
+              province: value,
+              status,
+              risk
+            });
+
+          getPublicProjects(query)
+            .then((response) => {
+              setProjects(
+                response?.projects || []
+              );
+            })
+            .catch((error) => {
+              console.error(
+                "Province filter error:",
+                error
+              );
+            });
+        },
         0
       );
     };
 
   const handleStatusChange =
     (event) => {
-      setStatus(
-        event.target.value
-      );
+      const value =
+        event.target.value;
+
+      setStatus(value);
 
       setTimeout(
-        load,
+        () => {
+          const query =
+            buildQuery({
+              search,
+              province,
+              status: value,
+              risk
+            });
+
+          getPublicProjects(query)
+            .then((response) => {
+              setProjects(
+                response?.projects || []
+              );
+            })
+            .catch((error) => {
+              console.error(
+                "Status filter error:",
+                error
+              );
+            });
+        },
         0
       );
     };
 
   const handleRiskChange =
     (event) => {
-      setRisk(
-        event.target.value
-      );
+      const value =
+        event.target.value;
+
+      setRisk(value);
 
       setTimeout(
-        load,
+        () => {
+          const query =
+            buildQuery({
+              search,
+              province,
+              status,
+              risk: value
+            });
+
+          getPublicProjects(query)
+            .then((response) => {
+              setProjects(
+                response?.projects || []
+              );
+            })
+            .catch((error) => {
+              console.error(
+                "Risk filter error:",
+                error
+              );
+            });
+        },
         0
       );
     };
@@ -294,7 +431,7 @@ const PublicPortal = () => {
   =================================== */
 
   const mappedProjects =
-    projects.filter(
+    filteredProjects.filter(
       (project) =>
         project.latitude !==
           undefined &&
@@ -307,10 +444,7 @@ const PublicPortal = () => {
     );
 
   /* ===================================
-     MAP
-     
-     Default Nepal view.
-     OpenStreetMap embed is used here.
+     MAP URL
   =================================== */
 
   const mapUrl =
@@ -360,8 +494,6 @@ const PublicPortal = () => {
           "ProjectWatch Nepal"
         )
       ),
-
-      /* PUBLIC NAVIGATION */
 
       h(
         "nav",
@@ -415,8 +547,6 @@ const PublicPortal = () => {
           "About"
         )
       ),
-
-      /* HEADER ACTIONS */
 
       h(
         "div",
@@ -579,9 +709,50 @@ const PublicPortal = () => {
     ),
 
     /* ===================================
+       SEARCH SECTION
+    =================================== */
+
+    h(
+      "div",
+      {
+        className:
+          "public-search-section"
+      },
+
+      h(
+        "div",
+        {
+          className:
+            "public-search-box"
+        },
+
+        h(
+          "span",
+          null,
+          "🔎"
+        ),
+
+        h(
+          "input",
+          {
+            value:
+              search,
+
+            onChange:
+              (e) =>
+                setSearch(
+                  e.target.value
+                ),
+
+            placeholder:
+              "Search projects by name, code or district..."
+          }
+        )
+      )
+    ),
+
+    /* ===================================
        FILTERS
-       
-       Moved BEFORE the map.
     =================================== */
 
     h(
@@ -590,8 +761,6 @@ const PublicPortal = () => {
         className:
           "public-filters"
       },
-
-      /* PROVINCE */
 
       h(
         "select",
@@ -619,8 +788,6 @@ const PublicPortal = () => {
         )
       ),
 
-      /* STATUS */
-
       h(
         "select",
         {
@@ -647,8 +814,6 @@ const PublicPortal = () => {
         )
       ),
 
-      /* RISK */
-
       h(
         "select",
         {
@@ -674,8 +839,6 @@ const PublicPortal = () => {
             )
         )
       ),
-
-      /* CLEAR */
 
       h(
         "button",
@@ -706,8 +869,6 @@ const PublicPortal = () => {
         className:
           "public-live-map"
       },
-
-      /* MAP HEADER */
 
       h(
         "div",
@@ -751,8 +912,6 @@ const PublicPortal = () => {
           `${mappedProjects.length} mapped projects`
         )
       ),
-
-      /* FULL WIDTH MAP */
 
       h(
         "div",
@@ -800,6 +959,53 @@ const PublicPortal = () => {
     ),
 
     /* ===================================
+       REPORT ISSUE CTA
+    =================================== */
+
+    h(
+      "div",
+      {
+        className:
+          "public-portal-cta"
+      },
+
+      h(
+        "div",
+        null,
+
+        h(
+          "span",
+          null,
+          "📢"
+        ),
+
+        h(
+          "h2",
+          null,
+          "Have an issue with a government project?"
+        ),
+
+        h(
+          "p",
+          null,
+          "Report project delays, quality issues or other concerns directly through ProjectWatch Nepal."
+        )
+      ),
+
+      h(
+        "a",
+        {
+          href:
+            "/public/report",
+
+          className:
+            "public-portal-cta-button"
+        },
+        "Report an Issue →"
+      )
+    ),
+
+    /* ===================================
        PROJECT GRID
     =================================== */
 
@@ -814,7 +1020,7 @@ const PublicPortal = () => {
           "Loading projects..."
         )
 
-      : projects.length === 0
+      : filteredProjects.length === 0
 
       ? h(
           "div",
@@ -846,8 +1052,6 @@ const PublicPortal = () => {
               "public-project-grid"
           },
 
-          /* PROJECT SECTION HEADER */
-
           h(
             "div",
             {
@@ -877,16 +1081,14 @@ const PublicPortal = () => {
               h(
                 "p",
                 null,
-                `${projects.length} project${
-                  projects.length !== 1
+                `${filteredProjects.length} project${
+                  filteredProjects.length !== 1
                     ? "s"
                     : ""
                 } found`
               )
             )
           ),
-
-          /* PROJECT CARDS */
 
           h(
             "div",
@@ -895,7 +1097,7 @@ const PublicPortal = () => {
                 "public-project-grid-items"
             },
 
-            projects.map(
+            filteredProjects.map(
               (project) =>
                 h(
                   "article",
@@ -913,8 +1115,6 @@ const PublicPortal = () => {
                         )
                   },
 
-                  /* PROJECT CODE */
-
                   h(
                     "span",
                     {
@@ -925,8 +1125,6 @@ const PublicPortal = () => {
                       "PROJECT"
                   ),
 
-                  /* PROJECT NAME */
-
                   h(
                     "h3",
                     null,
@@ -934,8 +1132,6 @@ const PublicPortal = () => {
                       project.projectName ||
                       "Untitled Project"
                   ),
-
-                  /* LOCATION */
 
                   h(
                     "p",
@@ -949,8 +1145,6 @@ const PublicPortal = () => {
                       project.province || ""
                     }`
                   ),
-
-                  /* PROGRESS BAR */
 
                   h(
                     "div",
@@ -972,8 +1166,6 @@ const PublicPortal = () => {
                       }
                     )
                   ),
-
-                  /* CARD FOOTER */
 
                   h(
                     "div",
@@ -1002,8 +1194,6 @@ const PublicPortal = () => {
                     )
                   ),
 
-                  /* DETAILS */
-
                   h(
                     "span",
                     {
@@ -1031,8 +1221,6 @@ const PublicPortal = () => {
           "public-footer"
       },
 
-      /* FOOTER COL 1 */
-
       h(
         "div",
         {
@@ -1052,8 +1240,6 @@ const PublicPortal = () => {
           "An open-government platform for tracking public development projects, budgets and progress across all seven provinces of Nepal."
         )
       ),
-
-      /* FOOTER COL 2 */
 
       h(
         "div",
@@ -1083,8 +1269,6 @@ const PublicPortal = () => {
           "Report a Project Issue"
         )
       ),
-
-      /* FOOTER BOTTOM */
 
       h(
         "div",

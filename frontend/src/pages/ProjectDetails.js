@@ -14,7 +14,10 @@ import {
 } from "../services/api";
 
 import ProjectTimeline from "../components/ProjectTimeline";
+import ProjectStatusBadge from "../components/ProjectStatusBadge";
+import ProjectRiskBadge from "../components/ProjectRiskBadge";
 import ProjectProgressCard from "../components/ProjectProgressCard";
+import ProgressHistory from "../components/ProgressHistory";
 
 const h = React.createElement;
 
@@ -31,367 +34,278 @@ const ProjectDetails = () => {
   const [timeline, setTimeline] =
     useState([]);
 
+  const [progressHistory, setProgressHistory] =
+    useState([]);
+
+  const [timelineSummary, setTimelineSummary] =
+    useState(null);
+
   const [loading, setLoading] =
     useState(true);
 
-  const [refreshing, setRefreshing] =
-    useState(false);
+  const [timelineLoading, setTimelineLoading] =
+    useState(true);
 
   const [error, setError] =
     useState("");
 
-  // ========================================
-  // LOAD PROJECT
-  // ========================================
+  const [refreshing, setRefreshing] =
+    useState(false);
 
-  const loadProject = async (
-    showRefresh = false
-  ) => {
+  const loadProject = async () => {
     try {
-      if (showRefresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
-
+      setLoading(true);
       setError("");
 
-      const [
-        projectResponse,
-        timelineResponse
-      ] = await Promise.all([
-        getProject(id),
-        getProjectTimeline(id)
-      ]);
+      const response =
+        await getProject(id);
 
-      // ========================================
-      // PROJECT RESPONSE
-      // ========================================
+      const data =
+        response?.project ||
+        response?.data ||
+        response;
 
-      const projectData =
-        projectResponse?.project ||
-        projectResponse?.data ||
-        projectResponse;
-
-      setProject(projectData || null);
-
-      // ========================================
-      // TIMELINE RESPONSE
-      // ========================================
-
-      const timelineData =
-        timelineResponse?.timeline ||
-        timelineResponse?.data ||
-        [];
-
-      setTimeline(
-        Array.isArray(timelineData)
-          ? timelineData
-          : []
-      );
-
+      setProject(data || null);
     } catch (err) {
       console.error(
-        "Project details error:",
+        "PROJECT LOAD ERROR:",
         err
       );
 
       setError(
-        err?.message ||
-        "Failed to load project details."
+        err.message ||
+        "Failed to load project."
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadTimeline = async () => {
+    try {
+      setTimelineLoading(true);
+
+      const response =
+        await getProjectTimeline(id);
+
+      const data =
+        response?.timeline ||
+        response?.data ||
+        [];
+
+      setTimeline(
+        Array.isArray(data)
+          ? data
+          : []
+      );
+
+      setProgressHistory(
+        Array.isArray(
+          response?.progressHistory
+        )
+          ? response.progressHistory
+          : []
+      );
+
+      setTimelineSummary(
+        response?.summary ||
+        null
+      );
+    } catch (err) {
+      console.error(
+        "TIMELINE LOAD ERROR:",
+        err
+      );
+
+      setTimeline([]);
+      setProgressHistory([]);
+      setTimelineSummary(null);
+    } finally {
+      setTimelineLoading(false);
+    }
+  };
+
+  const refreshAll = async () => {
+    try {
+      setRefreshing(true);
+
+      await Promise.all([
+        loadProject(),
+        loadTimeline()
+      ]);
+    } finally {
       setRefreshing(false);
     }
   };
 
   useEffect(() => {
-    if (id) {
-      loadProject();
-    }
+    if (!id) return;
+
+    loadProject();
+    loadTimeline();
   }, [id]);
-
-  // ========================================
-  // HELPERS
-  // ========================================
-
-  const formatMoney = (value) => {
-    const number =
-      Number(value) || 0;
-
-    return new Intl.NumberFormat(
-      "en-NP",
-      {
-        maximumFractionDigits: 0
-      }
-    ).format(number);
-  };
-
-  const formatDate = (value) => {
-    if (!value) {
-      return "N/A";
-    }
-
-    const date = new Date(value);
-
-    if (Number.isNaN(date.getTime())) {
-      return "N/A";
-    }
-
-    return date.toLocaleDateString(
-      "en-GB",
-      {
-        day: "2-digit",
-        month: "short",
-        year: "numeric"
-      }
-    );
-  };
-
-  const getProgress = () => {
-    const value =
-      Number(project?.progress);
-
-    if (!Number.isFinite(value)) {
-      return 0;
-    }
-
-    return Math.min(
-      100,
-      Math.max(0, value)
-    );
-  };
-
-  const getLatestReport = () => {
-    if (!Array.isArray(timeline)) {
-      return null;
-    }
-
-    const reports =
-      timeline.filter((item) => {
-        const title =
-          String(
-            item?.title ||
-            item?.event ||
-            ""
-          ).toLowerCase();
-
-        return (
-          title.includes(
-            "field report"
-          ) ||
-          item?.reportedProgress !==
-            undefined ||
-          item?.observation
-        );
-      });
-
-    if (!reports.length) {
-      return null;
-    }
-
-    return [...reports].sort(
-      (a, b) => {
-        const dateA =
-          new Date(
-            a?.date ||
-            a?.createdAt ||
-            0
-          ).getTime();
-
-        const dateB =
-          new Date(
-            b?.date ||
-            b?.createdAt ||
-            0
-          ).getTime();
-
-        return dateB - dateA;
-      }
-    )[0];
-  };
-
-  const latestReport =
-    getLatestReport();
-
-  const currentProgress =
-    getProgress();
-
-  const latestProgress =
-    Number(
-      latestReport?.reportedProgress ??
-      latestReport?.progress
-    );
-
-  const hasLatestProgress =
-    Number.isFinite(latestProgress);
-
-  const progressDifference =
-    hasLatestProgress
-      ? currentProgress - latestProgress
-      : 0;
-
-  const getHealthText = () => {
-    const status =
-      String(
-        project?.status || ""
-      ).toLowerCase();
-
-    const risk =
-      String(
-        project?.riskLevel ||
-        project?.risk ||
-        ""
-      ).toLowerCase();
-
-    if (
-      currentProgress >= 100 ||
-      status === "completed"
-    ) {
-      return "Project Completed";
-    }
-
-    if (
-      risk === "critical" ||
-      status === "critical"
-    ) {
-      return "Requires Immediate Attention";
-    }
-
-    if (
-      risk === "high" ||
-      status === "delayed"
-    ) {
-      return "Needs Monitoring";
-    }
-
-    return "Project Progressing";
-  };
-
-  // ========================================
-  // LOADING
-  // ========================================
 
   if (loading) {
     return h(
       "div",
       {
         className:
-          "project-details-page"
+          "project-details-loading"
       },
       h(
         "div",
         {
           className:
-            "project-details-loading"
+            "project-details-loading-icon"
         },
-        "Loading project details..."
+        "⏳"
+      ),
+      h(
+        "h3",
+        null,
+        "Loading Project..."
+      ),
+      h(
+        "p",
+        null,
+        "Please wait while project details are loading."
       )
     );
   }
 
-  // ========================================
-  // ERROR
-  // ========================================
-
-  if (error) {
+  if (error || !project) {
     return h(
       "div",
       {
         className:
-          "project-details-page"
+          "project-details-error"
       },
+
       h(
         "div",
         {
           className:
-            "project-details-error"
+            "project-details-error-icon"
         },
-        h(
-          "h2",
-          null,
-          "Unable to Load Project"
-        ),
+        "⚠️"
+      ),
+
+      h(
+        "h2",
+        null,
+        "Unable to Load Project"
+      ),
+
+      h(
+        "p",
+        null,
+        error ||
+          "Project information could not be found."
+      ),
+
+      h(
+        "div",
+        {
+          className:
+            "project-details-error-actions"
+        },
 
         h(
-          "p",
-          null,
-          error
-        ),
-
-        h(
-          "div",
+          "button",
           {
             className:
-              "project-details-error-actions"
+              "project-btn-secondary",
+            onClick: loadProject
           },
-
-          h(
-            "button",
-            {
-              type: "button",
-              onClick: () =>
-                loadProject()
-            },
-            "Try Again"
-          ),
-
-          h(
-            "button",
-            {
-              type: "button",
-              onClick: () =>
-                navigate("/admin/projects")
-            },
-            "Back to Projects"
-          )
-        )
-      )
-    );
-  }
-
-  if (!project) {
-    return h(
-      "div",
-      {
-        className:
-          "project-details-page"
-      },
-      h(
-        "div",
-        {
-          className:
-            "project-details-error"
-        },
-        h(
-          "h2",
-          null,
-          "Project Not Found"
-        ),
-
-        h(
-          "p",
-          null,
-          "The requested project could not be found."
+          "↻ Try Again"
         ),
 
         h(
           "button",
           {
-            type: "button",
+            className:
+              "project-btn-primary",
             onClick: () =>
-              navigate("/admin/projects")
+              navigate(
+                "/admin/projects"
+              )
           },
-          "Back to Projects"
+          "← Back to Projects"
         )
       )
     );
   }
 
-  // ========================================
-  // RENDER
-  // ========================================
+  const currentProgress =
+    Number(
+      project.progress ??
+      timelineSummary?.currentProgress ??
+      0
+    );
+
+  const budget =
+    Number(project.budget || 0);
+
+  const formatMoney = (value) => {
+    if (!Number.isFinite(value)) {
+      return "NPR 0";
+    }
+
+    return `NPR ${value.toLocaleString(
+      "en-IN"
+    )}`;
+  };
+
+  const formatDate = (value) => {
+    if (!value) return "—";
+
+    try {
+      return new Date(
+        value
+      ).toLocaleDateString(
+        "en-US",
+        {
+          year: "numeric",
+          month: "short",
+          day: "numeric"
+        }
+      );
+    } catch {
+      return "—";
+    }
+  };
+
+  const formatDateTime = (value) => {
+    if (!value) return "—";
+
+    try {
+      return new Date(
+        value
+      ).toLocaleString(
+        "en-US",
+        {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit"
+        }
+      );
+    } catch {
+      return "—";
+    }
+  };
+
+  const locationText =
+    [
+      project.municipality,
+      project.district,
+      project.province
+    ]
+      .filter(Boolean)
+      .join(", ") ||
+    project.location ||
+    "Location not specified";
 
   return h(
     "div",
@@ -400,9 +314,7 @@ const ProjectDetails = () => {
         "project-details-page"
     },
 
-    // ========================================
-    // HEADER
-    // ========================================
+    /* HEADER */
 
     h(
       "div",
@@ -421,11 +333,12 @@ const ProjectDetails = () => {
         h(
           "button",
           {
-            type: "button",
             className:
-              "project-back-button",
+              "project-back-btn",
             onClick: () =>
-              navigate("/projects")
+              navigate(
+                "/admin/projects"
+              )
           },
           "← Back to Projects"
         ),
@@ -434,38 +347,31 @@ const ProjectDetails = () => {
           "div",
           {
             className:
-              "project-title-block"
+              "project-details-title-wrap"
           },
 
           h(
             "div",
             {
               className:
-                "project-code"
+                "project-details-code"
             },
             project.projectCode ||
-              "No Project Code"
+              "PROJECT"
           ),
 
           h(
             "h1",
             null,
-            project.projectName ||
-              project.name ||
-              "Unnamed Project"
+            project.name ||
+              project.projectName ||
+              "Untitled Project"
           ),
 
           h(
             "p",
             null,
-            [
-              project.municipality,
-              project.district,
-              project.province
-            ]
-              .filter(Boolean)
-              .join(", ") ||
-              "Location not available"
+            locationText
           )
         )
       ),
@@ -480,12 +386,10 @@ const ProjectDetails = () => {
         h(
           "button",
           {
-            type: "button",
             className:
-              "project-refresh-button",
-            disabled: refreshing,
-            onClick: () =>
-              loadProject(true)
+              "project-btn-secondary",
+            onClick: refreshAll,
+            disabled: refreshing
           },
           refreshing
             ? "Refreshing..."
@@ -495,12 +399,11 @@ const ProjectDetails = () => {
         h(
           "button",
           {
-            type: "button",
             className:
-              "project-edit-button",
+              "project-btn-primary",
             onClick: () =>
               navigate(
-                `/projects/edit/${id}`
+                `/admin/projects/${id}/edit`
               )
           },
           "✎ Edit Project"
@@ -508,9 +411,7 @@ const ProjectDetails = () => {
       )
     ),
 
-    // ========================================
-    // STATUS / RISK
-    // ========================================
+    /* STATUS */
 
     h(
       "div",
@@ -520,326 +421,142 @@ const ProjectDetails = () => {
       },
 
       h(
-        "span",
+        "div",
         {
           className:
-            "project-status-pill"
+            "project-status-group"
         },
-        project.status ||
-          "Unknown Status"
+
+        h(
+          "span",
+          null,
+          "Status"
+        ),
+
+        h(
+          ProjectStatusBadge,
+          {
+            status:
+              project.status ||
+              "Active"
+          }
+        )
       ),
 
       h(
-        "span",
+        "div",
         {
           className:
-            "project-risk-pill"
+            "project-status-group"
         },
-        `Risk: ${
-          project.riskLevel ||
-          project.risk ||
-          "Unknown"
-        }`
+
+        h(
+          "span",
+          null,
+          "Risk"
+        ),
+
+        h(
+          ProjectRiskBadge,
+          {
+            riskLevel:
+              project.riskLevel ||
+              "Low"
+          }
+        )
       ),
 
       h(
-        "span",
+        "div",
         {
           className:
-            "project-health-pill"
+            "project-last-updated"
         },
-        getHealthText()
+
+        h(
+          "span",
+          null,
+          "Last Updated"
+        ),
+
+        h(
+          "strong",
+          null,
+          formatDateTime(
+            project.updatedAt ||
+            project.createdAt
+          )
+        )
       )
     ),
 
-    // ========================================
-    // QUICK STATS
-    // ========================================
+    /* OVERVIEW CARDS */
 
     h(
       "div",
       {
         className:
-          "project-details-quick-stats"
+          "project-details-info-grid"
       },
 
       h(
         "div",
         {
           className:
-            "project-quick-stat"
-        },
-        h(
-          "span",
-          null,
-          "Budget"
-        ),
-        h(
-          "strong",
-          null,
-          `NPR ${formatMoney(
-            project.budget
-          )}`
-        )
-      ),
-
-      h(
-        "div",
-        {
-          className:
-            "project-quick-stat"
-        },
-        h(
-          "span",
-          null,
-          "Current Progress"
-        ),
-        h(
-          "strong",
-          null,
-          `${currentProgress}%`
-        )
-      ),
-
-      h(
-        "div",
-        {
-          className:
-            "project-quick-stat"
-        },
-        h(
-          "span",
-          null,
-          "Start Date"
-        ),
-        h(
-          "strong",
-          null,
-          formatDate(
-            project.startDate
-          )
-        )
-      ),
-
-      h(
-        "div",
-        {
-          className:
-            "project-quick-stat"
-        },
-        h(
-          "span",
-          null,
-          "End Date"
-        ),
-        h(
-          "strong",
-          null,
-          formatDate(
-            project.endDate
-          )
-        )
-      )
-    ),
-
-    // ========================================
-    // PROGRESS CARD
-    // ========================================
-
-    h(
-      ProjectProgressCard,
-      {
-        progress: project.progress,
-        status: project.status,
-        risk:
-          project.riskLevel ||
-          project.risk,
-        budget: project.budget
-      }
-    ),
-
-    // ========================================
-    // LATEST FIELD REPORT
-    // ========================================
-
-    h(
-      "section",
-      {
-        className:
-          "project-latest-report-section"
-      },
-
-      h(
-        "div",
-        {
-          className:
-            "project-section-heading"
-        },
-
-        h(
-          "div",
-          null,
-          h(
-            "h2",
-            null,
-            "Latest Field Update"
-          ),
-          h(
-            "p",
-            null,
-            "Most recent progress reported from the field."
-          )
-        )
-      ),
-
-      latestReport
-        ? h(
-            "div",
-            {
-              className:
-                "project-latest-report-card"
-            },
-
-            h(
-              "div",
-              {
-                className:
-                  "latest-report-top"
-              },
-
-              h(
-                "div",
-                null,
-                h(
-                  "strong",
-                  null,
-                  latestReport.title ||
-                    "Field Report Update"
-                ),
-
-                h(
-                  "span",
-                  null,
-                  formatDate(
-                    latestReport.date ||
-                      latestReport.createdAt
-                  )
-                )
-              ),
-
-              hasLatestProgress
-                ? h(
-                    "div",
-                    {
-                      className:
-                        "latest-report-progress"
-                    },
-                    `${latestProgress}%`
-                  )
-                : null
-            ),
-
-            latestReport.observation
-              ? h(
-                  "p",
-                  {
-                    className:
-                      "latest-report-observation"
-                  },
-                  latestReport.observation
-                )
-              : null,
-
-            latestReport.officer
-              ? h(
-                  "p",
-                  {
-                    className:
-                      "latest-report-officer"
-                  },
-                  `Reported by: ${
-                    latestReport.officer.name ||
-                    latestReport.officer.fullName ||
-                    latestReport.officer.email ||
-                    "Field Officer"
-                  }`
-                )
-              : null,
-
-            latestReport.location
-              ? h(
-                  "p",
-                  {
-                    className:
-                      "latest-report-location"
-                  },
-                  `Location: ${latestReport.location}`
-                )
-              : null
-          )
-        : h(
-            "div",
-            {
-              className:
-                "project-empty-report"
-            },
-            "No field report has been submitted for this project yet."
-          )
-    ),
-
-    // ========================================
-    // PROGRESS HISTORY
-    // ========================================
-
-    h(
-      "section",
-      {
-        className:
-          "project-progress-history-section"
-      },
-
-      h(
-        "div",
-        {
-          className:
-            "project-section-heading"
-        },
-
-        h(
-          "div",
-          null,
-          h(
-            "h2",
-            null,
-            "Progress History"
-          ),
-
-          h(
-            "p",
-            null,
-            "Comparison between the latest field report and current project progress."
-          )
-        )
-      ),
-
-      h(
-        "div",
-        {
-          className:
-            "project-progress-history-grid"
+            "project-info-card"
         },
 
         h(
           "div",
           {
             className:
-              "progress-history-item"
+              "project-info-icon"
           },
+          "💰"
+        ),
+
+        h(
+          "div",
+          null,
 
           h(
             "span",
             null,
-            "Current Project Progress"
+            "Project Budget"
+          ),
+
+          h(
+            "strong",
+            null,
+            formatMoney(budget)
+          )
+        )
+      ),
+
+      h(
+        "div",
+        {
+          className:
+            "project-info-card"
+        },
+
+        h(
+          "div",
+          {
+            className:
+              "project-info-icon"
+          },
+          "📊"
+        ),
+
+        h(
+          "div",
+          null,
+
+          h(
+            "span",
+            null,
+            "Current Progress"
           ),
 
           h(
@@ -847,129 +564,28 @@ const ProjectDetails = () => {
             null,
             `${currentProgress}%`
           )
-        ),
-
-        h(
-          "div",
-          {
-            className:
-              "progress-history-item"
-          },
-
-          h(
-            "span",
-            null,
-            "Latest Field Report"
-          ),
-
-          h(
-            "strong",
-            null,
-            hasLatestProgress
-              ? `${latestProgress}%`
-              : "No Report"
-          )
-        ),
-
-        h(
-          "div",
-          {
-            className:
-              "progress-history-item"
-          },
-
-          h(
-            "span",
-            null,
-            "Difference"
-          ),
-
-          h(
-            "strong",
-            null,
-            hasLatestProgress
-              ? `${
-                  progressDifference > 0
-                    ? "+"
-                    : ""
-                }${progressDifference}%`
-              : "N/A"
-          )
-        ),
-
-        h(
-          "div",
-          {
-            className:
-              "progress-history-item"
-          },
-
-          h(
-            "span",
-            null,
-            "Total Timeline Events"
-          ),
-
-          h(
-            "strong",
-            null,
-            timeline.length
-          )
         )
-      )
-    ),
-
-    // ========================================
-    // OVERVIEW
-    // ========================================
-
-    h(
-      "section",
-      {
-        className:
-          "project-details-section"
-      },
-
-      h(
-        "h2",
-        null,
-        "Project Overview"
       ),
 
       h(
         "div",
         {
           className:
-            "project-overview-grid"
+            "project-info-card"
         },
 
         h(
           "div",
           {
             className:
-              "project-overview-item"
+              "project-info-icon"
           },
-
-          h(
-            "span",
-            null,
-            "Project Code"
-          ),
-
-          h(
-            "strong",
-            null,
-            project.projectCode ||
-              "N/A"
-          )
+          "🏗️"
         ),
 
         h(
           "div",
-          {
-            className:
-              "project-overview-item"
-          },
+          null,
 
           h(
             "span",
@@ -981,201 +597,593 @@ const ProjectDetails = () => {
             "strong",
             null,
             project.contractor ||
-              "N/A"
-          )
-        ),
-
-        h(
-          "div",
-          {
-            className:
-              "project-overview-item"
-          },
-
-          h(
-            "span",
-            null,
-            "Province"
-          ),
-
-          h(
-            "strong",
-            null,
-            project.province ||
-              "N/A"
-          )
-        ),
-
-        h(
-          "div",
-          {
-            className:
-              "project-overview-item"
-          },
-
-          h(
-            "span",
-            null,
-            "District"
-          ),
-
-          h(
-            "strong",
-            null,
-            project.district ||
-              "N/A"
-          )
-        ),
-
-        h(
-          "div",
-          {
-            className:
-              "project-overview-item"
-          },
-
-          h(
-            "span",
-            null,
-            "Municipality"
-          ),
-
-          h(
-            "strong",
-            null,
-            project.municipality ||
-              "N/A"
+              "Not specified"
           )
         )
-      )
-    ),
-
-    // ========================================
-    // DESCRIPTION
-    // ========================================
-
-    h(
-      "section",
-      {
-        className:
-          "project-details-section"
-      },
-
-      h(
-        "h2",
-        null,
-        "Description"
-      ),
-
-      h(
-        "p",
-        {
-          className:
-            "project-description"
-        },
-        project.description ||
-          "No project description available."
-      )
-    ),
-
-    // ========================================
-    // LOCATION
-    // ========================================
-
-    h(
-      "section",
-      {
-        className:
-          "project-details-section"
-      },
-
-      h(
-        "h2",
-        null,
-        "Location"
       ),
 
       h(
         "div",
         {
           className:
-            "project-location-card"
+            "project-info-card"
         },
 
         h(
-          "p",
-          null,
-          project.location ||
-            [
-              project.municipality,
-              project.district,
-              project.province
-            ]
-              .filter(Boolean)
-              .join(", ") ||
-            "Location not available"
+          "div",
+          {
+            className:
+              "project-info-icon"
+          },
+          "📍"
         ),
 
-        project.latitude !==
-            undefined &&
-        project.longitude !==
-            undefined
-          ? h(
-              "p",
-              {
-                className:
-                  "project-coordinates"
-              },
-              `Coordinates: ${
-                project.latitude
-              }, ${
-                project.longitude
-              }`
+        h(
+          "div",
+          null,
+
+          h(
+            "span",
+            null,
+            "Location"
+          ),
+
+          h(
+            "strong",
+            null,
+            locationText
+          )
+        )
+      )
+    ),
+
+    /* MAIN GRID */
+
+    h(
+      "div",
+      {
+        className:
+          "project-details-main-grid"
+      },
+
+      /* LEFT */
+
+      h(
+        "div",
+        {
+          className:
+            "project-details-main-column"
+        },
+
+        h(
+          "div",
+          {
+            className:
+              "project-details-section"
+          },
+
+          h(
+            "div",
+            {
+              className:
+                "project-section-heading"
+            },
+
+            h(
+              "div",
+              null,
+
+              h(
+                "span",
+                null,
+                "📋"
+              ),
+
+              h(
+                "div",
+                null,
+
+                h(
+                  "h2",
+                  null,
+                  "Project Overview"
+                ),
+
+                h(
+                  "p",
+                  null,
+                  "Basic information about this government project."
+                )
+              )
             )
-          : null
-      )
-    ),
+          ),
 
-    // ========================================
-    // TIMELINE
-    // ========================================
+          h(
+            "div",
+            {
+              className:
+                "project-overview-grid"
+            },
 
-    h(
-      "section",
-      {
-        className:
-          "project-details-section"
-      },
+            h(
+              "div",
+              null,
+              h(
+                "span",
+                null,
+                "Project Name"
+              ),
+              h(
+                "strong",
+                null,
+                project.name ||
+                  project.projectName ||
+                  "—"
+              )
+            ),
+
+            h(
+              "div",
+              null,
+              h(
+                "span",
+                null,
+                "Project Code"
+              ),
+              h(
+                "strong",
+                null,
+                project.projectCode ||
+                  "—"
+              )
+            ),
+
+            h(
+              "div",
+              null,
+              h(
+                "span",
+                null,
+                "Province"
+              ),
+              h(
+                "strong",
+                null,
+                project.province ||
+                  "—"
+              )
+            ),
+
+            h(
+              "div",
+              null,
+              h(
+                "span",
+                null,
+                "District"
+              ),
+              h(
+                "strong",
+                null,
+                project.district ||
+                  "—"
+              )
+            ),
+
+            h(
+              "div",
+              null,
+              h(
+                "span",
+                null,
+                "Municipality"
+              ),
+              h(
+                "strong",
+                null,
+                project.municipality ||
+                  "—"
+              )
+            ),
+
+            h(
+              "div",
+              null,
+              h(
+                "span",
+                null,
+                "Start Date"
+              ),
+              h(
+                "strong",
+                null,
+                formatDate(
+                  project.startDate ||
+                  project.createdAt
+                )
+              )
+            )
+          ),
+
+          project.description
+            ? h(
+                "div",
+                {
+                  className:
+                    "project-description-box"
+                },
+
+                h(
+                  "span",
+                  null,
+                  "Description"
+                ),
+
+                h(
+                  "p",
+                  null,
+                  project.description
+                )
+              )
+            : null
+        ),
+
+        h(
+          "div",
+          {
+            className:
+              "project-details-section"
+          },
+
+          h(
+            "div",
+            {
+              className:
+                "project-section-heading"
+            },
+
+            h(
+              "div",
+              null,
+
+              h(
+                "span",
+                null,
+                "📈"
+              ),
+
+              h(
+                "div",
+                null,
+
+                h(
+                  "h2",
+                  null,
+                  "Project Progress"
+                ),
+
+                h(
+                  "p",
+                  null,
+                  "Current implementation progress."
+                )
+              )
+            )
+          ),
+
+          h(
+            ProjectProgressCard,
+            {
+              progress:
+                currentProgress,
+              status:
+                project.status
+            }
+          )
+        ),
+
+        h(
+          "div",
+          {
+            className:
+              "project-details-section"
+          },
+
+          h(
+            "div",
+            {
+              className:
+                "project-section-heading"
+            },
+
+            h(
+              "div",
+              null,
+
+              h(
+                "span",
+                null,
+                "🕒"
+              ),
+
+              h(
+                "div",
+                null,
+
+                h(
+                  "h2",
+                  null,
+                  "Project Timeline"
+                ),
+
+                h(
+                  "p",
+                  null,
+                  "Project activities and progress history."
+                )
+              )
+            )
+          ),
+
+          timelineLoading
+            ? h(
+                "div",
+                {
+                  className:
+                    "project-section-loading"
+                },
+                "Loading timeline..."
+              )
+            : h(
+                ProjectTimeline,
+                {
+                  timeline:
+                    timeline
+                }
+              )
+        )
+      ),
+
+      /* RIGHT */
 
       h(
         "div",
         {
           className:
-            "project-section-heading"
+            "project-details-side-column"
         },
 
         h(
           "div",
-          null,
+          {
+            className:
+              "project-details-section"
+          },
+
           h(
-            "h2",
-            null,
-            "Project Timeline"
+            "div",
+            {
+              className:
+                "project-section-heading"
+            },
+
+            h(
+              "div",
+              null,
+
+              h(
+                "span",
+                null,
+                "📊"
+              ),
+
+              h(
+                "div",
+                null,
+
+                h(
+                  "h2",
+                  null,
+                  "Progress History"
+                ),
+
+                h(
+                  "p",
+                  null,
+                  "Reported project progress."
+                )
+              )
+            )
           ),
 
           h(
-            "p",
-            null,
-            "Project activity and field progress history."
+            ProgressHistory,
+            {
+              history:
+                progressHistory
+            }
+          )
+        ),
+
+        h(
+          "div",
+          {
+            className:
+              "project-details-section"
+          },
+
+          h(
+            "div",
+            {
+              className:
+                "project-section-heading"
+            },
+
+            h(
+              "div",
+              null,
+
+              h(
+                "span",
+                null,
+                "📌"
+              ),
+
+              h(
+                "div",
+                null,
+
+                h(
+                  "h2",
+                  null,
+                  "Project Summary"
+                )
+              )
+            )
+          ),
+
+          h(
+            "div",
+            {
+              className:
+                "project-summary-list"
+            },
+
+            h(
+              "div",
+              null,
+              h(
+                "span",
+                null,
+                "Field Reports"
+              ),
+              h(
+                "strong",
+                null,
+                timelineSummary?.totalFieldReports ??
+                  0
+              )
+            ),
+
+            h(
+              "div",
+              null,
+              h(
+                "span",
+                null,
+                "Latest Report Progress"
+              ),
+              h(
+                "strong",
+                null,
+                `${
+                  timelineSummary?.latestReportedProgress ??
+                  currentProgress
+                }%`
+              )
+            ),
+
+            h(
+              "div",
+              null,
+              h(
+                "span",
+                null,
+                "Progress Difference"
+              ),
+              h(
+                "strong",
+                null,
+                `${
+                  timelineSummary?.progressDifference ??
+                  0
+                }%`
+              )
+            ),
+
+            h(
+              "div",
+              null,
+              h(
+                "span",
+                null,
+                "Completion"
+              ),
+              h(
+                "strong",
+                null,
+                currentProgress >= 100
+                  ? "Completed"
+                  : `${100 - currentProgress}% remaining`
+              )
+            )
+          )
+        ),
+
+        h(
+          "div",
+          {
+            className:
+              "project-details-section"
+          },
+
+          h(
+            "div",
+            {
+              className:
+                "project-section-heading"
+            },
+
+            h(
+              "div",
+              null,
+
+              h(
+                "span",
+                null,
+                "📍"
+              ),
+
+              h(
+                "div",
+                null,
+
+                h(
+                  "h2",
+                  null,
+                  "Location"
+                )
+              )
+            )
+          ),
+
+          h(
+            "div",
+            {
+              className:
+                "project-location-box"
+            },
+
+            h(
+              "strong",
+              null,
+              locationText
+            ),
+
+            project.latitude &&
+            project.longitude
+              ? h(
+                  "p",
+                  null,
+                  `Coordinates: ${project.latitude}, ${project.longitude}`
+                )
+              : h(
+                  "p",
+                  null,
+                  "Coordinates not available."
+                )
           )
         )
-      ),
-
-      h(
-        ProjectTimeline,
-        {
-          timeline
-        }
       )
     )
   );

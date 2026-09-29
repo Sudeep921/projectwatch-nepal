@@ -1,309 +1,162 @@
 import React, {
-  useEffect,
   useState
 } from "react";
 
 import {
-  useLocation,
-  useNavigate
-} from "react-router-dom";
-
-import {
-  getPublicProjects,
   submitPublicComplaint
 } from "../services/api";
 
 const h = React.createElement;
 
-const CATEGORIES = [
-  "Delay",
-  "Quality",
-  "Budget",
-  "Contractor",
-  "Safety",
-  "Other"
-];
+const PublicComplaint = () => {
+  const [form, setForm] =
+    useState({
+      name: "",
+      phone: "",
+      email: "",
+      project: "",
+      location: "",
+      category: "",
+      priority: "normal",
+      description: ""
+    });
 
-const PublicComplaintForm = () => {
-  const navigate =
-    useNavigate();
+  const [file, setFile] =
+    useState(null);
 
-  const routerLocation =
-    useLocation();
+  const [loading, setLoading] =
+    useState(false);
 
-  const preset =
-    routerLocation.state || {};
+  const [success, setSuccess] =
+    useState(null);
 
-  const [
-    projects,
-    setProjects
-  ] = useState([]);
+  const [error, setError] =
+    useState("");
 
-  const [
-    submitted,
-    setSubmitted
-  ] = useState(false);
+  const update = (
+    field,
+    value
+  ) => {
+    setForm((current) => ({
+      ...current,
+      [field]: value
+    }));
+  };
 
-  const [
-    submitting,
-    setSubmitting
-  ] = useState(false);
+  const submit = async (e) => {
+    e.preventDefault();
 
-  const [
-    error,
-    setError
-  ] = useState("");
+    setError("");
+    setSuccess(null);
 
-  const [
-    form,
-    setForm
-  ] = useState({
-    project:
-      preset.projectId || "",
-    citizenName: "",
-    citizenPhone: "",
-    citizenEmail: "",
-    title: "",
-    category: "Other",
-    location: "",
-    description: ""
-  });
-
-  useEffect(() => {
-    getPublicProjects()
-      .then((data) =>
-        setProjects(
-          data.projects || []
-        )
-      )
-      .catch(() =>
-        setProjects([])
+    if (
+      !form.description.trim()
+    ) {
+      setError(
+        "Please describe your complaint."
       );
-  }, []);
+      return;
+    }
 
-  const update =
-    (key) =>
-    (event) => {
-      setForm((previous) => ({
-        ...previous,
-        [key]:
-          event.target.value
-      }));
-    };
+    try {
+      setLoading(true);
 
-  const submit =
-    async (event) => {
-      event.preventDefault();
+      const data =
+        new FormData();
 
-      if (
-        !form.citizenName.trim() ||
-        !form.citizenPhone.trim() ||
-        !form.title.trim() ||
-        !form.description.trim()
-      ) {
-        setError(
-          "Please fill in your name, phone, subject and description."
+      Object.keys(form).forEach(
+        (key) => {
+          if (
+            form[key] !== undefined &&
+            form[key] !== ""
+          ) {
+            data.append(
+              key,
+              form[key]
+            );
+          }
+        }
+      );
+
+      if (file) {
+        data.append(
+          "evidence",
+          file
         );
-        return;
       }
 
-      try {
-        setSubmitting(true);
-        setError("");
-
+      const response =
         await submitPublicComplaint(
-          form
+          data
         );
 
-        setSubmitted(true);
-      } catch (err) {
-        setError(
-          err.message ||
-            "Unable to submit your complaint. Please try again."
-        );
-      } finally {
-        setSubmitting(false);
-      }
-    };
+      setSuccess(
+        response?.complaintId ||
+        response?.complaint
+          ?.complaintId ||
+        "Complaint submitted successfully."
+      );
 
-  if (submitted) {
-    return h(
-      "div",
-      {
-        className:
-          "public-portal"
-      },
+      setForm({
+        name: "",
+        phone: "",
+        email: "",
+        project: "",
+        location: "",
+        category: "",
+        priority: "normal",
+        description: ""
+      });
 
-      h(
-        "header",
-        {
-          className:
-            "public-header"
-        },
-
-        h(
-          "div",
-          {
-            className:
-              "public-header-brand",
-            style: {
-              cursor: "pointer"
-            },
-            onClick: () =>
-              navigate("/")
-          },
-
-          h(
-            "div",
-            {
-              className:
-                "public-header-logo"
-            },
-            "PW"
-          ),
-
-          h(
-            "strong",
-            null,
-            "ProjectWatch Nepal"
-          )
-        )
-      ),
-
-      h(
-        "div",
-        {
-          className:
-            "public-confirm-wrap"
-        },
-
-        h(
-          "div",
-          {
-            className:
-              "public-confirm-icon"
-          },
-          "✓"
-        ),
-
-        h(
-          "h2",
-          null,
-          "Complaint Submitted"
-        ),
-
-        h(
-          "p",
-          null,
-          "Thank you. Your report has been recorded and will be reviewed by ProjectWatch officers."
-        ),
-
-        h(
-          "button",
-          {
-            className:
-              "primary-button",
-            onClick: () =>
-              navigate("/")
-          },
-          "← Back to Home"
-        )
-      )
-    );
-  }
+      setFile(null);
+    } catch (err) {
+      setError(
+        err.message ||
+        "Failed to submit complaint."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return h(
     "div",
     {
       className:
-        "public-portal"
+        "public-complaint-page"
     },
 
     h(
-      "header",
+      "div",
       {
         className:
-          "public-header"
+          "public-complaint-card"
       },
 
       h(
         "div",
         {
           className:
-            "public-header-brand",
-          style: {
-            cursor: "pointer"
-          },
-          onClick: () =>
-            navigate("/")
+            "public-complaint-heading"
         },
 
         h(
-          "div",
-          {
-            className:
-              "public-header-logo"
-          },
-          "PW"
+          "span",
+          null,
+          "📢"
         ),
 
         h(
-          "strong",
+          "h1",
           null,
-          "ProjectWatch Nepal"
+          "Report a Public Issue"
+        ),
+
+        h(
+          "p",
+          null,
+          "Submit a complaint or report about a government project."
         )
-      ),
-
-      h(
-        "a",
-        {
-          href: "/admin-login"
-        },
-        "Admin Login"
-      )
-    ),
-
-    h(
-      "div",
-      {
-        className:
-          "public-form-wrap"
-      },
-
-      h(
-        "button",
-        {
-          className:
-            "public-back-button",
-          onClick: () =>
-            navigate("/")
-        },
-        "← Back"
-      ),
-
-      h(
-        "span",
-        {
-          className: "eyebrow"
-        },
-        "CITIZEN REPORT"
-      ),
-
-      h(
-        "h1",
-        null,
-        "Report a Project Issue"
-      ),
-
-      h(
-        "p",
-        {
-          className:
-            "public-form-subtitle"
-        },
-        preset.projectName
-          ? `Reporting about: ${preset.projectName}`
-          : "Tell us about a delay, quality concern, or other issue with a government project. No login needed."
       ),
 
       error
@@ -311,18 +164,37 @@ const PublicComplaintForm = () => {
             "div",
             {
               className:
-                "form-error"
+                "public-complaint-error"
             },
-            "⚠ ",
             error
+          )
+        : null,
+
+      success
+        ? h(
+            "div",
+            {
+              className:
+                "public-complaint-success"
+            },
+
+            h(
+              "strong",
+              null,
+              "Complaint submitted successfully!"
+            ),
+
+            h(
+              "p",
+              null,
+              `Your reference: ${success}`
+            )
           )
         : null,
 
       h(
         "form",
         {
-          className:
-            "public-complaint-form",
           onSubmit: submit
         },
 
@@ -330,304 +202,247 @@ const PublicComplaintForm = () => {
           "div",
           {
             className:
-              "form-grid"
+              "public-complaint-grid"
           },
 
           h(
-            "div",
+            "input",
             {
-              className:
-                "form-group"
-            },
-
-            h(
-              "label",
-              null,
-              "Your Full Name *"
-            ),
-
-            h(
-              "input",
-              {
-                value:
-                  form.citizenName,
-                onChange:
-                  update(
-                    "citizenName"
-                  ),
-                placeholder:
-                  "e.g. Sita Sharma",
-                required: true
-              }
-            )
+              value: form.name,
+              onChange: (e) =>
+                update(
+                  "name",
+                  e.target.value
+                ),
+              placeholder:
+                "Your name (optional)"
+            }
           ),
 
           h(
-            "div",
+            "input",
             {
-              className:
-                "form-group"
-            },
-
-            h(
-              "label",
-              null,
-              "Phone Number *"
-            ),
-
-            h(
-              "input",
-              {
-                value:
-                  form.citizenPhone,
-                onChange:
-                  update(
-                    "citizenPhone"
-                  ),
-                placeholder:
-                  "98XXXXXXXX",
-                required: true
-              }
-            )
+              value: form.phone,
+              onChange: (e) =>
+                update(
+                  "phone",
+                  e.target.value
+                ),
+              placeholder:
+                "Phone (optional)"
+            }
           ),
 
           h(
-            "div",
+            "input",
             {
-              className:
-                "form-group"
-            },
-
-            h(
-              "label",
-              null,
-              "Email (optional)"
-            ),
-
-            h(
-              "input",
-              {
-                type: "email",
-                value:
-                  form.citizenEmail,
-                onChange:
-                  update(
-                    "citizenEmail"
-                  ),
-                placeholder:
-                  "you@example.com"
-              }
-            )
+              type: "email",
+              value: form.email,
+              onChange: (e) =>
+                update(
+                  "email",
+                  e.target.value
+                ),
+              placeholder:
+                "Email (optional)"
+            }
           ),
 
           h(
-            "div",
+            "input",
             {
-              className:
-                "form-group"
+              value:
+                form.project,
+              onChange: (e) =>
+                update(
+                  "project",
+                  e.target.value
+                ),
+              placeholder:
+                "Project name or code"
+            }
+          ),
+
+          h(
+            "input",
+            {
+              value:
+                form.location,
+              onChange: (e) =>
+                update(
+                  "location",
+                  e.target.value
+                ),
+              placeholder:
+                "Issue location"
+            }
+          ),
+
+          h(
+            "select",
+            {
+              value:
+                form.category,
+              onChange: (e) =>
+                update(
+                  "category",
+                  e.target.value
+                )
             },
 
             h(
-              "label",
-              null,
-              "Related Project"
+              "option",
+              { value: "" },
+              "Issue category"
             ),
 
             h(
-              "select",
+              "option",
               {
                 value:
-                  form.project,
-                onChange:
-                  update(
-                    "project"
-                  )
+                  "project-delay"
               },
-
-              h(
-                "option",
-                { value: "" },
-                "Not sure / general complaint"
-              ),
-
-              projects.map(
-                (p) =>
-                  h(
-                    "option",
-                    {
-                      key: p._id,
-                      value: p._id
-                    },
-                    p.name ||
-                      p.projectName ||
-                      p.projectCode
-                  )
-              )
-            )
-          ),
-
-          h(
-            "div",
-            {
-              className:
-                "form-group"
-            },
-
-            h(
-              "label",
-              null,
-              "Category"
+              "Project Delay"
             ),
 
             h(
-              "select",
+              "option",
               {
                 value:
-                  form.category,
-                onChange:
-                  update(
-                    "category"
-                  )
+                  "quality"
               },
+              "Construction Quality"
+            ),
 
-              CATEGORIES.map(
-                (x) =>
-                  h(
-                    "option",
-                    {
-                      key: x,
-                      value: x
-                    },
-                    x
-                  )
-              )
+            h(
+              "option",
+              {
+                value:
+                  "corruption"
+              },
+              "Irregularity"
+            ),
+
+            h(
+              "option",
+              {
+                value:
+                  "environment"
+              },
+              "Environment"
+            ),
+
+            h(
+              "option",
+              {
+                value:
+                  "other"
+              },
+              "Other"
             )
           ),
 
           h(
-            "div",
+            "select",
             {
-              className:
-                "form-group"
+              value:
+                form.priority,
+              onChange: (e) =>
+                update(
+                  "priority",
+                  e.target.value
+                )
             },
 
             h(
-              "label",
-              null,
-              "Location / Site"
+              "option",
+              {
+                value:
+                  "normal"
+              },
+              "Normal Priority"
             ),
 
             h(
-              "input",
+              "option",
               {
                 value:
-                  form.location,
-                onChange:
-                  update(
-                    "location"
-                  ),
-                placeholder:
-                  "Ward, tole, or landmark"
-              }
-            )
-          ),
-
-          h(
-            "div",
-            {
-              className:
-                "form-group full"
-            },
-
-            h(
-              "label",
-              null,
-              "Subject *"
+                  "high"
+              },
+              "High Priority"
             ),
 
             h(
-              "input",
+              "option",
               {
                 value:
-                  form.title,
-                onChange:
-                  update(
-                    "title"
-                  ),
-                placeholder:
-                  "Brief summary of the issue",
-                required: true
-              }
-            )
-          ),
-
-          h(
-            "div",
-            {
-              className:
-                "form-group full"
-            },
-
-            h(
-              "label",
-              null,
-              "Description *"
-            ),
-
-            h(
-              "textarea",
-              {
-                rows: 6,
-                value:
-                  form.description,
-                onChange:
-                  update(
-                    "description"
-                  ),
-                placeholder:
-                  "Describe what you observed in detail...",
-                required: true
-              }
+                  "critical"
+              },
+              "Critical"
             )
           )
+        ),
+
+        h(
+          "textarea",
+          {
+            value:
+              form.description,
+            onChange: (e) =>
+              update(
+                "description",
+                e.target.value
+              ),
+            placeholder:
+              "Describe the issue in detail...",
+            rows: 7,
+            required: true
+          }
         ),
 
         h(
           "div",
           {
             className:
-              "public-form-actions"
+              "public-complaint-file"
           },
 
           h(
-            "button",
-            {
-              type: "button",
-              className:
-                "secondary-button",
-              onClick: () =>
-                navigate("/")
-            },
-            "Cancel"
+            "label",
+            null,
+            "Attach photo/evidence (optional)"
           ),
 
           h(
-            "button",
+            "input",
             {
-              type: "submit",
-              className:
-                "primary-button",
-              disabled:
-                submitting
-            },
-            submitting
-              ? "Submitting..."
-              : "Submit Complaint"
+              type: "file",
+              accept:
+                "image/*,.pdf,.doc,.docx",
+              onChange: (e) =>
+                setFile(
+                  e.target.files?.[0] ||
+                  null
+                )
+            }
           )
+        ),
+
+        h(
+          "button",
+          {
+            type: "submit",
+            disabled: loading,
+            className:
+              "public-complaint-submit"
+          },
+          loading
+            ? "Submitting..."
+            : "Submit Complaint"
         )
       )
     )
   );
 };
 
-export default PublicComplaintForm;
+export default PublicComplaint;

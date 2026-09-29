@@ -7,10 +7,28 @@ const roleMiddleware = (...allowedRoles) => {
       });
     }
 
-    if (!allowedRoles.includes(req.user.role)) {
+    const userRole =
+      String(
+        req.user.role || ""
+      ).toLowerCase();
+
+    const allowed =
+      allowedRoles.map(
+        (role) =>
+          String(
+            role
+          ).toLowerCase()
+      );
+
+    if (
+      !allowed.includes(
+        userRole
+      )
+    ) {
       return res.status(403).json({
         success: false,
-        message: "You do not have permission to perform this action"
+        message:
+          "You do not have permission to access this resource."
       });
     }
 
@@ -18,4 +36,5 @@ const roleMiddleware = (...allowedRoles) => {
   };
 };
 
-module.exports = roleMiddleware;
+module.exports =
+  roleMiddleware;

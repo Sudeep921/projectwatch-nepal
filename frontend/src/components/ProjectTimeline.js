@@ -1,21 +1,187 @@
-import React from "react";
+import React, {
+  useMemo,
+  useState
+} from "react";
 
 const h = React.createElement;
 
 const ProjectTimeline = ({
   timeline = []
 }) => {
-  if (
-    !timeline ||
-    timeline.length === 0
-  ) {
+  const [filter, setFilter] =
+    useState("all");
+
+  const [expanded, setExpanded] =
+    useState(null);
+
+  const items = Array.isArray(timeline)
+    ? timeline
+    : [];
+
+  const filteredItems = useMemo(() => {
+    if (filter === "all") {
+      return items;
+    }
+
+    if (filter === "report") {
+      return items.filter(
+        (item) =>
+          item.type === "field_report" ||
+          item.type === "report"
+      );
+    }
+
+    if (filter === "progress") {
+      return items.filter(
+        (item) =>
+          item.progress !== undefined &&
+          item.progress !== null
+      );
+    }
+
+    if (filter === "completed") {
+      return items.filter(
+        (item) =>
+          String(
+            item.status || ""
+          ).toLowerCase() ===
+            "completed" ||
+          item.type === "completed"
+      );
+    }
+
+    return items;
+  }, [items, filter]);
+
+  const getType = (item) => {
+    if (
+      item.type === "completed" ||
+      String(item.status || "").toLowerCase() ===
+        "completed"
+    ) {
+      return "completed";
+    }
+
+    if (
+      item.type === "field_report" ||
+      item.type === "report"
+    ) {
+      return "report";
+    }
+
+    return "project";
+  };
+
+  const getIcon = (type) => {
+    if (type === "completed") {
+      return "✓";
+    }
+
+    if (type === "report") {
+      return "📋";
+    }
+
+    return "🚀";
+  };
+
+  const getTitle = (item, type) => {
+    if (item.title) {
+      return item.title;
+    }
+
+    if (type === "completed") {
+      return "Project Completed";
+    }
+
+    if (type === "report") {
+      return "Field Report";
+    }
+
+    return "Project Started";
+  };
+
+  const getDate = (item) => {
+    const value =
+      item.date ||
+      item.createdAt ||
+      item.reportDate ||
+      item.timestamp;
+
+    if (!value) {
+      return "Date unavailable";
+    }
+
+    try {
+      return new Date(
+        value
+      ).toLocaleString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    } catch {
+      return "Date unavailable";
+    }
+  };
+
+  const getProgress = (item) => {
+    if (
+      item.progress !== undefined &&
+      item.progress !== null
+    ) {
+      return Number(item.progress);
+    }
+
+    if (
+      item.reportedProgress !== undefined &&
+      item.reportedProgress !== null
+    ) {
+      return Number(
+        item.reportedProgress
+      );
+    }
+
+    return null;
+  };
+
+  const toggleItem = (index) => {
+    setExpanded(
+      expanded === index
+        ? null
+        : index
+    );
+  };
+
+  if (!items.length) {
     return h(
       "div",
       {
         className:
-          "timeline-empty"
+          "advanced-timeline-empty"
       },
-      "No timeline updates available."
+
+      h(
+        "div",
+        {
+          className:
+            "advanced-timeline-empty-icon"
+        },
+        "🕒"
+      ),
+
+      h(
+        "strong",
+        null,
+        "No timeline activity yet"
+      ),
+
+      h(
+        "p",
+        null,
+        "Project activities and field reports will appear here."
+      )
     );
   }
 
@@ -23,224 +189,203 @@ const ProjectTimeline = ({
     "div",
     {
       className:
-        "project-timeline"
+        "advanced-project-timeline"
     },
 
-    timeline.map(
-      (item, index) => {
-        /* =========================
-           DATE
-        ========================= */
+    h(
+      "div",
+      {
+        className:
+          "timeline-filter-bar"
+      },
 
-        const dateValue =
-          item.date ||
-          item.createdAt ||
-          item.updatedAt;
+      h(
+        "button",
+        {
+          className:
+            filter === "all"
+              ? "timeline-filter active"
+              : "timeline-filter",
+          onClick: () =>
+            setFilter("all")
+        },
+        "All"
+      ),
 
-        const formattedDate =
-          dateValue
-            ? new Date(
-                dateValue
-              ).toLocaleDateString(
-                "en-US",
-                {
-                  year: "numeric",
-                  month: "short",
-                  day: "numeric"
-                }
-              )
-            : "";
+      h(
+        "button",
+        {
+          className:
+            filter === "project"
+              ? "timeline-filter active"
+              : "timeline-filter",
+          onClick: () =>
+            setFilter("project")
+        },
+        "Project"
+      ),
 
-        /* =========================
-           PROGRESS
-        ========================= */
+      h(
+        "button",
+        {
+          className:
+            filter === "report"
+              ? "timeline-filter active"
+              : "timeline-filter",
+          onClick: () =>
+            setFilter("report")
+        },
+        "Reports"
+      ),
 
-        const rawProgress =
-          item.progress ??
-          item.reportedProgress;
+      h(
+        "button",
+        {
+          className:
+            filter === "progress"
+              ? "timeline-filter active"
+              : "timeline-filter",
+          onClick: () =>
+            setFilter("progress")
+        },
+        "Progress"
+      ),
 
-        const hasProgress =
-          rawProgress !==
-            undefined &&
-          rawProgress !== null &&
-          rawProgress !== "";
+      h(
+        "button",
+        {
+          className:
+            filter === "completed"
+              ? "timeline-filter active"
+              : "timeline-filter",
+          onClick: () =>
+            setFilter("completed")
+        },
+        "Completed"
+      )
+    ),
 
-        const progress =
-          hasProgress
-            ? Math.min(
-                100,
-                Math.max(
-                  0,
-                  Number(
-                    rawProgress
-                  ) || 0
-                )
-              )
-            : 0;
+    h(
+      "div",
+      {
+        className:
+          "timeline-count"
+      },
+      `${filteredItems.length} timeline ${
+        filteredItems.length === 1
+          ? "event"
+          : "events"
+      }`
+    ),
 
-        /* =========================
-           TITLE
-        ========================= */
+    h(
+      "div",
+      {
+        className:
+          "timeline-list"
+      },
 
-        const title =
-          item.title ||
-          item.status ||
-          (
-            item.reportedProgress !==
-              undefined
-              ? "Field Report Update"
-              : `Project Update ${
-                  index + 1
-                }`
-          );
+      filteredItems.map(
+        (item, index) => {
+          const type =
+            getType(item);
 
-        /* =========================
-           DESCRIPTION
-        ========================= */
+          const progress =
+            getProgress(item);
 
-        const description =
-          item.description ||
-          item.observation ||
-          "";
+          const isOpen =
+            expanded === index;
 
-        /* =========================
-           OFFICER
-        ========================= */
-
-        const officerName =
-          typeof item.officer ===
-          "object"
-            ? (
-                item.officer?.name ||
-                item.officer?.email ||
-                ""
-              )
-            : (
-                item.officer ||
-                ""
-              );
-
-        /* =========================
-           LOCATION
-        ========================= */
-
-        const location =
-          item.location ||
-          "";
-
-        return h(
-          "div",
-          {
-            className:
-              "timeline-item",
-
-            key:
-              item._id ||
-              item.id ||
-              index
-          },
-
-          /* =======================
-             MARKER
-          ======================= */
-
-          h(
+          return h(
             "div",
             {
+              key:
+                item._id ||
+                item.id ||
+                `${index}-${getDate(
+                  item
+                )}`,
               className:
-                "timeline-marker"
+                "timeline-event"
             },
-
-            h(
-              "span",
-              null,
-              item.reportedProgress !==
-                undefined
-                ? "◉"
-                : "✓"
-            )
-          ),
-
-          /* =======================
-             CONTENT
-          ======================= */
-
-          h(
-            "div",
-            {
-              className:
-                "timeline-content"
-            },
-
-            /* HEADER */
 
             h(
               "div",
               {
                 className:
-                  "timeline-header"
+                  `timeline-marker timeline-marker-${type}`
+              },
+              getIcon(type)
+            ),
+
+            h(
+              "div",
+              {
+                className:
+                  "timeline-event-content"
               },
 
               h(
                 "div",
-                null,
-
-                h(
-                  "h4",
-                  null,
-                  title
-                ),
-
-                item.status
-                  ? h(
-                      "span",
-                      {
-                        className:
-                          "timeline-status"
-                      },
-                      item.status
-                    )
-                  : null
-              ),
-
-              h(
-                "span",
                 {
                   className:
-                    "timeline-date"
+                    "timeline-event-top"
                 },
-                formattedDate
-              )
-            ),
 
-            /* DESCRIPTION */
-
-            description
-              ? h(
-                  "p",
-                  {
-                    className:
-                      "timeline-description"
-                  },
-                  description
-                )
-              : null,
-
-            /* PROGRESS */
-
-            hasProgress
-              ? h(
+                h(
                   "div",
-                  {
-                    className:
-                      "timeline-progress"
-                  },
+                  null,
 
                   h(
+                    "strong",
+                    null,
+                    getTitle(
+                      item,
+                      type
+                    )
+                  ),
+
+                  h(
+                    "span",
+                    {
+                      className:
+                        `timeline-type-badge ${type}`
+                    },
+                    type ===
+                    "field_report"
+                      ? "Report"
+                      : type
+                  )
+                ),
+
+                h(
+                  "small",
+                  null,
+                  getDate(item)
+                )
+              ),
+
+              item.description ||
+              item.remarks ||
+              item.message
+                ? h(
+                    "p",
+                    {
+                      className:
+                        "timeline-event-description"
+                    },
+                    item.description ||
+                      item.remarks ||
+                      item.message
+                  )
+                : null,
+
+              progress !== null
+                ? h(
                     "div",
                     {
                       className:
-                        "timeline-progress-top"
+                        "timeline-progress-row"
                     },
 
                     h(
@@ -250,72 +395,121 @@ const ProjectTimeline = ({
                     ),
 
                     h(
+                      "div",
+                      {
+                        className:
+                          "timeline-progress-track"
+                      },
+
+                      h(
+                        "div",
+                        {
+                          className:
+                            "timeline-progress-fill",
+                          style: {
+                            width:
+                              `${Math.min(
+                                100,
+                                Math.max(
+                                  0,
+                                  progress
+                                )
+                              )}%`
+                          }
+                        }
+                      )
+                    ),
+
+                    h(
                       "strong",
                       null,
                       `${progress}%`
                     )
-                  ),
+                  )
+                : null,
 
-                  h(
+              h(
+                "button",
+                {
+                  className:
+                    "timeline-view-button",
+                  onClick: () =>
+                    toggleItem(
+                      index
+                    )
+                },
+                isOpen
+                  ? "Hide details"
+                  : "View details"
+              ),
+
+              isOpen
+                ? h(
                     "div",
                     {
                       className:
-                        "timeline-progress-bar"
+                        "timeline-expanded"
                     },
 
-                    h("div", {
-                      className:
-                        "timeline-progress-fill",
+                    item.officer
+                      ? h(
+                          "div",
+                          null,
+                          h(
+                            "span",
+                            null,
+                            "Officer"
+                          ),
+                          h(
+                            "strong",
+                            null,
+                            item.officer.name ||
+                              item.officer.fullName ||
+                              item.officer.email ||
+                              "—"
+                          )
+                        )
+                      : null,
 
-                      style: {
-                        width:
-                          `${progress}%`
-                      }
-                    })
+                    item.status
+                      ? h(
+                          "div",
+                          null,
+                          h(
+                            "span",
+                            null,
+                            "Status"
+                          ),
+                          h(
+                            "strong",
+                            null,
+                            item.status
+                          )
+                        )
+                      : null,
+
+                    item.remarks
+                      ? h(
+                          "div",
+                          null,
+                          h(
+                            "span",
+                            null,
+                            "Remarks"
+                          ),
+                          h(
+                            "strong",
+                            null,
+                            item.remarks
+                          )
+                        )
+                      : null
                   )
-                )
-              : null,
-
-            /* OFFICER */
-
-            officerName
-              ? h(
-                  "div",
-                  {
-                    className:
-                      "timeline-meta"
-                  },
-
-                  h(
-                    "span",
-                    null,
-                    "👤 " +
-                      officerName
-                  )
-                )
-              : null,
-
-            /* LOCATION */
-
-            location
-              ? h(
-                  "div",
-                  {
-                    className:
-                      "timeline-meta"
-                  },
-
-                  h(
-                    "span",
-                    null,
-                    "📍 " +
-                      location
-                  )
-                )
-              : null
-          )
-        );
-      }
+                : null
+            )
+          );
+        }
+      )
     )
   );
 };

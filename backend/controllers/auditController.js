@@ -1,11 +1,71 @@
 const AuditLog = require("../models/AuditLog");
 
+// ========================================
+// GET AUDIT LOGS
+// ========================================
+
 const getAuditLogs = async (req, res) => {
   try {
-    const logs = await AuditLog.find()
-      .populate("user", "name email role")
-      .populate("project", "name projectCode")
-      .sort({ createdAt: -1 });
+    const {
+      search = "",
+      module = "all",
+      action = "all",
+      limit = 100
+    } = req.query;
+
+    const query = {};
+
+    if (module !== "all") {
+      query.module = module;
+    }
+
+    if (action !== "all") {
+      query.action = action;
+    }
+
+    if (search.trim()) {
+      query.$or = [
+        {
+          userName: {
+            $regex: search.trim(),
+            $options: "i"
+          }
+        },
+        {
+          userEmail: {
+            $regex: search.trim(),
+            $options: "i"
+          }
+        },
+        {
+          description: {
+            $regex: search.trim(),
+            $options: "i"
+          }
+        },
+        {
+          action: {
+            $regex: search.trim(),
+            $options: "i"
+          }
+        }
+      ];
+    }
+
+    const logs = await AuditLog.find(query)
+      .populate(
+        "user",
+        "name email role"
+      )
+      .sort({
+        createdAt: -1
+      })
+      .limit(
+        Math.min(
+          Number(limit) || 100,
+          500
+        )
+      );
 
     res.json({
       success: true,
@@ -13,106 +73,82 @@ const getAuditLogs = async (req, res) => {
       logs
     });
   } catch (error) {
-    console.error("Get audit logs error:", error);
+    console.error(
+      "AUDIT LOG ERROR:",
+      error
+    );
 
     res.status(500).json({
       success: false,
-      message: "Failed to fetch audit logs"
+      message:
+        "Failed to load audit logs"
     });
   }
 };
 
-const getAuditLog = async (req, res) => {
+// ========================================
+// CREATE AUDIT LOG
+// ========================================
+
+const createAuditLog = async ({
+  req,
+  user = null,
+  action,
+  module,
+  description = "",
+  metadata = {}
+}) => {
   try {
-    const log = await AuditLog.findById(req.params.id)
-      .populate("user", "name email role")
-      .populate("project", "name projectCode");
+    const currentUser =
+      user || req?.user || null;
 
-    if (!log) {
-      return res.status(404).json({
-        success: false,
-        message: "Audit log not found"
-      });
-    }
+    const log = new AuditLog({
+      user:
+        currentUser?._id ||
+        currentUser?.id ||
+        null,
 
-    res.json({
-      success: true,
-      log
-    });
-  } catch (error) {
-    console.error("Get audit log error:", error);
+      userName:
+        currentUser?.name ||
+        currentUser?.fullName ||
+        "",
 
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch audit log"
-    });
-  }
-};
+      userEmail:
+        currentUser?.email ||
+        "",
 
-const createAuditLog = async (req, res) => {
-  try {
-    const {
       action,
       module,
       description,
-      project,
+
+      ipAddress:
+        req?.headers?.["x-forwarded-for"] ||
+        req?.socket?.remoteAddress ||
+        "",
+
+      method:
+        req?.method || "",
+
+      endpoint:
+        req?.originalUrl || "",
+
       metadata
-    } = req.body;
-
-    const log = await AuditLog.create({
-      user: req.user ? req.user.id : null,
-      action,
-      module,
-      description,
-      project: project || null,
-      metadata: metadata || {}
     });
 
-    res.status(201).json({
-      success: true,
-      message: "Audit log created",
-      log
-    });
+    await log.save();
+
+    return log;
   } catch (error) {
-    console.error("Create audit log error:", error);
+    console.error(
+      "CREATE AUDIT LOG ERROR:",
+      error
+    );
 
-    res.status(500).json({
-      success: false,
-      message: "Failed to create audit log"
-    });
-  }
-};
-
-const deleteAuditLog = async (req, res) => {
-  try {
-    const log = await AuditLog.findById(req.params.id);
-
-    if (!log) {
-      return res.status(404).json({
-        success: false,
-        message: "Audit log not found"
-      });
-    }
-
-    await log.deleteOne();
-
-    res.json({
-      success: true,
-      message: "Audit log deleted"
-    });
-  } catch (error) {
-    console.error("Delete audit log error:", error);
-
-    res.status(500).json({
-      success: false,
-      message: "Failed to delete audit log"
-    });
+    return null;
   }
 };
 
 module.exports = {
   getAuditLogs,
-  getAuditLog,
-  createAuditLog,
-  deleteAuditLog
+  createAuditLog
 };

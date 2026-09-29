@@ -13,509 +13,176 @@ import {
 const h = React.createElement;
 
 const Alerts = () => {
-  const [alerts, setAlerts] = useState([]);
+  const [
+    alerts,
+    setAlerts
+  ] = useState([]);
 
-  const [loading, setLoading] =
-    useState(true);
+  const [
+    loading,
+    setLoading
+  ] = useState(true);
 
-  const [refreshing, setRefreshing] =
-    useState(false);
+  const [
+    error,
+    setError
+  ] = useState("");
 
-  const [generating, setGenerating] =
-    useState(false);
+  const [
+    search,
+    setSearch
+  ] = useState("");
 
-  const [error, setError] =
-    useState("");
+  const [
+    severity,
+    setSeverity
+  ] = useState("all");
 
-  const [success, setSuccess] =
-    useState("");
+  const [
+    status,
+    setStatus
+  ] = useState("all");
 
-  const [searchTerm, setSearchTerm] =
-    useState("");
-
-  const [severityFilter, setSeverityFilter] =
-    useState("all");
-
-  const [statusFilter, setStatusFilter] =
-    useState("all");
-
-  const [projectFilter, setProjectFilter] =
-    useState("all");
-
-  // ========================================
-  // LOAD ALERTS
-  // ========================================
-
-  const loadAlerts = async (
-    showRefresh = false
-  ) => {
-    try {
-      if (showRefresh) {
-        setRefreshing(true);
-      } else {
+  const loadAlerts =
+    async () => {
+      try {
         setLoading(true);
+        setError("");
+
+        const response =
+          await getAlerts();
+
+        const data =
+          response?.alerts ||
+          response?.data ||
+          response ||
+          [];
+
+        setAlerts(
+          Array.isArray(data)
+            ? data
+            : []
+        );
+      } catch (err) {
+        console.error(
+          "ALERT LOAD ERROR:",
+          err
+        );
+
+        setError(
+          err.message ||
+          "Failed to load alerts."
+        );
+      } finally {
+        setLoading(false);
       }
-
-      setError("");
-
-      const data =
-        await getAlerts();
-
-      const alertData =
-        data?.alerts ??
-        data?.data ??
-        data ??
-        [];
-
-      setAlerts(
-        Array.isArray(alertData)
-          ? alertData
-          : []
-      );
-    } catch (err) {
-      console.error(
-        "ALERT LOAD ERROR:",
-        err
-      );
-
-      setError(
-        err?.message ||
-        "Failed to load alerts."
-      );
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+    };
 
   useEffect(() => {
     loadAlerts();
   }, []);
 
-  // ========================================
-  // HELPERS
-  // ========================================
-
-  const getAlertId = (alert) => {
-    return (
-      alert?._id ||
-      alert?.id ||
-      ""
-    );
-  };
-
-  const getSeverity = (alert) => {
-    return String(
-      alert?.severity ||
-      alert?.level ||
-      "medium"
-    ).toLowerCase();
-  };
-
-  const getStatus = (alert) => {
-    return String(
-      alert?.status ||
-      (alert?.resolved
-        ? "resolved"
-        : "active")
-    ).toLowerCase();
-  };
-
-  const getProjectId = (alert) => {
-    if (
-      typeof alert?.project ===
-      "string"
-    ) {
-      return alert.project;
-    }
-
-    return (
-      alert?.project?._id ||
-      alert?.project?.id ||
-      alert?.projectId ||
-      ""
-    );
-  };
-
-  const getProjectName = (alert) => {
-    if (
-      typeof alert?.project ===
-      "object" &&
-      alert.project
-    ) {
-      return (
-        alert.project.projectName ||
-        alert.project.name ||
-        alert.project.title ||
-        alert.project.projectCode ||
-        "Unknown Project"
-      );
-    }
-
-    return (
-      alert?.projectName ||
-      alert?.projectCode ||
-      "Unknown Project"
-    );
-  };
-
-  const getAlertTitle = (alert) => {
-    return (
-      alert?.title ||
-      alert?.name ||
-      alert?.type ||
-      "Project Alert"
-    );
-  };
-
-  const getAlertMessage = (alert) => {
-    return (
-      alert?.message ||
-      alert?.description ||
-      alert?.observation ||
-      "No alert details available."
-    );
-  };
-
-  const getAlertDate = (alert) => {
-    return (
-      alert?.createdAt ||
-      alert?.date ||
-      alert?.updatedAt ||
-      ""
-    );
-  };
-
-  const isResolved = (alert) => {
-    const status =
-      getStatus(alert);
-
-    return (
-      status === "resolved" ||
-      status === "closed" ||
-      status === "read" ||
-      alert?.resolved === true
-    );
-  };
-
-  // ========================================
-  // PROJECT LIST
-  // ========================================
-
-  const projectOptions = useMemo(() => {
-    const map = {};
-
-    alerts.forEach(
-      (alert) => {
-        const id =
-          getProjectId(alert);
-
-        if (!id) {
-          return;
-        }
-
-        if (!map[id]) {
-          map[id] =
-            getProjectName(alert);
-        }
-      }
-    );
-
-    return Object.entries(map);
-  }, [alerts]);
-
-  // ========================================
-  // FILTER
-  // ========================================
-
-  const filteredAlerts = useMemo(() => {
-    const search =
-      searchTerm
-        .trim()
-        .toLowerCase();
-
-    return alerts.filter(
-      (alert) => {
-        const title =
-          getAlertTitle(
-            alert
-          ).toLowerCase();
-
-        const message =
-          getAlertMessage(
-            alert
-          ).toLowerCase();
-
-        const project =
-          getProjectName(
-            alert
-          ).toLowerCase();
-
-        const severity =
-          getSeverity(alert);
-
-        const status =
-          getStatus(alert);
-
-        const projectId =
-          getProjectId(alert);
-
-        const matchesSearch =
-          !search ||
-          title.includes(search) ||
-          message.includes(search) ||
-          project.includes(search);
-
-        const matchesSeverity =
-          severityFilter ===
-          "all" ||
-          severity ===
-          severityFilter;
-
-        const matchesStatus =
-          statusFilter ===
-          "all" ||
-          (
-            statusFilter ===
-            "active"
-              ? !isResolved(alert)
-              : isResolved(alert)
-          );
-
-        const matchesProject =
-          projectFilter ===
-          "all" ||
-          String(projectId) ===
-          String(projectFilter);
-
-        return (
-          matchesSearch &&
-          matchesSeverity &&
-          matchesStatus &&
-          matchesProject
+  const handleResolve =
+    async (id) => {
+      try {
+        await resolveAlert(id);
+        await loadAlerts();
+      } catch (err) {
+        window.alert(
+          err.message ||
+          "Failed to resolve alert."
         );
       }
-    );
-  }, [
-    alerts,
-    searchTerm,
-    severityFilter,
-    statusFilter,
-    projectFilter
-  ]);
-
-  // ========================================
-  // SUMMARY
-  // ========================================
-
-  const summary = useMemo(() => {
-    const total =
-      alerts.length;
-
-    const critical =
-      alerts.filter(
-        (alert) =>
-          getSeverity(alert) ===
-          "critical"
-      ).length;
-
-    const high =
-      alerts.filter(
-        (alert) =>
-          getSeverity(alert) ===
-          "high"
-      ).length;
-
-    const active =
-      alerts.filter(
-        (alert) =>
-          !isResolved(alert)
-      ).length;
-
-    const resolved =
-      alerts.filter(
-        (alert) =>
-          isResolved(alert)
-      ).length;
-
-    return {
-      total,
-      critical,
-      high,
-      active,
-      resolved
     };
-  }, [alerts]);
 
-  // ========================================
-  // SORT ALERTS
-  // ========================================
-
-  const sortedAlerts = useMemo(() => {
-    return [
-      ...filteredAlerts
-    ].sort(
-      (a, b) => {
-        const dateA =
-          new Date(
-            getAlertDate(a) ||
-            0
-          ).getTime();
-
-        const dateB =
-          new Date(
-            getAlertDate(b) ||
-            0
-          ).getTime();
-
-        return dateB - dateA;
-      }
-    );
-  }, [
-    filteredAlerts
-  ]);
-
-  // ========================================
-  // RESOLVE ALERT
-  // ========================================
-
-  const handleResolve = async (
-    alert
-  ) => {
-    const id =
-      getAlertId(alert);
-
-    if (!id) {
-      setError(
-        "Alert ID not found."
-      );
-      return;
-    }
-
-    try {
-      setError("");
-      setSuccess("");
-
-      await resolveAlert(id);
-
-      setSuccess(
-        "Alert resolved successfully."
-      );
-
-      await loadAlerts(true);
-    } catch (err) {
-      console.error(
-        "RESOLVE ALERT ERROR:",
-        err
-      );
-
-      setError(
-        err?.message ||
-        "Failed to resolve alert."
-      );
-    }
-  };
-
-  // ========================================
-  // GENERATE ALERTS
-  // ========================================
-
-  const handleGenerateAlerts =
+  const handleGenerate =
     async () => {
       try {
-        setGenerating(true);
-        setError("");
-        setSuccess("");
-
         await generateAlerts();
-
-        setSuccess(
-          "Project alerts generated successfully."
-        );
-
-        await loadAlerts(true);
+        await loadAlerts();
       } catch (err) {
-        console.error(
-          "GENERATE ALERT ERROR:",
-          err
-        );
-
-        setError(
-          err?.message ||
+        window.alert(
+          err.message ||
           "Failed to generate alerts."
         );
-      } finally {
-        setGenerating(false);
       }
     };
 
-  // ========================================
-  // CLEAR FILTERS
-  // ========================================
+  const filteredAlerts =
+    useMemo(() => {
+      const q =
+        search
+          .trim()
+          .toLowerCase();
 
-  const clearFilters = () => {
-    setSearchTerm("");
-    setSeverityFilter("all");
-    setStatusFilter("all");
-    setProjectFilter("all");
-  };
+      return alerts.filter(
+        (alert) => {
+          const text =
+            [
+              alert.title,
+              alert.message,
+              alert.description,
+              alert.project?.name,
+              alert.projectName
+            ]
+              .filter(Boolean)
+              .join(" ")
+              .toLowerCase();
 
-  // ========================================
-  // SEVERITY CLASS
-  // ========================================
+          const level =
+            String(
+              alert.severity ||
+              alert.level ||
+              "medium"
+            ).toLowerCase();
 
-  const severityClass = (
-    severity
-  ) => {
-    switch (
-      String(
-        severity
-      ).toLowerCase()
-    ) {
-      case "critical":
-        return "alert-severity-critical";
+          const currentStatus =
+            alert.isResolved ||
+            alert.resolved
+              ? "resolved"
+              : "open";
 
-      case "high":
-        return "alert-severity-high";
+          return (
+            (!q ||
+              text.includes(q)) &&
+            (severity === "all" ||
+              level === severity) &&
+            (status === "all" ||
+              currentStatus === status)
+          );
+        }
+      );
+    }, [
+      alerts,
+      search,
+      severity,
+      status
+    ]);
 
-      case "medium":
-        return "alert-severity-medium";
+  const criticalCount =
+    alerts.filter(
+      (item) =>
+        String(
+          item.severity ||
+          item.level ||
+          ""
+        ).toLowerCase() ===
+        "critical"
+    ).length;
 
-      case "low":
-        return "alert-severity-low";
+  const openCount =
+    alerts.filter(
+      (item) =>
+        !item.isResolved &&
+        !item.resolved
+    ).length;
 
-      default:
-        return "alert-severity-medium";
-    }
-  };
-
-  // ========================================
-  // LOADING
-  // ========================================
-
-  if (loading) {
-    return h(
-      "div",
-      {
-        className:
-          "alerts-page"
-      },
-
-      h(
-        "div",
-        {
-          className:
-            "alerts-loading"
-        },
-
-        "Loading alerts..."
-      )
-    );
-  }
-
-  // ========================================
-  // MAIN
-  // ========================================
+  const resolvedCount =
+    alerts.filter(
+      (item) =>
+        item.isResolved ||
+        item.resolved
+    ).length;
 
   return h(
     "div",
@@ -523,10 +190,6 @@ const Alerts = () => {
       className:
         "alerts-page"
     },
-
-    // ======================================
-    // HEADER
-    // ======================================
 
     h(
       "div",
@@ -538,17 +201,15 @@ const Alerts = () => {
       h(
         "div",
         null,
-
         h(
           "h1",
           null,
           "Alerts"
         ),
-
         h(
           "p",
           null,
-          "Monitor critical project risks and system alerts."
+          "Monitor critical project and field-report alerts."
         )
       ),
 
@@ -562,114 +223,47 @@ const Alerts = () => {
         h(
           "button",
           {
-            className:
-              "alerts-generate-button",
-
+            type: "button",
             onClick:
-              handleGenerateAlerts,
-
-            disabled:
-              generating
+              handleGenerate
           },
-
-          generating
-            ? "Generating..."
-            : "⚡ Generate Alerts"
+          "⚡ Generate Alerts"
         ),
 
         h(
           "button",
           {
-            className:
-              "alerts-refresh-button",
-
-            onClick: () =>
-              loadAlerts(true),
-
-            disabled:
-              refreshing
+            type: "button",
+            onClick:
+              loadAlerts
           },
-
-          refreshing
-            ? "Refreshing..."
-            : "↻ Refresh"
+          "↻ Refresh"
         )
       )
     ),
-
-    // ======================================
-    // SUCCESS
-    // ======================================
-
-    success &&
-      h(
-        "div",
-        {
-          className:
-            "alerts-success"
-        },
-
-        success
-      ),
-
-    // ======================================
-    // ERROR
-    // ======================================
-
-    error &&
-      h(
-        "div",
-        {
-          className:
-            "alerts-error"
-        },
-
-        error
-      ),
-
-    // ======================================
-    // SUMMARY
-    // ======================================
 
     h(
       "div",
       {
         className:
-          "alerts-summary-grid"
+          "alerts-summary"
       },
 
       h(
         "div",
         {
           className:
-            "alerts-summary-card"
+            "alert-summary-card"
         },
-
         h(
-          "div",
-          {
-            className:
-              "alerts-summary-icon"
-          },
-
-          "🚨"
-        ),
-
-        h(
-          "div",
+          "strong",
           null,
-
-          h(
-            "strong",
-            null,
-            summary.total
-          ),
-
-          h(
-            "span",
-            null,
-            "Total Alerts"
-          )
+          alerts.length
+        ),
+        h(
+          "span",
+          null,
+          "Total Alerts"
         )
       ),
 
@@ -677,34 +271,17 @@ const Alerts = () => {
         "div",
         {
           className:
-            "alerts-summary-card"
+            "alert-summary-card"
         },
-
         h(
-          "div",
-          {
-            className:
-              "alerts-summary-icon"
-          },
-
-          "⚠️"
-        ),
-
-        h(
-          "div",
+          "strong",
           null,
-
-          h(
-            "strong",
-            null,
-            summary.critical
-          ),
-
-          h(
-            "span",
-            null,
-            "Critical"
-          )
+          openCount
+        ),
+        h(
+          "span",
+          null,
+          "Open"
         )
       ),
 
@@ -712,34 +289,17 @@ const Alerts = () => {
         "div",
         {
           className:
-            "alerts-summary-card"
+            "alert-summary-card"
         },
-
         h(
-          "div",
-          {
-            className:
-              "alerts-summary-icon"
-          },
-
-          "🔴"
-        ),
-
-        h(
-          "div",
+          "strong",
           null,
-
-          h(
-            "strong",
-            null,
-            summary.high
-          ),
-
-          h(
-            "span",
-            null,
-            "High"
-          )
+          criticalCount
+        ),
+        h(
+          "span",
+          null,
+          "Critical"
         )
       ),
 
@@ -747,127 +307,79 @@ const Alerts = () => {
         "div",
         {
           className:
-            "alerts-summary-card"
+            "alert-summary-card"
         },
-
         h(
-          "div",
-          {
-            className:
-              "alerts-summary-icon"
-          },
-
-          "🔔"
-        ),
-
-        h(
-          "div",
+          "strong",
           null,
-
-          h(
-            "strong",
-            null,
-            summary.active
-          ),
-
-          h(
-            "span",
-            null,
-            "Active"
-          )
+          resolvedCount
+        ),
+        h(
+          "span",
+          null,
+          "Resolved"
         )
       )
     ),
-
-    // ======================================
-    // TOOLBAR
-    // ======================================
 
     h(
       "div",
       {
         className:
-          "alerts-toolbar"
+          "alerts-filters"
       },
 
       h(
         "input",
         {
-          type: "search",
-
-          className:
-            "alerts-search",
-
-          value:
-            searchTerm,
-
-          onChange: (
-            event
-          ) =>
-            setSearchTerm(
-              event.target.value
-            ),
-
+          type: "text",
           placeholder:
-            "Search alerts, projects..."
+            "Search alerts...",
+          value: search,
+          onChange: (e) =>
+            setSearch(
+              e.target.value
+            )
         }
       ),
 
       h(
         "select",
         {
-          className:
-            "alerts-filter",
-
-          value:
-            severityFilter,
-
-          onChange: (
-            event
-          ) =>
-            setSeverityFilter(
-              event.target.value
+          value: severity,
+          onChange: (e) =>
+            setSeverity(
+              e.target.value
             )
         },
 
         h(
           "option",
-          {
-            value: "all"
-          },
+          { value: "all" },
           "All Severity"
         ),
 
         h(
           "option",
-          {
-            value:
-              "critical"
-          },
+          { value: "critical" },
           "Critical"
         ),
 
         h(
           "option",
-          {
-            value: "high"
-          },
+          { value: "high" },
           "High"
         ),
 
         h(
           "option",
-          {
-            value: "medium"
-          },
+          { value: "medium" },
           "Medium"
         ),
 
         h(
           "option",
-          {
-            value: "low"
-          },
+          { value: "low" },
           "Low"
         )
       ),
@@ -875,369 +387,183 @@ const Alerts = () => {
       h(
         "select",
         {
-          className:
-            "alerts-filter",
-
-          value:
-            statusFilter,
-
-          onChange: (
-            event
-          ) =>
-            setStatusFilter(
-              event.target.value
+          value: status,
+          onChange: (e) =>
+            setStatus(
+              e.target.value
             )
         },
 
         h(
           "option",
-          {
-            value: "all"
-          },
+          { value: "all" },
           "All Status"
         ),
 
         h(
           "option",
-          {
-            value: "active"
-          },
-          "Active"
+          { value: "open" },
+          "Open"
         ),
 
         h(
           "option",
-          {
-            value: "resolved"
-          },
+          { value: "resolved" },
           "Resolved"
         )
-      ),
-
-      h(
-        "select",
-        {
-          className:
-            "alerts-filter",
-
-          value:
-            projectFilter,
-
-          onChange: (
-            event
-          ) =>
-            setProjectFilter(
-              event.target.value
-            )
-        },
-
-        h(
-          "option",
-          {
-            value: "all"
-          },
-          "All Projects"
-        ),
-
-        projectOptions.map(
-          ([id, name]) =>
-            h(
-              "option",
-              {
-                key: id,
-                value: id
-              },
-
-              name
-            )
-        )
-      ),
-
-      h(
-        "button",
-        {
-          className:
-            "alerts-clear-button",
-
-          onClick:
-            clearFilters
-        },
-
-        "Clear Filters"
       )
     ),
 
-    // ======================================
-    // RESULT COUNT
-    // ======================================
+    error
+      ? h(
+          "div",
+          {
+            className:
+              "alerts-error"
+          },
+          error
+        )
+      : null,
 
-    h(
-      "div",
-      {
-        className:
-          "alerts-result-count"
-      },
-
-      h(
-        "strong",
-        null,
-
-        sortedAlerts.length
-      ),
-
-      " alerts found"
-    ),
-
-    // ======================================
-    // EMPTY
-    // ======================================
-
-    sortedAlerts.length === 0
-
+    loading
       ? h(
           "div",
           {
             className:
               "alerts-empty"
           },
-
-          h(
-            "div",
-            {
-              className:
-                "alerts-empty-icon"
-            },
-
-            "✓"
-          ),
-
-          h(
-            "h3",
-            null,
-            "No alerts found"
-          ),
-
-          h(
-            "p",
-            null,
-
-            searchTerm ||
-            severityFilter !==
-              "all" ||
-            statusFilter !==
-              "all" ||
-            projectFilter !==
-              "all"
-
-              ? "Try changing your filters."
-
-              : "There are currently no project alerts."
-          )
+          "Loading alerts..."
         )
-
-      // ====================================
-      // ALERT LIST
-      // ====================================
-
-      : h(
+      : filteredAlerts.length
+      ? h(
           "div",
           {
             className:
               "alerts-list"
           },
 
-          sortedAlerts.map(
-            (
-              alert,
-              index
-            ) => {
-              const severity =
-                getSeverity(
-                  alert
+          filteredAlerts.map(
+            (alert) => {
+              const isResolved =
+                Boolean(
+                  alert.isResolved ||
+                  alert.resolved
                 );
 
-              const resolved =
-                isResolved(
-                  alert
-                );
-
-              const date =
-                getAlertDate(
-                  alert
-                );
+              const level =
+                String(
+                  alert.severity ||
+                  alert.level ||
+                  "medium"
+                ).toLowerCase();
 
               return h(
                 "div",
                 {
                   key:
-                    getAlertId(
-                      alert
-                    ) ||
-                    index,
-
+                    alert._id ||
+                    alert.id,
                   className:
-                    "alert-item " +
-                    severityClass(
-                      severity
-                    ) +
-                    (
-                      resolved
-                        ? " alert-resolved"
+                    `alert-card alert-${level} ${
+                      isResolved
+                        ? "alert-resolved"
                         : ""
-                    )
+                    }`
                 },
 
-                // ALERT ICON
                 h(
                   "div",
                   {
                     className:
-                      "alert-icon"
-                  },
-
-                  severity ===
-                  "critical"
-
-                    ? "🚨"
-
-                    : severity ===
-                      "high"
-
-                    ? "⚠️"
-
-                    : severity ===
-                      "medium"
-
-                    ? "🔔"
-
-                    : "ℹ️"
-                ),
-
-                // CONTENT
-                h(
-                  "div",
-                  {
-                    className:
-                      "alert-content"
+                      "alert-card-top"
                   },
 
                   h(
-                    "div",
+                    "span",
                     {
                       className:
-                        "alert-top-row"
+                        "alert-severity"
                     },
-
-                    h(
-                      "div",
-                      {
-                        className:
-                          "alert-title"
-                      },
-
-                      getAlertTitle(
-                        alert
-                      )
-                    ),
-
-                    h(
-                      "span",
-                      {
-                        className:
-                          "alert-severity-badge"
-                      },
-
-                      severity
-                        .toUpperCase()
-                    )
+                    level.toUpperCase()
                   ),
 
                   h(
-                    "div",
-                    {
-                      className:
-                        "alert-project"
-                    },
-
-                    "Project: ",
-
-                    h(
-                      "strong",
-                      null,
-
-                      getProjectName(
-                        alert
-                      )
-                    )
-                  ),
-
-                  h(
-                    "p",
-                    {
-                      className:
-                        "alert-message"
-                    },
-
-                    getAlertMessage(
-                      alert
-                    )
-                  ),
-
-                  h(
-                    "div",
-                    {
-                      className:
-                        "alert-bottom-row"
-                    },
-
-                    h(
-                      "span",
-                      {
-                        className:
-                          "alert-date"
-                      },
-
-                      date
-                        ? new Date(
-                            date
-                          ).toLocaleString()
-                        : "Date unavailable"
-                    ),
-
-                    h(
-                      "span",
-                      {
-                        className:
-                          "alert-status"
-                      },
-
-                      resolved
-                        ? "✓ Resolved"
-                        : "● Active"
-                    )
+                    "span",
+                    null,
+                    isResolved
+                      ? "Resolved"
+                      : "Open"
                   )
                 ),
 
-                // ACTION
-                !resolved &&
-                  h(
-                    "button",
-                    {
-                      className:
-                        "alert-resolve-button",
+                h(
+                  "h3",
+                  null,
+                  alert.title ||
+                    "Project Alert"
+                ),
 
-                      onClick:
-                        () =>
+                h(
+                  "p",
+                  null,
+                  alert.message ||
+                    alert.description ||
+                    "No alert description."
+                ),
+
+                h(
+                  "div",
+                  {
+                    className:
+                      "alert-meta"
+                  },
+
+                  h(
+                    "span",
+                    null,
+                    `Project: ${
+                      alert.project?.name ||
+                      alert.projectName ||
+                      "N/A"
+                    }`
+                  ),
+
+                  h(
+                    "span",
+                    null,
+                    alert.createdAt
+                      ? new Date(
+                          alert.createdAt
+                        ).toLocaleString()
+                      : ""
+                  )
+                ),
+
+                !isResolved
+                  ? h(
+                      "button",
+                      {
+                        type: "button",
+                        onClick: () =>
                           handleResolve(
-                            alert
+                            alert._id ||
+                              alert.id
                           )
-                    },
-
-                    "Resolve"
-                  )
+                      },
+                      "✓ Resolve Alert"
+                    )
+                  : null
               );
             }
           )
+        )
+      : h(
+          "div",
+          {
+            className:
+              "alerts-empty"
+          },
+          "No alerts found."
         )
   );
 };

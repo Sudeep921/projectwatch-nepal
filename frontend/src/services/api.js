@@ -1,4 +1,5 @@
 const API_BASE_URL =
+  import.meta.env.VITE_API_URL ||
   "http://localhost:8000/api";
 
 // ========================================
@@ -62,7 +63,7 @@ const apiRequest = async (
       const error =
         new Error(
           data.message ||
-          `Server error: ${response.status}`
+            `Server error: ${response.status}`
         );
 
       error.status =
@@ -568,6 +569,21 @@ export const createEvidence = (
 
 
 // ========================================
+// DELETE EVIDENCE
+// ========================================
+
+export const deleteEvidence = (
+  id
+) =>
+  apiRequest(
+    `/evidence/${id}`,
+    {
+      method: "DELETE"
+    }
+  );
+
+
+// ========================================
 // REVIEW EVIDENCE
 // ========================================
 
@@ -682,7 +698,6 @@ export const getMyNotifications = () =>
 
 export const getUnreadNotificationCount =
   async () => {
-
     const data =
       await getMyNotifications();
 
@@ -855,13 +870,56 @@ export const getProjectReport = () =>
 // ========================================
 
 export const logoutUser = () => {
-
   localStorage.removeItem(
     "projectwatch_token"
   );
 
   localStorage.removeItem(
     "projectwatch_user"
+  );
+};
+
+
+// ========================================
+// AUDIT LOGS WITH FILTERS
+// ========================================
+
+export const searchAuditLogs = (
+  params = {}
+) => {
+  const query =
+    new URLSearchParams();
+
+  if (params.search) {
+    query.set(
+      "search",
+      params.search
+    );
+  }
+
+  if (params.module) {
+    query.set(
+      "module",
+      params.module
+    );
+  }
+
+  if (params.action) {
+    query.set(
+      "action",
+      params.action
+    );
+  }
+
+  const queryString =
+    query.toString();
+
+  return apiRequest(
+    `/audit${
+      queryString
+        ? `?${queryString}`
+        : ""
+    }`
   );
 };
 

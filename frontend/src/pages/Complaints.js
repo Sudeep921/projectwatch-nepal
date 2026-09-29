@@ -1,644 +1,654 @@
 import React, {
   useEffect,
+  useMemo,
   useState
 } from "react";
 
 import {
   getComplaints,
-  createComplaint,
-  getProjects
+  updateComplaintStatus,
+  updateComplaint
 } from "../services/api";
+
+const h = React.createElement;
 
 const Complaints = () => {
   const [complaints, setComplaints] =
     useState([]);
 
-  const [projects, setProjects] =
-    useState([]);
-
   const [loading, setLoading] =
     useState(true);
 
-  const [saving, setSaving] =
-    useState(false);
-
-  const [showForm, setShowForm] =
-    useState(false);
-
-  const [error, setError] =
+  const [search, setSearch] =
     useState("");
 
-  const [form, setForm] =
-    useState({
-      project: "",
-      subject: "",
-      description: "",
-      location: ""
-    });
+  const [status, setStatus] =
+    useState("all");
 
-  // ========================================
-  // LOAD COMPLAINTS + PROJECTS
-  // ========================================
+  const [priority, setPriority] =
+    useState("all");
 
-  const loadData = async () => {
+  const load = async () => {
     try {
       setLoading(true);
-      setError("");
 
-      const [
-        complaintResponse,
-        projectResponse
-      ] = await Promise.all([
-        getComplaints(),
-        getProjects()
-      ]);
+      const response =
+        await getComplaints();
+
+      const data =
+        response?.complaints ||
+        response?.data ||
+        [];
 
       setComplaints(
-        complaintResponse?.complaints ||
-          complaintResponse?.data ||
-          []
-      );
-
-      setProjects(
-        projectResponse?.projects ||
-          projectResponse?.data ||
-          []
+        Array.isArray(data)
+          ? data
+          : []
       );
     } catch (err) {
-      console.error(
-        "Complaint loading failed:",
-        err
-      );
-
-      setError(
-        err.message ||
-          "Unable to load complaints."
-      );
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  // ========================================
-  // INITIAL LOAD
-  // ========================================
-
   useEffect(() => {
-    loadData();
+    load();
   }, []);
 
-  // ========================================
-  // FORM CHANGE
-  // ========================================
+  const filtered =
+    useMemo(() => {
+      const q =
+        search
+          .trim()
+          .toLowerCase();
 
-  const handleChange = (event) => {
-    const {
-      name,
-      value
-    } = event.target;
+      return complaints.filter(
+        (item) => {
+          const text =
+            `${item.complaintId || ""} ${
+              item.name || ""
+            } ${
+              item.email || ""
+            } ${
+              item.description || ""
+            } ${
+              item.category || ""
+            }`.toLowerCase();
 
-    setForm((previous) => ({
-      ...previous,
-      [name]: value
-    }));
-  };
+          const itemStatus =
+            String(
+              item.status ||
+              "pending"
+            ).toLowerCase();
 
-  // ========================================
-  // GET PROJECT NAME
-  // ========================================
+          const itemPriority =
+            String(
+              item.priority ||
+              "normal"
+            ).toLowerCase();
 
-  const getProjectName = (
-    complaint
+          return (
+            (!q ||
+              text.includes(q)) &&
+            (status === "all" ||
+              itemStatus === status) &&
+            (priority === "all" ||
+              itemPriority ===
+                priority)
+          );
+        }
+      );
+    }, [
+      complaints,
+      search,
+      status,
+      priority
+    ]);
+
+  const changeStatus = async (
+    item,
+    nextStatus
   ) => {
-    if (
-      complaint?.project &&
-      typeof complaint.project ===
-        "object"
-    ) {
-      return (
-        complaint.project.name ||
-        complaint.project.projectName ||
-        complaint.project.projectCode ||
-        "General Project"
+    try {
+      await updateComplaintStatus(
+        item._id,
+        nextStatus
+      );
+
+      setComplaints(
+        (current) =>
+          current.map((x) =>
+            x._id === item._id
+              ? {
+                  ...x,
+                  status:
+                    nextStatus
+                }
+              : x
+          )
+      );
+    } catch (err) {
+      window.alert(
+        err.message ||
+        "Status update failed."
       );
     }
+  };
 
-    const project =
-      projects.find(
-        (item) =>
-          item._id ===
-          complaint?.project
-      );
+  const formatDate = (value) => {
+    if (!value) return "—";
 
-    return (
-      project?.name ||
-      project?.projectName ||
-      project?.projectCode ||
-      complaint?.project ||
-      "General Project"
+    return new Date(
+      value
+    ).toLocaleDateString(
+      "en-US",
+      {
+        year: "numeric",
+        month: "short",
+        day: "numeric"
+      }
     );
   };
 
-  // ========================================
-  // SUBMIT COMPLAINT
-  // ========================================
-
-  const submitComplaint =
-    async (event) => {
-      event.preventDefault();
-
-      try {
-        setSaving(true);
-        setError("");
-
-        await createComplaint(
-          form
-        );
-
-        setForm({
-          project: "",
-          subject: "",
-          description: "",
-          location: ""
-        });
-
-        setShowForm(false);
-
-        await loadData();
-      } catch (err) {
-        console.error(
-          "Complaint creation failed:",
-          err
-        );
-
-        setError(
-          err.message ||
-            "Unable to submit complaint."
-        );
-      } finally {
-        setSaving(false);
-      }
-    };
-
-  // ========================================
-  // RETURN UI
-  // ========================================
-
-  return React.createElement(
+  return h(
     "div",
     {
       className:
-        "page-container"
+        "complaints-page"
     },
 
-    // ======================================
-    // PAGE HEADER
-    // ======================================
-
-    React.createElement(
+    h(
       "div",
       {
         className:
-          "page-header"
+          "complaints-header"
       },
 
-      React.createElement(
+      h(
         "div",
         null,
 
-        React.createElement(
-          "span",
-          {
-            className:
-              "page-eyebrow"
-          },
-          "CITIZEN OVERSIGHT"
-        ),
-
-        React.createElement(
+        h(
           "h1",
           null,
           "Complaints"
         ),
 
-        React.createElement(
+        h(
           "p",
           null,
-          "Review public complaints and project-related concerns."
+          "Review and manage public complaints."
         )
       ),
 
-      React.createElement(
-        "div",
+      h(
+        "button",
         {
           className:
-            "header-actions"
+            "complaints-refresh-btn",
+          onClick: load
         },
+        "↻ Refresh"
+      )
+    ),
 
-        React.createElement(
-          "button",
-          {
-            className:
-              "secondary-button",
-            onClick:
-              loadData,
-            disabled:
-              loading
-          },
-          loading
-            ? "Refreshing..."
-            : "↻ Refresh"
+    h(
+      "div",
+      {
+        className:
+          "complaints-summary"
+      },
+
+      h(
+        "div",
+        null,
+        h(
+          "strong",
+          null,
+          complaints.length
         ),
+        h(
+          "span",
+          null,
+          "Total"
+        )
+      ),
 
-        React.createElement(
-          "button",
-          {
-            className:
-              "primary-button",
-            onClick: () =>
-              setShowForm(
-                !showForm
-              )
-          },
-          showForm
-            ? "Close Form"
-            : "+ New Complaint"
+      h(
+        "div",
+        null,
+        h(
+          "strong",
+          null,
+          complaints.filter(
+            (x) =>
+              String(
+                x.status
+              ).toLowerCase() ===
+              "pending"
+          ).length
+        ),
+        h(
+          "span",
+          null,
+          "Pending"
+        )
+      ),
+
+      h(
+        "div",
+        null,
+        h(
+          "strong",
+          null,
+          complaints.filter(
+            (x) =>
+              String(
+                x.status
+              ).toLowerCase() ===
+              "in progress"
+          ).length
+        ),
+        h(
+          "span",
+          null,
+          "In Progress"
+        )
+      ),
+
+      h(
+        "div",
+        null,
+        h(
+          "strong",
+          null,
+          complaints.filter(
+            (x) =>
+              String(
+                x.status
+              ).toLowerCase() ===
+              "resolved"
+          ).length
+        ),
+        h(
+          "span",
+          null,
+          "Resolved"
         )
       )
     ),
 
-    // ======================================
-    // ERROR
-    // ======================================
+    h(
+      "div",
+      {
+        className:
+          "complaints-filters"
+      },
 
-    error
-      ? React.createElement(
-          "div",
-          {
-            className:
-              "form-error"
-          },
-          "⚠ ",
-          error
-        )
-      : null,
-
-    // ======================================
-    // NEW COMPLAINT FORM
-    // ======================================
-
-    showForm
-      ? React.createElement(
-          "div",
-          {
-            className:
-              "report-form-card"
-          },
-
-          React.createElement(
-            "span",
-            {
-              className:
-                "page-eyebrow"
-            },
-            "PUBLIC REPORT"
-          ),
-
-          React.createElement(
-            "h2",
-            null,
-            "Submit Complaint"
-          ),
-
-          React.createElement(
-            "p",
-            null,
-            "Provide clear information about a project-related concern."
-          ),
-
-          React.createElement(
-            "form",
-            {
-              onSubmit:
-                submitComplaint
-            },
-
-            React.createElement(
-              "div",
-              {
-                className:
-                  "form-grid"
-              },
-
-              // PROJECT
-              React.createElement(
-                "div",
-                {
-                  className:
-                    "form-group"
-                },
-
-                React.createElement(
-                  "label",
-                  null,
-                  "Project"
-                ),
-
-                React.createElement(
-                  "select",
-                  {
-                    name:
-                      "project",
-                    value:
-                      form.project,
-                    onChange:
-                      handleChange
-                  },
-
-                  React.createElement(
-                    "option",
-                    {
-                      value:
-                        ""
-                    },
-                    "Select project"
-                  ),
-
-                  projects.map(
-                    (project) =>
-                      React.createElement(
-                        "option",
-                        {
-                          key:
-                            project._id,
-                          value:
-                            project._id
-                        },
-                        project.name ||
-                          project.projectName ||
-                          project.projectCode ||
-                          "Unnamed Project"
-                      )
-                  )
-                )
-              ),
-
-              // SUBJECT
-              React.createElement(
-                "div",
-                {
-                  className:
-                    "form-group"
-                },
-
-                React.createElement(
-                  "label",
-                  null,
-                  "Subject"
-                ),
-
-                React.createElement(
-                  "input",
-                  {
-                    name:
-                      "subject",
-                    value:
-                      form.subject,
-                    onChange:
-                      handleChange,
-                    placeholder:
-                      "Complaint subject",
-                    required: true
-                  }
-                )
-              ),
-
-              // LOCATION
-              React.createElement(
-                "div",
-                {
-                  className:
-                    "form-group full"
-                },
-
-                React.createElement(
-                  "label",
-                  null,
-                  "Location"
-                ),
-
-                React.createElement(
-                  "input",
-                  {
-                    name:
-                      "location",
-                    value:
-                      form.location,
-                    onChange:
-                      handleChange,
-                    placeholder:
-                      "Project site / location"
-                  }
-                )
-              ),
-
-              // DESCRIPTION
-              React.createElement(
-                "div",
-                {
-                  className:
-                    "form-group full"
-                },
-
-                React.createElement(
-                  "label",
-                  null,
-                  "Description"
-                ),
-
-                React.createElement(
-                  "textarea",
-                  {
-                    name:
-                      "description",
-                    value:
-                      form.description,
-                    onChange:
-                      handleChange,
-                    rows: 6,
-                    placeholder:
-                      "Describe the concern in detail...",
-                    required: true
-                  }
-                )
-              )
+      h(
+        "input",
+        {
+          value: search,
+          onChange: (e) =>
+            setSearch(
+              e.target.value
             ),
+          placeholder:
+            "Search complaint, citizen, description..."
+        }
+      ),
 
-            // FORM BUTTONS
-            React.createElement(
-              "div",
-              {
-                className:
-                  "modal-footer"
-              },
-
-              React.createElement(
-                "button",
-                {
-                  type:
-                    "button",
-                  className:
-                    "secondary-button",
-                  onClick: () =>
-                    setShowForm(
-                      false
-                    )
-                },
-                "Cancel"
-              ),
-
-              React.createElement(
-                "button",
-                {
-                  type:
-                    "submit",
-                  className:
-                    "primary-button",
-                  disabled:
-                    saving
-                },
-                saving
-                  ? "Submitting..."
-                  : "Submit Complaint"
-              )
+      h(
+        "select",
+        {
+          value: status,
+          onChange: (e) =>
+            setStatus(
+              e.target.value
             )
-          )
-        )
-      : null,
+        },
 
-    // ======================================
-    // LOADING
-    // ======================================
+        h(
+          "option",
+          { value: "all" },
+          "All Status"
+        ),
+
+        h(
+          "option",
+          { value: "pending" },
+          "Pending"
+        ),
+
+        h(
+          "option",
+          { value: "review" },
+          "Review"
+        ),
+
+        h(
+          "option",
+          { value: "in progress" },
+          "In Progress"
+        ),
+
+        h(
+          "option",
+          { value: "resolved" },
+          "Resolved"
+        ),
+
+        h(
+          "option",
+          { value: "rejected" },
+          "Rejected"
+        )
+      ),
+
+      h(
+        "select",
+        {
+          value: priority,
+          onChange: (e) =>
+            setPriority(
+              e.target.value
+            )
+        },
+
+        h(
+          "option",
+          { value: "all" },
+          "All Priority"
+        ),
+
+        h(
+          "option",
+          { value: "low" },
+          "Low"
+        ),
+
+        h(
+          "option",
+          { value: "normal" },
+          "Normal"
+        ),
+
+        h(
+          "option",
+          { value: "high" },
+          "High"
+        ),
+
+        h(
+          "option",
+          { value: "critical" },
+          "Critical"
+        )
+      )
+    ),
 
     loading
-      ? React.createElement(
+      ? h(
           "div",
           {
             className:
-              "page-loading"
+              "complaints-loading"
           },
           "Loading complaints..."
         )
-
-      // ====================================
-      // EMPTY STATE
-      // ====================================
-
-      : complaints.length === 0
-      ? React.createElement(
+      : h(
           "div",
           {
             className:
-              "empty-state"
+              "complaints-table-wrapper"
           },
 
-          React.createElement(
-            "h3",
-            null,
-            "No complaints yet"
-          ),
-
-          React.createElement(
-            "p",
-            null,
-            "Citizen complaints and project concerns will appear here."
-          )
-        )
-
-      // ====================================
-      // COMPLAINT LIST
-      // ====================================
-
-      : React.createElement(
-          "div",
-          {
-            className:
-              "reports-list"
-          },
-
-          complaints.map(
-            (complaint) =>
-              React.createElement(
-                "div",
+          filtered.length
+            ? h(
+                "table",
                 {
                   className:
-                    "report-card",
-                  key:
-                    complaint._id ||
-                    complaint.id
+                    "complaints-table"
                 },
 
-                // CARD HEADER
-                React.createElement(
-                  "div",
-                  {
-                    className:
-                      "report-card-header"
-                  },
+                h(
+                  "thead",
+                  null,
 
-                  React.createElement(
-                    "strong",
+                  h(
+                    "tr",
                     null,
-                    complaint.subject ||
-                      "Project Complaint"
-                  ),
 
-                  React.createElement(
-                    "span",
-                    {
-                      className:
-                        "status-badge"
-                    },
-                    complaint.status ||
-                      "Pending"
+                    h(
+                      "th",
+                      null,
+                      "Complaint"
+                    ),
+
+                    h(
+                      "th",
+                      null,
+                      "Citizen"
+                    ),
+
+                    h(
+                      "th",
+                      null,
+                      "Category"
+                    ),
+
+                    h(
+                      "th",
+                      null,
+                      "Priority"
+                    ),
+
+                    h(
+                      "th",
+                      null,
+                      "Status"
+                    ),
+
+                    h(
+                      "th",
+                      null,
+                      "Date"
+                    ),
+
+                    h(
+                      "th",
+                      null,
+                      "Action"
+                    )
                   )
                 ),
 
-                // DESCRIPTION
-                React.createElement(
-                  "p",
+                h(
+                  "tbody",
                   null,
-                  complaint.description ||
-                    "No description available."
-                ),
 
-                // META
-                React.createElement(
-                  "div",
-                  {
-                    className:
-                      "report-meta"
-                  },
+                  filtered.map(
+                    (item) =>
+                      h(
+                        "tr",
+                        {
+                          key:
+                            item._id
+                        },
 
-                  React.createElement(
-                    "span",
-                    null,
-                    "📁 ",
-                    getProjectName(
-                      complaint
-                    )
-                  ),
+                        h(
+                          "td",
+                          null,
 
-                  React.createElement(
-                    "span",
-                    null,
-                    "📍 ",
-                    complaint.location ||
-                      "Location not provided"
+                          h(
+                            "strong",
+                            null,
+                            item.complaintId ||
+                              `CMP-${String(
+                                item._id
+                              ).slice(
+                                -6
+                              )}`
+                          ),
+
+                          h(
+                            "p",
+                            null,
+                            item.description ||
+                              "No description"
+                          )
+                        ),
+
+                        h(
+                          "td",
+                          null,
+
+                          item.name ||
+                            "Anonymous",
+
+                          item.email
+                            ? h(
+                                "small",
+                                null,
+                                item.email
+                              )
+                            : null
+                        ),
+
+                        h(
+                          "td",
+                          null,
+                          item.category ||
+                            item.issueType ||
+                            "General"
+                        ),
+
+                        h(
+                          "td",
+                          null,
+
+                          h(
+                            "span",
+                            {
+                              className:
+                                `complaint-priority ${
+                                  String(
+                                    item.priority ||
+                                      "normal"
+                                  ).toLowerCase()
+                                }`
+                            },
+                            item.priority ||
+                              "Normal"
+                          )
+                        ),
+
+                        h(
+                          "td",
+                          null,
+
+                          h(
+                            "select",
+                            {
+                              value:
+                                item.status ||
+                                "pending",
+                              onChange:
+                                (e) =>
+                                  changeStatus(
+                                    item,
+                                    e.target
+                                      .value
+                                  )
+                            },
+
+                            h(
+                              "option",
+                              {
+                                value:
+                                  "pending"
+                              },
+                              "Pending"
+                            ),
+
+                            h(
+                              "option",
+                              {
+                                value:
+                                  "review"
+                              },
+                              "Review"
+                            ),
+
+                            h(
+                              "option",
+                              {
+                                value:
+                                  "in progress"
+                              },
+                              "In Progress"
+                            ),
+
+                            h(
+                              "option",
+                              {
+                                value:
+                                  "resolved"
+                              },
+                              "Resolved"
+                            ),
+
+                            h(
+                              "option",
+                              {
+                                value:
+                                  "rejected"
+                              },
+                              "Rejected"
+                            )
+                          )
+                        ),
+
+                        h(
+                          "td",
+                          null,
+                          formatDate(
+                            item.createdAt
+                          )
+                        ),
+
+                        h(
+                          "td",
+                          null,
+
+                          h(
+                            "button",
+                            {
+                              className:
+                                "complaint-view-btn",
+                              onClick:
+                                () =>
+                                  window.alert(
+                                    item.description ||
+                                      "No complaint details."
+                                  )
+                            },
+                            "View"
+                          )
+                        )
+                      )
                   )
                 )
               )
-          )
+            : h(
+                "div",
+                {
+                  className:
+                    "complaints-empty"
+                },
+                "No complaints found."
+              )
         )
   );
 };

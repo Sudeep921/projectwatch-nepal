@@ -23,6 +23,10 @@ const h = React.createElement;
 const Dashboard = () => {
   const navigate = useNavigate();
 
+  // ========================================
+  // STATES
+  // ========================================
+
   const [stats, setStats] =
     useState(null);
 
@@ -60,9 +64,9 @@ const Dashboard = () => {
     useState(null);
 
 
-  /* =========================
-     LOAD DASHBOARD
-  ========================= */
+  // ========================================
+  // LOAD DASHBOARD
+  // ========================================
 
   const loadDashboard = async (
     isRefresh = false
@@ -100,9 +104,9 @@ const Dashboard = () => {
       ] = results;
 
 
-      /* =========================
-         DASHBOARD STATS
-      ========================= */
+      // ========================================
+      // DASHBOARD STATS
+      // ========================================
 
       if (
         statsResult.status ===
@@ -118,6 +122,7 @@ const Dashboard = () => {
           {};
 
         setStats(data);
+
       } else {
         console.warn(
           "Dashboard stats failed:",
@@ -128,9 +133,9 @@ const Dashboard = () => {
       }
 
 
-      /* =========================
-         STATUS SUMMARY
-      ========================= */
+      // ========================================
+      // STATUS SUMMARY
+      // ========================================
 
       if (
         statusResult.status ===
@@ -168,6 +173,7 @@ const Dashboard = () => {
                   )
               })
             );
+
         } else if (
           rawData &&
           typeof rawData ===
@@ -199,6 +205,7 @@ const Dashboard = () => {
         setStatusData(
           normalizedStatus
         );
+
       } else {
         console.warn(
           "Project status summary failed:",
@@ -209,9 +216,9 @@ const Dashboard = () => {
       }
 
 
-      /* =========================
-         PROVINCE SUMMARY
-      ========================= */
+      // ========================================
+      // PROVINCE SUMMARY
+      // ========================================
 
       if (
         provinceResult.status ===
@@ -250,6 +257,7 @@ const Dashboard = () => {
                   )
               })
             );
+
         } else if (
           rawData &&
           typeof rawData ===
@@ -281,6 +289,7 @@ const Dashboard = () => {
         setProvinceData(
           normalizedProvince
         );
+
       } else {
         console.warn(
           "Province summary failed:",
@@ -291,9 +300,9 @@ const Dashboard = () => {
       }
 
 
-      /* =========================
-         PROJECTS
-      ========================= */
+      // ========================================
+      // PROJECTS
+      // ========================================
 
       if (
         projectsResult.status ===
@@ -321,6 +330,7 @@ const Dashboard = () => {
               )
             : []
         );
+
       } else {
         console.warn(
           "Projects loading failed:",
@@ -331,9 +341,9 @@ const Dashboard = () => {
       }
 
 
-      /* =========================
-         FIELD REPORTS
-      ========================= */
+      // ========================================
+      // FIELD REPORTS
+      // ========================================
 
       if (
         reportsResult.status ===
@@ -362,6 +372,7 @@ const Dashboard = () => {
               )
             : []
         );
+
       } else {
         console.warn(
           "Field reports loading failed:",
@@ -372,9 +383,9 @@ const Dashboard = () => {
       }
 
 
-      /* =========================
-         COMPLAINTS
-      ========================= */
+      // ========================================
+      // COMPLAINTS
+      // ========================================
 
       if (
         complaintsResult.status ===
@@ -402,6 +413,7 @@ const Dashboard = () => {
               )
             : []
         );
+
       } else {
         console.warn(
           "Complaints loading failed:",
@@ -412,9 +424,9 @@ const Dashboard = () => {
       }
 
 
-      /* =========================
-         ALERTS
-      ========================= */
+      // ========================================
+      // ALERTS
+      // ========================================
 
       if (
         alertsResult.status ===
@@ -442,6 +454,7 @@ const Dashboard = () => {
               )
             : []
         );
+
       } else {
         console.warn(
           "Alerts loading failed:",
@@ -452,9 +465,9 @@ const Dashboard = () => {
       }
 
 
-      /* =========================
-         NOTIFICATIONS
-      ========================= */
+      // ========================================
+      // NOTIFICATIONS
+      // ========================================
 
       if (
         notificationsResult.status ===
@@ -482,6 +495,7 @@ const Dashboard = () => {
               )
             : []
         );
+
       } else {
         console.warn(
           "Notifications loading failed:",
@@ -492,9 +506,9 @@ const Dashboard = () => {
       }
 
 
-      /* =========================
-         PARTIAL ERROR CHECK
-      ========================= */
+      // ========================================
+      // PARTIAL ERROR CHECK
+      // ========================================
 
       const failedApis =
         results.filter(
@@ -514,9 +528,9 @@ const Dashboard = () => {
       }
 
 
-      /* =========================
-         LAST UPDATED
-      ========================= */
+      // ========================================
+      // LAST UPDATED
+      // ========================================
 
       setLastUpdated(
         new Date()
@@ -532,6 +546,7 @@ const Dashboard = () => {
         err?.message ||
         "Failed to load dashboard data."
       );
+
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -539,18 +554,18 @@ const Dashboard = () => {
   };
 
 
-  /* =========================
-     INITIAL LOAD
-  ========================= */
+  // ========================================
+  // INITIAL LOAD
+  // ========================================
 
   useEffect(() => {
     loadDashboard();
   }, []);
 
 
-  /* =========================
-     LOADING
-  ========================= */
+  // ========================================
+  // LOADING
+  // ========================================
 
   if (loading) {
     return h(
@@ -571,16 +586,15 @@ const Dashboard = () => {
       h(
         "p",
         null,
-
         "Loading dashboard..."
       )
     );
   }
 
 
-  /* =========================
-     SAFE STATS
-  ========================= */
+  // ========================================
+  // SAFE STATS
+  // ========================================
 
   const totalProjects =
     Number(
@@ -654,9 +668,9 @@ const Dashboard = () => {
     );
 
 
-  /* =========================
-     LAST UPDATED TEXT
-  ========================= */
+  // ========================================
+  // LAST UPDATED TEXT
+  // ========================================
 
   const lastUpdatedText =
     lastUpdated
@@ -673,9 +687,9 @@ const Dashboard = () => {
       : "Not updated yet";
 
 
-  /* =========================
-     STAT CARD
-  ========================= */
+  // ========================================
+  // STAT CARD
+  // ========================================
 
   const createStatCard = (
     icon,
@@ -730,9 +744,9 @@ const Dashboard = () => {
   };
 
 
-  /* =========================
-     HEADER
-  ========================= */
+  // ========================================
+  // HEADER
+  // ========================================
 
   const pageHeader =
     h(
@@ -749,14 +763,12 @@ const Dashboard = () => {
         h(
           "h1",
           null,
-
           "Government Project Dashboard"
         ),
 
         h(
           "p",
           null,
-
           "Monitor Nepal's public projects in real time."
         ),
 
@@ -795,9 +807,9 @@ const Dashboard = () => {
     );
 
 
-  /* =========================
-     STATS GRID
-  ========================= */
+  // ========================================
+  // STATS GRID
+  // ========================================
 
   const statsGrid =
     h(
@@ -869,9 +881,9 @@ const Dashboard = () => {
     );
 
 
-  /* =========================
-     STATUS
-  ========================= */
+  // ========================================
+  // STATUS
+  // ========================================
 
   const statusTotal =
     statusData.reduce(
@@ -909,7 +921,6 @@ const Dashboard = () => {
           h(
             "p",
             null,
-
             "No project status data available."
           )
         )
@@ -1028,14 +1039,12 @@ const Dashboard = () => {
           h(
             "h2",
             null,
-
             "Project Status"
           ),
 
           h(
             "p",
             null,
-
             "Current project distribution"
           )
         ),
@@ -1064,9 +1073,9 @@ const Dashboard = () => {
     );
 
 
-  /* =========================
-     PROVINCES
-  ========================= */
+  // ========================================
+  // PROVINCES
+  // ========================================
 
   const maxProvinceCount =
     provinceData.length > 0
@@ -1103,7 +1112,6 @@ const Dashboard = () => {
           h(
             "p",
             null,
-
             "No province data available."
           )
         )
@@ -1214,14 +1222,12 @@ const Dashboard = () => {
           h(
             "h2",
             null,
-
             "Projects by Province"
           ),
 
           h(
             "p",
             null,
-
             "Geographic distribution"
           )
         ),
@@ -1250,9 +1256,9 @@ const Dashboard = () => {
     );
 
 
-  /* =========================
-     PROJECT NAME
-  ========================= */
+  // ========================================
+  // PROJECT NAME
+  // ========================================
 
   const getProjectName =
     (project) =>
@@ -1262,9 +1268,9 @@ const Dashboard = () => {
       "Unnamed Project";
 
 
-  /* =========================
-     RECENT PROJECTS
-  ========================= */
+  // ========================================
+  // RECENT PROJECTS
+  // ========================================
 
   const recentProjects =
     projects.length === 0
@@ -1455,14 +1461,12 @@ const Dashboard = () => {
           h(
             "h2",
             null,
-
             "Recent Projects"
           ),
 
           h(
             "p",
             null,
-
             "Latest project records"
           )
         ),
@@ -1498,9 +1502,9 @@ const Dashboard = () => {
     );
 
 
-  /* =========================
-     FIELD REPORTS
-  ========================= */
+  // ========================================
+  // FIELD REPORTS
+  // ========================================
 
   const recentReports =
     fieldReports.length === 0
@@ -1622,14 +1626,12 @@ const Dashboard = () => {
           h(
             "h2",
             null,
-
             "Recent Field Reports"
           ),
 
           h(
             "p",
             null,
-
             "Latest field updates"
           )
         ),
@@ -1665,9 +1667,9 @@ const Dashboard = () => {
     );
 
 
-  /* =========================
-     COMPLAINTS
-  ========================= */
+  // ========================================
+  // COMPLAINTS
+  // ========================================
 
   const recentComplaints =
     complaints.length === 0
@@ -1775,14 +1777,12 @@ const Dashboard = () => {
           h(
             "h2",
             null,
-
             "Recent Complaints"
           ),
 
           h(
             "p",
             null,
-
             "Latest public complaints"
           )
         ),
@@ -1818,9 +1818,9 @@ const Dashboard = () => {
     );
 
 
-  /* =========================
-     ALERTS
-  ========================= */
+  // ========================================
+  // ALERTS
+  // ========================================
 
   const recentAlerts =
     alerts.length === 0
@@ -1913,14 +1913,12 @@ const Dashboard = () => {
           h(
             "h2",
             null,
-
             "Recent Alerts"
           ),
 
           h(
             "p",
             null,
-
             "Important project alerts"
           )
         ),
@@ -1956,9 +1954,9 @@ const Dashboard = () => {
     );
 
 
-  /* =========================
-     NOTIFICATIONS
-  ========================= */
+  // ========================================
+  // NOTIFICATIONS
+  // ========================================
 
   const recentNotifications =
     notifications.length === 0
@@ -2100,14 +2098,12 @@ const Dashboard = () => {
           h(
             "h2",
             null,
-
             "Recent Notifications"
           ),
 
           h(
             "p",
             null,
-
             "Latest system notifications"
           )
         ),
@@ -2143,9 +2139,9 @@ const Dashboard = () => {
     );
 
 
-  /* =========================
-     OVERVIEW
-  ========================= */
+  // ========================================
+  // OVERVIEW
+  // ========================================
 
   const completionRate =
     totalProjects > 0
@@ -2218,14 +2214,12 @@ const Dashboard = () => {
           h(
             "h2",
             null,
-
             "Project Overview"
           ),
 
           h(
             "p",
             null,
-
             "Key monitoring indicators"
           )
         )
@@ -2248,7 +2242,6 @@ const Dashboard = () => {
           h(
             "span",
             null,
-
             "Completion Rate"
           ),
 
@@ -2271,7 +2264,6 @@ const Dashboard = () => {
           h(
             "span",
             null,
-
             "Delayed Rate"
           ),
 
@@ -2294,7 +2286,6 @@ const Dashboard = () => {
           h(
             "span",
             null,
-
             "Critical Rate"
           ),
 
@@ -2317,7 +2308,6 @@ const Dashboard = () => {
           h(
             "span",
             null,
-
             "Complaints"
           ),
 
@@ -2339,7 +2329,6 @@ const Dashboard = () => {
           h(
             "span",
             null,
-
             "Unread Notifications"
           ),
 
@@ -2354,9 +2343,9 @@ const Dashboard = () => {
     );
 
 
-  /* =========================
-     DASHBOARD WARNING
-  ========================= */
+  // ========================================
+  // DASHBOARD WARNING
+  // ========================================
 
   const dashboardWarning =
     error
@@ -2370,14 +2359,12 @@ const Dashboard = () => {
           h(
             "strong",
             null,
-
             "Dashboard Warning"
           ),
 
           h(
             "p",
             null,
-
             error
           ),
 
@@ -2397,9 +2384,9 @@ const Dashboard = () => {
       : null;
 
 
-  /* =========================
-     FINAL
-  ========================= */
+  // ========================================
+  // FINAL
+  // ========================================
 
   return h(
     "div",
