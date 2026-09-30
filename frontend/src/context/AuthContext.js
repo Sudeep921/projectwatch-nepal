@@ -7,8 +7,7 @@ import React, {
 
 import {
   loginUser,
-  getCurrentUser,
-  logoutUser
+  getCurrentUser
 } from "../services/api";
 
 
@@ -84,7 +83,9 @@ export const AuthProvider = ({
               typeof parsedUser === "object"
             ) {
 
-              setUser(parsedUser);
+              setUser(
+                parsedUser
+              );
 
             }
 
@@ -148,7 +149,9 @@ export const AuthProvider = ({
             typeof currentUser === "object"
           ) {
 
-            setUser(currentUser);
+            setUser(
+              currentUser
+            );
 
             localStorage.setItem(
               "projectwatch_user",
@@ -188,6 +191,9 @@ export const AuthProvider = ({
             ) ||
             message.includes(
               "unauthorized"
+            ) ||
+            message.includes(
+              "401"
             )
           ) {
 
@@ -246,9 +252,7 @@ export const AuthProvider = ({
 
 
       // ------------------------------------
-      // IMPORTANT
-      // loginUser expects:
-      // loginUser(email, password)
+      // LOGIN API
       // ------------------------------------
 
       const response =
@@ -287,12 +291,20 @@ export const AuthProvider = ({
         response;
 
 
+      // ------------------------------------
+      // TOKEN
+      // ------------------------------------
+
       const token =
         authData?.token ||
         authData?.accessToken ||
         response?.token ||
         response?.accessToken;
 
+
+      // ------------------------------------
+      // USER
+      // ------------------------------------
 
       const loggedInUser =
         authData?.user ||
@@ -356,6 +368,10 @@ export const AuthProvider = ({
       }
 
 
+      // ------------------------------------
+      // LOGIN SUCCESS LOG
+      // ------------------------------------
+
       console.log(
         "AUTH LOGIN SUCCESS:",
         {
@@ -397,26 +413,37 @@ export const AuthProvider = ({
 
     try {
 
-      logoutUser();
+      // ------------------------------------
+      // REMOVE AUTH TOKEN
+      // ------------------------------------
 
-    } catch (error) {
-
-      console.warn(
-        "Logout API error:",
-        error
-      );
-
-      // Safety cleanup
       localStorage.removeItem(
         "projectwatch_token"
       );
+
+
+      // ------------------------------------
+      // REMOVE SAVED USER
+      // ------------------------------------
 
       localStorage.removeItem(
         "projectwatch_user"
       );
 
+
+    } catch (error) {
+
+      console.error(
+        "LOGOUT ERROR:",
+        error
+      );
+
     }
 
+
+    // --------------------------------------
+    // CLEAR REACT USER STATE
+    // --------------------------------------
 
     setUser(null);
 
@@ -515,5 +542,9 @@ export const useAuth = () => {
 
 };
 
+
+// ========================================
+// EXPORT
+// ========================================
 
 export default AuthContext;

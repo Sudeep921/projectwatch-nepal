@@ -16,6 +16,88 @@ const {
 } = require("../utils/projectCodeGenerator");
 
 
+const validateProjectData = (
+  data
+) => {
+  const errors = [];
+
+  const name =
+    String(
+      data.name ||
+      data.projectName ||
+      ""
+    ).trim();
+
+  if (!name) {
+    errors.push(
+      "Project name is required."
+    );
+  }
+
+  const budget =
+    Number(data.budget);
+
+  if (
+    data.budget !== undefined &&
+    (
+      Number.isNaN(budget) ||
+      budget < 0
+    )
+  ) {
+    errors.push(
+      "Budget must be a valid positive number."
+    );
+  }
+
+  const progress =
+    Number(data.progress ?? 0);
+
+  if (
+    Number.isNaN(progress) ||
+    progress < 0 ||
+    progress > 100
+  ) {
+    errors.push(
+      "Progress must be between 0 and 100."
+    );
+  }
+
+  if (
+    data.latitude !== undefined &&
+    data.latitude !== "" &&
+    (
+      Number.isNaN(
+        Number(data.latitude)
+      ) ||
+      Number(data.latitude) < -90 ||
+      Number(data.latitude) > 90
+    )
+  ) {
+    errors.push(
+      "Invalid latitude."
+    );
+  }
+
+  if (
+    data.longitude !== undefined &&
+    data.longitude !== "" &&
+    (
+      Number.isNaN(
+        Number(data.longitude)
+      ) ||
+      Number(data.longitude) < -180 ||
+      Number(data.longitude) > 180
+    )
+  ) {
+    errors.push(
+      "Invalid longitude."
+    );
+  }
+
+  return errors;
+};
+
+
 // ==========================================
 // CREATE PROJECT
 // ==========================================

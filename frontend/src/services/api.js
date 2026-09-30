@@ -10,6 +10,7 @@ const apiRequest = async (
   endpoint,
   options = {}
 ) => {
+
   const token =
     localStorage.getItem(
       "projectwatch_token"
@@ -19,6 +20,7 @@ const apiRequest = async (
     ...(options.headers || {})
   };
 
+
   // ======================================
   // JSON CONTENT TYPE
   // ======================================
@@ -27,70 +29,166 @@ const apiRequest = async (
     options.body &&
     !(options.body instanceof FormData)
   ) {
+
     headers["Content-Type"] =
       "application/json";
+
   }
+
 
   // ======================================
   // JWT AUTHORIZATION
   // ======================================
 
   if (token) {
+
     headers.Authorization =
       `Bearer ${token}`;
+
   }
 
+
+  // ======================================
+  // FETCH REQUEST
+  // ======================================
+
+  let response;
+
   try {
-    const response =
-      await fetch(
-        `${API_BASE_URL}${endpoint}`,
-        {
-          ...options,
-          headers
-        }
-      );
 
-    let data = {};
-
-    try {
-      data =
-        await response.json();
-    } catch (error) {
-      data = {};
-    }
-
-    if (!response.ok) {
-      const error =
-        new Error(
-          data.message ||
-            `Server error: ${response.status}`
-        );
-
-      error.status =
-        response.status;
-
-      throw error;
-    }
-
-    return data;
+    response = await fetch(
+      `${API_BASE_URL}${endpoint}`,
+      {
+        ...options,
+        headers
+      }
+    );
 
   } catch (error) {
+
     console.error(
-      "API REQUEST ERROR:",
+      "API NETWORK ERROR:",
       error
     );
 
+    throw new Error(
+      "Backend server is not running. Please start the backend server."
+    );
+
+  }
+
+
+  // ======================================
+  // RESPONSE DATA
+  // ======================================
+
+  let data = null;
+
+  try {
+
+    data =
+      await response.json();
+
+  } catch (error) {
+
+    data = null;
+
+  }
+
+
+  // ======================================
+  // ERROR HANDLING
+  // ======================================
+
+  if (!response.ok) {
+
+
+    // ====================================
+    // 401 UNAUTHORIZED
+    // ====================================
+
     if (
-      error.message ===
-      "Failed to fetch"
+      response.status === 401
     ) {
-      throw new Error(
-        "Backend server is not running. Please start ProjectWatch backend on port 8000."
+
+      localStorage.removeItem(
+        "projectwatch_token"
       );
+
+      localStorage.removeItem(
+        "projectwatch_user"
+      );
+
+
+      if (
+        window.location.pathname.startsWith(
+          "/admin"
+        )
+      ) {
+
+        window.location.href =
+          "/admin-login";
+
+      }
+
+
+      throw new Error(
+        "Your session has expired. Please login again."
+      );
+
     }
 
-    throw error;
+
+    // ====================================
+    // 403 FORBIDDEN
+    // ====================================
+
+    if (
+      response.status === 403
+    ) {
+
+      throw new Error(
+        data?.message ||
+        "You do not have permission to perform this action."
+      );
+
+    }
+
+
+    // ====================================
+    // 404 NOT FOUND
+    // ====================================
+
+    if (
+      response.status === 404
+    ) {
+
+      throw new Error(
+        data?.message ||
+        `API endpoint not found: ${endpoint}`
+      );
+
+    }
+
+
+    // ====================================
+    // OTHER SERVER ERRORS
+    // ====================================
+
+    throw new Error(
+      data?.message ||
+      `Server error: ${response.status}`
+    );
+
   }
+
+
+  // ======================================
+  // SUCCESS
+  // ======================================
+
+  return data;
+
 };
 
 
@@ -98,12 +196,16 @@ const apiRequest = async (
 // AUTH
 // ========================================
 
+
+// ========================================
 // LOGIN
+// ========================================
 
 export const loginUser = async (
   email,
   password
 ) => {
+
   const data =
     await apiRequest(
       "/auth/login",
@@ -118,42 +220,57 @@ export const loginUser = async (
       }
     );
 
+
   const authData =
     data?.data ||
     data;
 
+
   const token =
     authData?.token ||
     authData?.accessToken;
+
 
   const user =
     authData?.user ||
     data?.user ||
     null;
 
+
   if (token) {
+
     localStorage.setItem(
       "projectwatch_token",
       token
     );
+
   }
 
+
   if (user) {
+
     localStorage.setItem(
       "projectwatch_user",
-      JSON.stringify(user)
+      JSON.stringify(
+        user
+      )
     );
+
   }
+
 
   return {
     ...authData,
     token,
     user
   };
+
 };
 
 
+// ========================================
 // REGISTER
+// ========================================
 
 export const registerUser = (
   userData
@@ -171,7 +288,9 @@ export const registerUser = (
   );
 
 
+// ========================================
 // CURRENT USER
+// ========================================
 
 export const getCurrentUser = () =>
   apiRequest(
@@ -248,6 +367,7 @@ export const deleteProject = (
 export const searchProjects = (
   params = {}
 ) => {
+
   const query =
     new URLSearchParams(
       params
@@ -256,6 +376,7 @@ export const searchProjects = (
   return apiRequest(
     `/projects/search?${query}`
   );
+
 };
 
 
@@ -698,8 +819,10 @@ export const getMyNotifications = () =>
 
 export const getUnreadNotificationCount =
   async () => {
+
     const data =
       await getMyNotifications();
+
 
     const notifications =
       Array.isArray(data)
@@ -708,10 +831,12 @@ export const getUnreadNotificationCount =
           data?.data ||
           [];
 
+
     return notifications.filter(
       (notification) =>
         !notification.isRead
     ).length;
+
   };
 
 
@@ -870,6 +995,7 @@ export const getProjectReport = () =>
 // ========================================
 
 export const logoutUser = () => {
+
   localStorage.removeItem(
     "projectwatch_token"
   );
@@ -877,6 +1003,7 @@ export const logoutUser = () => {
   localStorage.removeItem(
     "projectwatch_user"
   );
+
 };
 
 
@@ -887,32 +1014,44 @@ export const logoutUser = () => {
 export const searchAuditLogs = (
   params = {}
 ) => {
+
   const query =
     new URLSearchParams();
 
+
   if (params.search) {
+
     query.set(
       "search",
       params.search
     );
+
   }
 
+
   if (params.module) {
+
     query.set(
       "module",
       params.module
     );
+
   }
 
+
   if (params.action) {
+
     query.set(
       "action",
       params.action
     );
+
   }
+
 
   const queryString =
     query.toString();
+
 
   return apiRequest(
     `/audit${
@@ -921,6 +1060,7 @@ export const searchAuditLogs = (
         : ""
     }`
   );
+
 };
 
 

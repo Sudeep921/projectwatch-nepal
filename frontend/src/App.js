@@ -15,7 +15,6 @@ import {
 import DashboardLayout
   from "./layouts/DashboardLayout";
 
-
 // ========================================
 // ADMIN PAGES
 // ========================================
@@ -68,7 +67,6 @@ import AuditLogs
 import SystemSettings
   from "./pages/SystemSettings";
 
-
 // ========================================
 // PUBLIC PAGES
 // ========================================
@@ -88,14 +86,12 @@ import PublicComplaint
 import PublicMap
   from "./pages/PublicMap";
 
-
 // ========================================
 // AUTH
 // ========================================
 
 import AdminLogin
   from "./pages/AdminLogin";
-
 
 // ========================================
 // TEST PAGES
@@ -107,6 +103,16 @@ import SystemTest
 import ApiTest
   from "./pages/ApiTest";
 
+// ========================================
+// ERROR / NOT FOUND
+// ========================================
+
+import ErrorBoundary
+  from "./components/ErrorBoundary";
+
+import NotFound
+  from "./pages/NotFound";
+import ReleaseStatus from "./pages/ReleaseStatus";
 
 // ========================================
 // REACT CREATE ELEMENT
@@ -116,7 +122,7 @@ const h = React.createElement;
 
 
 // ========================================
-// PROTECTED ADMIN LAYOUT
+// PROTECTED ADMIN ROUTES
 // ========================================
 
 const ProtectedRoutes = () => {
@@ -126,45 +132,33 @@ const ProtectedRoutes = () => {
     loading
   } = useAuth();
 
-
   // ======================================
-  // AUTH LOADING
+  // LOADING
   // ======================================
 
   if (loading) {
-
     return h(
       "div",
       {
-        className:
-          "app-loading"
+        className: "app-loading"
       },
-
       "Loading ProjectWatch Nepal..."
     );
-
   }
-
 
   // ======================================
   // NOT LOGGED IN
   // ======================================
 
   if (!user) {
-
     return h(
       Navigate,
       {
-        to:
-          "/admin-login",
-
-        replace:
-          true
+        to: "/admin-login",
+        replace: true
       }
     );
-
   }
-
 
   // ======================================
   // ROLE CHECK
@@ -175,37 +169,129 @@ const ProtectedRoutes = () => {
       user?.role || ""
     ).toLowerCase();
 
+  const allowedRoles = [
+    "admin",
+    "officer"
+  ];
 
-  // Only admin and officer
-  // can access admin area
+  // ======================================
+  // INVALID ROLE
+  // ======================================
 
   if (
-    role !== "admin" &&
-    role !== "officer"
+    !allowedRoles.includes(role)
   ) {
-
     return h(
       Navigate,
       {
-        to:
-          "/admin-login",
-
-        replace:
-          true
+        to: "/admin-login",
+        replace: true
       }
     );
-
   }
 
-
   // ======================================
-  // AUTHORIZED ADMIN LAYOUT
+  // ALLOW ADMIN / OFFICER
   // ======================================
 
   return h(
     DashboardLayout
   );
+};
 
+
+// ========================================
+// ADMIN ONLY ROUTE GUARD
+// ========================================
+
+const AdminOnlyRoute = ({
+  children
+}) => {
+
+  const {
+    user,
+    loading
+  } = useAuth();
+
+  // ======================================
+  // LOADING
+  // ======================================
+
+  if (loading) {
+    return h(
+      "div",
+      {
+        className: "app-loading"
+      },
+      "Loading ProjectWatch Nepal..."
+    );
+  }
+
+  // ======================================
+  // NOT LOGGED IN
+  // ======================================
+
+  if (!user) {
+    return h(
+      Navigate,
+      {
+        to: "/admin-login",
+        replace: true
+      }
+    );
+  }
+
+  // ======================================
+  // GET ROLE
+  // ======================================
+
+  const role =
+    String(
+      user?.role || ""
+    ).toLowerCase();
+
+  // ======================================
+  // ADMIN ONLY
+  // ======================================
+
+  if (role !== "admin") {
+    return h(
+      "div",
+      {
+        className: "permission-denied"
+      },
+
+      h(
+        "h2",
+        null,
+        "Access Denied"
+      ),
+
+      h(
+        "p",
+        null,
+        "Only administrators can access this page."
+      ),
+
+      h(
+        "button",
+        {
+          type: "button",
+          onClick: () => {
+            window.location.href =
+              "/admin/dashboard";
+          }
+        },
+        "Go to Dashboard"
+      )
+    );
+  }
+
+  // ======================================
+  // ADMIN ALLOWED
+  // ======================================
+
+  return children;
 };
 
 
@@ -216,527 +302,495 @@ const ProtectedRoutes = () => {
 const App = () => {
 
   return h(
-    BrowserRouter,
+    ErrorBoundary,
     null,
 
     h(
-      Routes,
+      BrowserRouter,
       null,
 
-
-      // ====================================
-      // PUBLIC HOME
-      // ====================================
-
       h(
-        Route,
-        {
-          path:
-            "/",
+        Routes,
+        null,
 
-          element: h(
-            Navigate,
-            {
-              to:
-                "/public",
-
-              replace:
-                true
-            }
-          )
-        }
-      ),
-
-
-      // ====================================
-      // PUBLIC PORTAL
-      // ====================================
-
-      h(
-        Route,
-        {
-          path:
-            "/public",
-
-          element: h(
-            PublicPortal
-          )
-        }
-      ),
-
-
-      // ====================================
-      // PUBLIC PROJECT DETAILS
-      // ====================================
-
-      h(
-        Route,
-        {
-          path:
-            "/public/projects/:id",
-
-          element: h(
-            PublicProjectDetails
-          )
-        }
-      ),
-
-
-      // ====================================
-      // PUBLIC MAP
-      // ====================================
-
-      h(
-        Route,
-        {
-          path:
-            "/public-map",
-
-          element: h(
-            PublicMap
-          )
-        }
-      ),
-
-
-      // ====================================
-      // PUBLIC REPORT
-      // ====================================
-
-      h(
-        Route,
-        {
-          path:
-            "/public/report",
-
-          element: h(
-            PublicComplaintForm
-          )
-        }
-      ),
-
-
-      // ====================================
-      // PUBLIC COMPLAINT
-      // ====================================
-
-      h(
-        Route,
-        {
-          path:
-            "/complaints-public",
-
-          element: h(
-            PublicComplaint
-          )
-        }
-      ),
-
-
-      // ====================================
-      // ADMIN LOGIN
-      // ====================================
-
-      h(
-        Route,
-        {
-          path:
-            "/admin-login",
-
-          element: h(
-            AdminLogin
-          )
-        }
-      ),
-
-
-      // ====================================
-      // SYSTEM TEST
-      // ====================================
-
-      h(
-        Route,
-        {
-          path:
-            "/system-test",
-
-          element: h(
-            SystemTest
-          )
-        }
-      ),
-
-
-      // ====================================
-      // API TEST
-      // ====================================
-
-      h(
-        Route,
-        {
-          path:
-            "/api-test",
-
-          element: h(
-            ApiTest
-          )
-        }
-      ),
-
-
-      // ====================================
-      // PROTECTED ADMIN AREA
-      // ====================================
-
-      h(
-        Route,
-        {
-          path:
-            "/admin",
-
-          element: h(
-            ProtectedRoutes
-          )
-        },
-
-
-        // ==================================
-        // ADMIN DEFAULT
-        // /admin
-        // → /admin/dashboard
-        // ==================================
+        // ====================================
+        // PUBLIC HOME
+        // /
+        // ====================================
 
         h(
           Route,
           {
-            index:
-              true,
-
+            path: "/",
             element: h(
               Navigate,
               {
-                to:
-                  "/admin/dashboard",
-
-                replace:
-                  true
+                to: "/public",
+                replace: true
               }
             )
           }
         ),
 
 
-        // ==================================
-        // DASHBOARD
-        // /admin/dashboard
-        // ==================================
+        // ====================================
+        // PUBLIC PORTAL
+        // /public
+        // ====================================
 
         h(
           Route,
           {
-            path:
-              "dashboard",
-
+            path: "/public",
             element: h(
-              Dashboard
+              PublicPortal
             )
           }
         ),
 
 
-        // ==================================
-        // PROJECTS
-        // /admin/projects
-        // ==================================
+        // ====================================
+        // PUBLIC PROJECT DETAILS
+        // /public/projects/:id
+        // ====================================
 
         h(
           Route,
           {
-            path:
-              "projects",
-
+            path: "/public/projects/:id",
             element: h(
-              Projects
+              PublicProjectDetails
             )
           }
         ),
 
 
-        // ==================================
-        // ADD PROJECT
-        // /admin/projects/new
-        // ==================================
+        // ====================================
+        // PUBLIC MAP
+        // /public-map
+        // ====================================
 
         h(
           Route,
           {
-            path:
-              "projects/new",
-
+            path: "/public-map",
             element: h(
-              AddProjectPage
+              PublicMap
             )
           }
         ),
 
 
-        // ==================================
-        // PROJECT DETAILS
-        // /admin/projects/:id
-        // ==================================
+        // ====================================
+        // PUBLIC REPORT
+        // /public/report
+        // ====================================
 
         h(
           Route,
           {
-            path:
-              "projects/:id",
-
+            path: "/public/report",
             element: h(
-              ProjectDetails
+              PublicComplaintForm
             )
           }
         ),
 
 
-        // ==================================
-        // EDIT PROJECT
-        // /admin/projects/:id/edit
-        // ==================================
+        // ====================================
+        // PUBLIC COMPLAINT
+        // /complaints-public
+        // ====================================
 
         h(
           Route,
           {
-            path:
-              "projects/:id/edit",
-
+            path: "/complaints-public",
             element: h(
-              EditProjectPage
+              PublicComplaint
             )
           }
         ),
 
 
-        // ==================================
-        // MAP
-        // /admin/map
-        // ==================================
+        // ====================================
+        // ADMIN LOGIN
+        // /admin-login
+        // ====================================
 
         h(
           Route,
           {
-            path:
-              "map",
-
+            path: "/admin-login",
             element: h(
-              Map
+              AdminLogin
             )
           }
         ),
 
 
-        // ==================================
-        // FIELD REPORTS
-        // /admin/field-reports
-        // ==================================
+        // ====================================
+        // SYSTEM TEST
+        // /system-test
+        // ====================================
 
         h(
           Route,
           {
-            path:
-              "field-reports",
-
+            path: "/system-test",
             element: h(
-              FieldReports
+              SystemTest
             )
           }
         ),
 
 
-        // ==================================
-        // COMPLAINTS
-        // /admin/complaints
-        // ==================================
+        // ====================================
+        // API TEST
+        // /api-test
+        // ====================================
 
         h(
           Route,
           {
-            path:
-              "complaints",
-
+            path: "/api-test",
             element: h(
-              Complaints
+              ApiTest
             )
           }
         ),
 
 
-        // ==================================
-        // EVIDENCE
-        // /admin/evidence
-        // ==================================
+        // ====================================
+        // PROTECTED ADMIN AREA
+        // /admin/*
+        // ====================================
 
         h(
           Route,
           {
-            path:
-              "evidence",
-
+            path: "/admin",
             element: h(
-              Evidence
+              ProtectedRoutes
             )
-          }
+          },
+
+          // ==================================
+          // ADMIN DEFAULT
+          // /admin
+          // ==================================
+
+          h(
+            Route,
+            {
+              index: true,
+              element: h(
+                Navigate,
+                {
+                  to: "/admin/dashboard",
+                  replace: true
+                }
+              )
+            }
+          ),
+
+
+          // ==================================
+          // DASHBOARD
+          // /admin/dashboard
+          // ==================================
+
+          h(
+            Route,
+            {
+              path: "dashboard",
+              element: h(
+                Dashboard
+              )
+            }
+          ),
+
+
+          // ==================================
+          // PROJECTS
+          // /admin/projects
+          // ==================================
+
+          h(
+            Route,
+            {
+              path: "projects",
+              element: h(
+                Projects
+              )
+            }
+          ),
+
+
+          // ==================================
+          // ADD PROJECT
+          // /admin/projects/new
+          // ==================================
+
+          h(
+            Route,
+            {
+              path: "projects/new",
+              element: h(
+                AddProjectPage
+              )
+            }
+          ),
+
+
+          // ==================================
+          // PROJECT DETAILS
+          // /admin/projects/:id
+          // ==================================
+
+          h(
+            Route,
+            {
+              path: "projects/:id",
+              element: h(
+                ProjectDetails
+              )
+            }
+          ),
+
+
+          // ==================================
+          // EDIT PROJECT
+          // /admin/projects/:id/edit
+          // ==================================
+
+          h(
+            Route,
+            {
+              path: "projects/:id/edit",
+              element: h(
+                EditProjectPage
+              )
+            }
+          ),
+
+
+          // ==================================
+          // MAP
+          // /admin/map
+          // ==================================
+
+          h(
+            Route,
+            {
+              path: "map",
+              element: h(
+                Map
+              )
+            }
+          ),
+
+
+          // ==================================
+          // FIELD REPORTS
+          // /admin/field-reports
+          // ==================================
+
+          h(
+            Route,
+            {
+              path: "field-reports",
+              element: h(
+                FieldReports
+              )
+            }
+          ),
+
+
+          // ==================================
+          // COMPLAINTS
+          // /admin/complaints
+          // ==================================
+
+          h(
+            Route,
+            {
+              path: "complaints",
+              element: h(
+                Complaints
+              )
+            }
+          ),
+
+
+          // ==================================
+          // EVIDENCE
+          // /admin/evidence
+          // ==================================
+
+          h(
+            Route,
+            {
+              path: "evidence",
+              element: h(
+                Evidence
+              )
+            }
+          ),
+
+
+          // ==================================
+          // ALERTS
+          // /admin/alerts
+          // ==================================
+
+          h(
+            Route,
+            {
+              path: "alerts",
+              element: h(
+                Alerts
+              )
+            }
+          ),
+
+
+          // ==================================
+          // NOTIFICATIONS
+          // /admin/notifications
+          // ==================================
+
+          h(
+            Route,
+            {
+              path: "notifications",
+              element: h(
+                Notifications
+              )
+            }
+          ),
+
+
+          // ==================================
+          // REPORTS
+          // /admin/reports
+          // ==================================
+
+          h(
+            Route,
+            {
+              path: "reports",
+              element: h(
+                Reports
+              )
+            }
+          ),
+
+
+          // ==================================
+          // SETTINGS
+          // /admin/settings
+          // ==================================
+
+          h(
+            Route,
+            {
+              path: "settings",
+              element: h(
+                Settings
+              )
+            }
+          ),
+
+
+          // ==================================
+          // USER MANAGEMENT
+          // ADMIN ONLY
+          // /admin/users
+          // ==================================
+
+          h(
+            Route,
+            {
+              path: "users",
+              element: h(
+                AdminOnlyRoute,
+                null,
+                h(
+                  UserManagement
+                )
+              )
+            }
+          ),
+
+
+          // ==================================
+          // AUDIT LOGS
+          // ADMIN ONLY
+          // /admin/audit-logs
+          // ==================================
+
+          h(
+            Route,
+            {
+              path: "audit-logs",
+              element: h(
+                AdminOnlyRoute,
+                null,
+                h(
+                  AuditLogs
+                )
+              )
+            }
+          ),
+
+
+          // ==================================
+          // SYSTEM SETTINGS
+          // ADMIN ONLY
+          // /admin/system-settings
+          // ==================================
+
+          h(
+            Route,
+            {
+              path: "system-settings",
+              element: h(
+                AdminOnlyRoute,
+                null,
+                h(
+                  SystemSettings
+                )
+              )
+            }
+          )
+
         ),
 
 
-        // ==================================
-        // ALERTS
-        // /admin/alerts
-        // ==================================
+        // ====================================
+        // UNKNOWN ROUTE
+        // ====================================
 
         h(
           Route,
           {
-            path:
-              "alerts",
-
+            path: "*",
             element: h(
-              Alerts
+              NotFound
             )
           }
         ),
-
-
-        // ==================================
-        // NOTIFICATIONS
-        // /admin/notifications
-        // ==================================
-
         h(
           Route,
           {
-            path:
-              "notifications",
-
+            path: "release-status",
             element: h(
-              Notifications
-            )
-          }
-        ),
-
-
-        // ==================================
-        // REPORTS
-        // /admin/reports
-        // ==================================
-
-        h(
-          Route,
-          {
-            path:
-              "reports",
-
-            element: h(
-              Reports
-            )
-          }
-        ),
-
-
-        // ==================================
-        // SETTINGS
-        // /admin/settings
-        // ==================================
-
-        h(
-          Route,
-          {
-            path:
-              "settings",
-
-            element: h(
-              Settings
-            )
-          }
-        ),
-
-
-        // ==================================
-        // USERS
-        // /admin/users
-        // ==================================
-
-        h(
-          Route,
-          {
-            path:
-              "users",
-
-            element: h(
-              UserManagement
-            )
-          }
-        ),
-
-
-        // ==================================
-        // AUDIT LOGS
-        // /admin/audit-logs
-        // ==================================
-
-        h(
-          Route,
-          {
-            path:
-              "audit-logs",
-
-            element: h(
-              AuditLogs
-            )
-          }
-        ),
-
-
-        // ==================================
-        // SYSTEM SETTINGS
-        // /admin/system-settings
-        // ==================================
-
-        h(
-          Route,
-          {
-            path:
-              "system-settings",
-
-            element: h(
-              SystemSettings
+              ReleaseStatus
             )
           }
         )
 
-      ),
-
-
-      // ====================================
-      // UNKNOWN ROUTE
-      // ====================================
-
-      h(
-        Route,
-        {
-          path:
-            "*",
-
-          element: h(
-            Navigate,
-            {
-              to:
-                "/public",
-
-              replace:
-                true
-            }
-          )
-        }
       )
 
     )
