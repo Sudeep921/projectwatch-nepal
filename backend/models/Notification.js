@@ -1,18 +1,41 @@
-const mongoose =
-  require("mongoose");
+const mongoose = require("mongoose");
 
 const notificationSchema =
   new mongoose.Schema(
     {
+      // ==========================================
+      // RECIPIENT / USER
+      // ==========================================
+
+      recipient: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null
+      },
+
+      // ==========================================
+      // TITLE
+      // ==========================================
+
       title: {
         type: String,
-        required: true
+        required: true,
+        trim: true
       },
+
+      // ==========================================
+      // MESSAGE
+      // ==========================================
 
       message: {
         type: String,
-        required: true
+        required: true,
+        trim: true
       },
+
+      // ==========================================
+      // NOTIFICATION TYPE
+      // ==========================================
 
       type: {
         type: String,
@@ -25,10 +48,18 @@ const notificationSchema =
         default: "Info"
       },
 
+      // ==========================================
+      // READ STATUS
+      // ==========================================
+
       read: {
         type: Boolean,
         default: false
       },
+
+      // ==========================================
+      // PROJECT
+      // ==========================================
 
       project: {
         type:

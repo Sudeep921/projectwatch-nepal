@@ -1,298 +1,57 @@
 import React, {
+  useEffect,
   useState
 } from "react";
 
 import {
   checkApiHealth,
-  getDashboardStats,
-  getProjectStatusSummary,
-  getProvinceSummary,
-  getProjects,
-  getFieldReports,
-  getComplaints,
-  getEvidence,
-  getAlerts,
-  getNotifications,
-  getUsers,
-  getMySettings,
-  getPublicProjects,
-  getPublicSummary
+  getSystemHealth
 } from "../services/api";
 
 const h = React.createElement;
 
 const ApiTest = () => {
-  const [results, setResults] = useState([]);
-  const [testing, setTesting] = useState(false);
+  const [api, setApi] = useState(null);
+  const [system, setSystem] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  const addResult = (
-    name,
-    status,
-    message
-  ) => {
-    setResults((prev) => [
-      ...prev,
-      {
-        id:
-          Date.now() +
-          Math.random(),
-        name,
-        status,
-        message
-      }
-    ]);
-  };
+  const runTest = async () => {
+    setLoading(true);
 
-  const runTest = async (
-    name,
-    apiFunction
-  ) => {
     try {
-      const response =
-        await apiFunction();
-
-      addResult(
-        name,
-        "success",
-        getResponseMessage(response)
-      );
-
-      return true;
+      const apiResult = await checkApiHealth();
+      setApi(apiResult);
     } catch (error) {
-      console.error(
-        `${name} ERROR:`,
-        error
-      );
-
-      addResult(
-        name,
-        "error",
-        error.message ||
-          "Request failed"
-      );
-
-      return false;
+      setApi({
+        success: false,
+        message: error.message
+      });
     }
+
+    try {
+      const systemResult = await getSystemHealth();
+      setSystem(systemResult);
+    } catch (error) {
+      setSystem({
+        success: false,
+        message: error.message
+      });
+    }
+
+    setLoading(false);
   };
 
-  const getResponseMessage = (
-    response
-  ) => {
-    if (
-      response === null ||
-      response === undefined
-    ) {
-      return "API responded successfully";
-    }
-
-    if (
-      Array.isArray(response)
-    ) {
-      return `Success — ${response.length} records`;
-    }
-
-    if (
-      typeof response === "object"
-    ) {
-      if (
-        response.count !==
-        undefined
-      ) {
-        return `Success — ${response.count} records`;
-      }
-
-      if (
-        response.projects &&
-        Array.isArray(
-          response.projects
-        )
-      ) {
-        return `Success — ${response.projects.length} projects`;
-      }
-
-      if (
-        response.users &&
-        Array.isArray(
-          response.users
-        )
-      ) {
-        return `Success — ${response.users.length} users`;
-      }
-
-      if (
-        response.notifications &&
-        Array.isArray(
-          response.notifications
-        )
-      ) {
-        return `Success — ${response.notifications.length} notifications`;
-      }
-
-      return (
-        response.message ||
-        "API responded successfully"
-      );
-    }
-
-    return "API responded successfully";
-  };
-
-  const runAllTests = async () => {
-    if (testing) {
-      return;
-    }
-
-    setTesting(true);
-    setResults([]);
-
-    // ========================================
-    // SYSTEM
-    // ========================================
-
-    await runTest(
-      "API Health",
-      checkApiHealth
-    );
-
-    // ========================================
-    // DASHBOARD
-    // ========================================
-
-    await runTest(
-      "Dashboard Stats",
-      getDashboardStats
-    );
-
-    await runTest(
-      "Project Status Summary",
-      getProjectStatusSummary
-    );
-
-    await runTest(
-      "Province Summary",
-      getProvinceSummary
-    );
-
-    // ========================================
-    // PROJECTS
-    // ========================================
-
-    await runTest(
-      "Projects",
-      getProjects
-    );
-
-    // ========================================
-    // FIELD REPORTS
-    // ========================================
-
-    await runTest(
-      "Field Reports",
-      getFieldReports
-    );
-
-    // ========================================
-    // COMPLAINTS
-    // ========================================
-
-    await runTest(
-      "Complaints",
-      getComplaints
-    );
-
-    // ========================================
-    // EVIDENCE
-    // ========================================
-
-    await runTest(
-      "Evidence",
-      getEvidence
-    );
-
-    // ========================================
-    // ALERTS
-    // ========================================
-
-    await runTest(
-      "Alerts",
-      getAlerts
-    );
-
-    // ========================================
-    // NOTIFICATIONS
-    // ========================================
-
-    await runTest(
-      "Notifications",
-      getNotifications
-    );
-
-    // ========================================
-    // USERS
-    // ========================================
-
-    await runTest(
-      "Users",
-      getUsers
-    );
-
-    // ========================================
-    // SETTINGS
-    // ========================================
-
-    await runTest(
-      "My Settings",
-      getMySettings
-    );
-
-    // ========================================
-    // PUBLIC
-    // ========================================
-
-    await runTest(
-      "Public Projects",
-      getPublicProjects
-    );
-
-    await runTest(
-      "Public Summary",
-      getPublicSummary
-    );
-
-    setTesting(false);
-  };
-
-  const successCount =
-    results.filter(
-      (item) =>
-        item.status ===
-        "success"
-    ).length;
-
-  const errorCount =
-    results.filter(
-      (item) =>
-        item.status ===
-        "error"
-    ).length;
+  useEffect(() => {
+    runTest();
+  }, []);
 
   return h(
     "div",
-    {
-      className:
-        "api-test-page page-container"
-    },
-
-    // ========================================
-    // HEADER
-    // ========================================
+    { className: "api-test-page" },
 
     h(
       "div",
-      {
-        className:
-          "page-header"
-      },
+      { className: "api-test-header" },
 
       h(
         "div",
@@ -301,277 +60,86 @@ const ApiTest = () => {
         h(
           "h1",
           null,
-          "API Testing"
+          "API Test"
         ),
 
         h(
           "p",
           null,
-          "Check ProjectWatch Nepal backend API connections."
+          "Check ProjectWatch Nepal API and database connection."
         )
       ),
 
       h(
         "button",
         {
-          className:
-            "api-test-run-button",
-          onClick:
-            runAllTests,
-          disabled: testing
+          type: "button",
+          onClick: runTest,
+          disabled: loading
         },
-        testing
-          ? "Testing..."
-          : "Run All Tests"
+        loading ? "Testing..." : "Run Test"
       )
     ),
 
-    // ========================================
-    // SUMMARY
-    // ========================================
-
-    results.length > 0
-      ? h(
-          "div",
-          {
-            className:
-              "api-test-summary"
-          },
-
-          h(
-            "div",
-            {
-              className:
-                "api-test-summary-card"
-            },
-
-            h(
-              "span",
-              {
-                className:
-                  "api-test-summary-icon"
-              },
-              "🧪"
-            ),
-
-            h(
-              "div",
-              null,
-
-              h(
-                "strong",
-                null,
-                results.length
-              ),
-
-              h(
-                "span",
-                null,
-                "Total Tests"
-              )
-            )
-          ),
-
-          h(
-            "div",
-            {
-              className:
-                "api-test-summary-card success"
-            },
-
-            h(
-              "span",
-              {
-                className:
-                  "api-test-summary-icon"
-              },
-              "✓"
-            ),
-
-            h(
-              "div",
-              null,
-
-              h(
-                "strong",
-                null,
-                successCount
-              ),
-
-              h(
-                "span",
-                null,
-                "Passed"
-              )
-            )
-          ),
-
-          h(
-            "div",
-            {
-              className:
-                "api-test-summary-card error"
-            },
-
-            h(
-              "span",
-              {
-                className:
-                  "api-test-summary-icon"
-              },
-              "!"
-            ),
-
-            h(
-              "div",
-              null,
-
-              h(
-                "strong",
-                null,
-                errorCount
-              ),
-
-              h(
-                "span",
-                null,
-                "Failed"
-              )
-            )
-          )
-        )
-      : null,
-
-    // ========================================
-    // RESULTS
-    // ========================================
-
     h(
       "div",
-      {
-        className:
-          "api-test-card"
-      },
+      { className: "api-test-grid" },
 
       h(
         "div",
-        {
-          className:
-            "api-test-card-header"
-        },
+        { className: "api-test-card" },
+
+        h(
+          "h2",
+          null,
+          "API Connection"
+        ),
 
         h(
           "div",
+          {
+            className:
+              api?.success
+                ? "test-status success"
+                : "test-status error"
+          },
+          api?.success ? "Connected" : "Failed"
+        ),
+
+        h(
+          "pre",
           null,
-
-          h(
-            "h2",
-            null,
-            "API Test Results"
-          ),
-
-          h(
-            "p",
-            null,
-            "Read-only requests are used for testing."
-          )
+          JSON.stringify(api, null, 2)
         )
       ),
 
-      results.length === 0
-        ? h(
-            "div",
-            {
-              className:
-                "api-test-empty"
-            },
+      h(
+        "div",
+        { className: "api-test-card" },
 
-            h(
-              "div",
-              {
-                className:
-                  "api-test-empty-icon"
-              },
-              "🧪"
-            ),
+        h(
+          "h2",
+          null,
+          "System Health"
+        ),
 
-            h(
-              "h3",
-              null,
-              "Ready to test"
-            ),
+        h(
+          "div",
+          {
+            className:
+              system?.success
+                ? "test-status success"
+                : "test-status error"
+          },
+          system?.success ? "Healthy" : "Failed"
+        ),
 
-            h(
-              "p",
-              null,
-              "Click “Run All Tests” to check all available APIs."
-            )
-          )
-        : h(
-            "div",
-            {
-              className:
-                "api-test-results"
-            },
-
-            results.map(
-              (item, index) =>
-                h(
-                  "div",
-                  {
-                    key: item.id,
-                    className:
-                      `api-test-result ${
-                        item.status ===
-                        "success"
-                          ? "passed"
-                          : "failed"
-                      }`
-                  },
-
-                  h(
-                    "div",
-                    {
-                      className:
-                        "api-test-result-number"
-                    },
-                    index + 1
-                  ),
-
-                  h(
-                    "div",
-                    {
-                      className:
-                        "api-test-result-info"
-                    },
-
-                    h(
-                      "strong",
-                      null,
-                      item.name
-                    ),
-
-                    h(
-                      "span",
-                      null,
-                      item.message
-                    )
-                  ),
-
-                  h(
-                    "div",
-                    {
-                      className:
-                        "api-test-result-status"
-                    },
-                    item.status ===
-                    "success"
-                      ? "✓ PASS"
-                      : "✕ FAIL"
-                  )
-                )
-            )
-          )
+        h(
+          "pre",
+          null,
+          JSON.stringify(system, null, 2)
+        )
+      )
     )
   );
 };

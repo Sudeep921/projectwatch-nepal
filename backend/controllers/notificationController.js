@@ -47,7 +47,7 @@ const getMyNotifications =
           recipient: req.user._id
         })
           .sort({
-            isRead: 1,
+            Read: 1,
             createdAt: -1
           });
 
@@ -114,7 +114,7 @@ const markAsRead =
         await Notification.findByIdAndUpdate(
           req.params.id,
           {
-            isRead: true
+            read: true
           },
           {
             new: true
@@ -159,12 +159,12 @@ const markAllAsRead =
       await Notification.updateMany(
         {
           recipient: req.user._id,
-          isRead: {
+          read: {
             $ne: true
           }
         },
         {
-          isRead: true
+          read: true
         }
       );
 

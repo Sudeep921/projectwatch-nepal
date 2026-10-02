@@ -67,9 +67,9 @@ const Complaints = () => {
         (item) => {
           const text =
             `${item.complaintId || ""} ${
-              item.name || ""
+              item.citizenName || ""
             } ${
-              item.email || ""
+              item.citizenEmail || ""
             } ${
               item.description || ""
             } ${
@@ -79,20 +79,21 @@ const Complaints = () => {
           const itemStatus =
             String(
               item.status ||
-              "pending"
+              "Submitted"
             ).toLowerCase();
 
           const itemPriority =
             String(
               item.priority ||
-              "normal"
+              "Medium"
             ).toLowerCase();
 
           return (
             (!q ||
               text.includes(q)) &&
             (status === "all" ||
-              itemStatus === status) &&
+              itemStatus ===
+                status) &&
             (priority === "all" ||
               itemPriority ===
                 priority)
@@ -203,11 +204,13 @@ const Complaints = () => {
       h(
         "div",
         null,
+
         h(
           "strong",
           null,
           complaints.length
         ),
+
         h(
           "span",
           null,
@@ -218,6 +221,7 @@ const Complaints = () => {
       h(
         "div",
         null,
+
         h(
           "strong",
           null,
@@ -226,19 +230,21 @@ const Complaints = () => {
               String(
                 x.status
               ).toLowerCase() ===
-              "pending"
+              "submitted"
           ).length
         ),
+
         h(
           "span",
           null,
-          "Pending"
+          "Submitted"
         )
       ),
 
       h(
         "div",
         null,
+
         h(
           "strong",
           null,
@@ -250,6 +256,7 @@ const Complaints = () => {
               "in progress"
           ).length
         ),
+
         h(
           "span",
           null,
@@ -260,6 +267,7 @@ const Complaints = () => {
       h(
         "div",
         null,
+
         h(
           "strong",
           null,
@@ -271,6 +279,7 @@ const Complaints = () => {
               "resolved"
           ).length
         ),
+
         h(
           "span",
           null,
@@ -290,10 +299,12 @@ const Complaints = () => {
         "input",
         {
           value: search,
+
           onChange: (e) =>
             setSearch(
               e.target.value
             ),
+
           placeholder:
             "Search complaint, citizen, description..."
         }
@@ -303,6 +314,7 @@ const Complaints = () => {
         "select",
         {
           value: status,
+
           onChange: (e) =>
             setStatus(
               e.target.value
@@ -317,31 +329,46 @@ const Complaints = () => {
 
         h(
           "option",
-          { value: "pending" },
-          "Pending"
+          {
+            value:
+              "submitted"
+          },
+          "Submitted"
         ),
 
         h(
           "option",
-          { value: "review" },
-          "Review"
+          {
+            value:
+              "under review"
+          },
+          "Under Review"
         ),
 
         h(
           "option",
-          { value: "in progress" },
+          {
+            value:
+              "in progress"
+          },
           "In Progress"
         ),
 
         h(
           "option",
-          { value: "resolved" },
+          {
+            value:
+              "resolved"
+          },
           "Resolved"
         ),
 
         h(
           "option",
-          { value: "rejected" },
+          {
+            value:
+              "rejected"
+          },
           "Rejected"
         )
       ),
@@ -350,6 +377,7 @@ const Complaints = () => {
         "select",
         {
           value: priority,
+
           onChange: (e) =>
             setPriority(
               e.target.value
@@ -364,25 +392,33 @@ const Complaints = () => {
 
         h(
           "option",
-          { value: "low" },
+          {
+            value: "low"
+          },
           "Low"
         ),
 
         h(
           "option",
-          { value: "normal" },
-          "Normal"
+          {
+            value: "medium"
+          },
+          "Medium"
         ),
 
         h(
           "option",
-          { value: "high" },
+          {
+            value: "high"
+          },
           "High"
         ),
 
         h(
           "option",
-          { value: "critical" },
+          {
+            value: "critical"
+          },
           "Critical"
         )
       )
@@ -397,6 +433,7 @@ const Complaints = () => {
           },
           "Loading complaints..."
         )
+
       : h(
           "div",
           {
@@ -484,6 +521,7 @@ const Complaints = () => {
                           h(
                             "strong",
                             null,
+
                             item.complaintId ||
                               `CMP-${String(
                                 item._id
@@ -495,6 +533,7 @@ const Complaints = () => {
                           h(
                             "p",
                             null,
+
                             item.description ||
                               "No description"
                           )
@@ -504,14 +543,15 @@ const Complaints = () => {
                           "td",
                           null,
 
-                          item.name ||
+                          item.citizenName ||
                             "Anonymous",
 
-                          item.email
+                          item.citizenEmail
                             ? h(
                                 "small",
                                 null,
-                                item.email
+
+                                item.citizenEmail
                               )
                             : null
                         ),
@@ -519,9 +559,9 @@ const Complaints = () => {
                         h(
                           "td",
                           null,
+
                           item.category ||
-                            item.issueType ||
-                            "General"
+                            "Other"
                         ),
 
                         h(
@@ -535,12 +575,13 @@ const Complaints = () => {
                                 `complaint-priority ${
                                   String(
                                     item.priority ||
-                                      "normal"
+                                      "Medium"
                                   ).toLowerCase()
                                 }`
                             },
+
                             item.priority ||
-                              "Normal"
+                              "Medium"
                           )
                         ),
 
@@ -553,7 +594,8 @@ const Complaints = () => {
                             {
                               value:
                                 item.status ||
-                                "pending",
+                                "Submitted",
+
                               onChange:
                                 (e) =>
                                   changeStatus(
@@ -567,25 +609,25 @@ const Complaints = () => {
                               "option",
                               {
                                 value:
-                                  "pending"
+                                  "Submitted"
                               },
-                              "Pending"
+                              "Submitted"
                             ),
 
                             h(
                               "option",
                               {
                                 value:
-                                  "review"
+                                  "Under Review"
                               },
-                              "Review"
+                              "Under Review"
                             ),
 
                             h(
                               "option",
                               {
                                 value:
-                                  "in progress"
+                                  "In Progress"
                               },
                               "In Progress"
                             ),
@@ -594,7 +636,7 @@ const Complaints = () => {
                               "option",
                               {
                                 value:
-                                  "resolved"
+                                  "Resolved"
                               },
                               "Resolved"
                             ),
@@ -603,7 +645,7 @@ const Complaints = () => {
                               "option",
                               {
                                 value:
-                                  "rejected"
+                                  "Rejected"
                               },
                               "Rejected"
                             )
@@ -613,6 +655,7 @@ const Complaints = () => {
                         h(
                           "td",
                           null,
+
                           formatDate(
                             item.createdAt
                           )
@@ -627,6 +670,7 @@ const Complaints = () => {
                             {
                               className:
                                 "complaint-view-btn",
+
                               onClick:
                                 () =>
                                   window.alert(
@@ -634,6 +678,7 @@ const Complaints = () => {
                                       "No complaint details."
                                   )
                             },
+
                             "View"
                           )
                         )
@@ -641,12 +686,14 @@ const Complaints = () => {
                   )
                 )
               )
+
             : h(
                 "div",
                 {
                   className:
                     "complaints-empty"
                 },
+
                 "No complaints found."
               )
         )

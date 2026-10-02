@@ -1,6 +1,20 @@
 const Complaint =
   require("../models/Complaint");
 
+const Notification =
+  require("../models/Notification");
+
+const User =
+  require("../models/User");
+
+const Project =
+  require("../models/Project");
+
+
+// ==========================================
+// GET ALL COMPLAINTS
+// ==========================================
+
 const getComplaints =
   async (req, res) => {
     try {
@@ -20,10 +34,10 @@ const getComplaints =
 
       res.json({
         success: true,
-        count:
-          complaints.length,
+        count: complaints.length,
         complaints
       });
+
     } catch (error) {
       console.error(
         "Get complaints error:",
@@ -37,6 +51,11 @@ const getComplaints =
       });
     }
   };
+
+
+// ==========================================
+// GET SINGLE COMPLAINT
+// ==========================================
 
 const getComplaint =
   async (req, res) => {
@@ -66,6 +85,7 @@ const getComplaint =
         success: true,
         complaint
       });
+
     } catch (error) {
       console.error(
         "Get complaint error:",
@@ -80,15 +100,25 @@ const getComplaint =
     }
   };
 
-/*
-  PUBLIC SUBMISSION — no login required.
-  Any citizen can submit this; there is no
-  req.user here, so we never rely on it.
-*/
+
+// ==========================================
+// CREATE COMPLAINT
+// PUBLIC — NO LOGIN REQUIRED
+// ==========================================
 
 const createComplaint =
   async (req, res) => {
     try {
+      console.log(
+        "========== COMPLAINT REQUEST =========="
+      );
+
+      console.log(
+        "REQ BODY:",
+        req.body
+      );
+
+
       const {
         project,
         citizenName,
@@ -97,40 +127,195 @@ const createComplaint =
         title,
         description,
         category,
+        priority,
         location,
         latitude,
         longitude
       } = req.body;
 
-      if (
-        !citizenName ||
-        !citizenPhone ||
-        !title ||
-        !description
-      ) {
+
+      // ======================================
+      // REQUIRED FIELD VALIDATION
+      // ======================================
+
+      if (!citizenName) {
         return res.status(400).json({
           success: false,
           message:
-            "Name, phone, subject and description are required"
+            "Citizen name is required"
         });
       }
+
+      if (!citizenPhone) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Citizen phone is required"
+        });
+      }
+
+      if (!title) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Complaint title is required"
+        });
+      }
+
+      if (!description) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Complaint description is required"
+        });
+      }
+
+      if (!project) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Project is required"
+        });
+      }
+
+
+      // ======================================
+      // FIND PROJECT
+      // ======================================
+
+      let projectId = null;
+
+      const projectValue =
+        String(project).trim();
+
+
+      // --------------------------------------
+      // If MongoDB ObjectId was sent
+      // --------------------------------------
+
+      if (
+        /^[a-fA-F0-9]{24}$/.test(
+          projectValue
+        )
+      ) {
+        const projectDoc =
+          await Project.findById(
+            projectValue
+          );
+
+        if (!projectDoc) {
+          return res.status(400).json({
+            success: false,
+            message:
+              `Project not found: ${projectValue}`
+          });
+        }
+
+        projectId =
+          projectDoc._id;
+      }
+
+
+      // --------------------------------------
+      // If project code was sent
+      // Example:
+      // PW-BAG-00124
+      // --------------------------------------
+
+      else {
+        const projectDoc =
+          await Project.findOne({
+            projectCode:
+              projectValue
+          });
+
+        if (!projectDoc) {
+          return res.status(400).json({
+            success: false,
+            message:
+              `Project not found: ${projectValue}`
+          });
+        }
+
+        projectId =
+          projectDoc._id;
+      }
+
+
+      // ======================================
+      // CATEGORY
+      // ======================================
+
+      const categoryMap = {
+        "project-delay":
+          "Delay",
+
+        "quality":
+          "Quality",
+
+        "corruption":
+          "Other",
+
+        "environment":
+          "Other",
+
+        "other":
+          "Other"
+      };
+
+      const complaintCategory =
+        categoryMap[
+          category
+        ] || "Other";
+
+
+      // ======================================
+      // PRIORITY
+      // ======================================
+
+      const priorityMap = {
+        normal: "Medium",
+        high: "High",
+        critical: "Critical"
+      };
+
+      const complaintPriority =
+        priorityMap[
+          priority
+        ] || "Medium";
+
+
+      // ======================================
+      // CREATE COMPLAINT
+      // ======================================
 
       const complaint =
         await Complaint.create({
           project:
-            project || undefined,
+            projectId,
 
-          citizenName,
-          citizenPhone,
+          citizenName:
+            citizenName.trim(),
+
+          citizenPhone:
+            citizenPhone.trim(),
 
           citizenEmail:
-            citizenEmail || "",
+            citizenEmail
+              ? citizenEmail.trim()
+              : "",
 
-          title,
-          description,
+          title:
+            title.trim(),
+
+          description:
+            description.trim(),
 
           category:
-            category || "Other",
+            complaintCategory,
+
+          priority:
+            complaintPriority,
 
           location:
             location || "",
@@ -147,15 +332,66 @@ const createComplaint =
               ? Number(longitude)
               : undefined,
 
-          status: "Submitted"
+          status:
+            "Submitted"
         });
+
+
+      // ======================================
+      // FIND ALL ADMINS
+      // ======================================
+
+      const admins =
+        await User.find({
+          role: "admin"
+        }).select("_id");
+
+
+      // ======================================
+      // CREATE NOTIFICATION FOR ADMINS
+      // ======================================
+
+      if (admins.length > 0) {
+        const notifications =
+          admins.map((admin) => ({
+            recipient:
+              admin._id,
+
+            title:
+              "New Complaint Submitted",
+
+            message:
+              `${citizenName} submitted a new complaint: ${title}`,
+
+            type:
+              "Info",
+
+            project:
+              projectId,
+
+            read:
+              false
+          }));
+
+        await Notification.insertMany(
+          notifications
+        );
+      }
+
+
+      // ======================================
+      // RESPONSE
+      // ======================================
 
       res.status(201).json({
         success: true,
+
         message:
           "Complaint submitted successfully",
+
         complaint
       });
+
     } catch (error) {
       console.error(
         "Create complaint error:",
@@ -164,6 +400,7 @@ const createComplaint =
 
       res.status(500).json({
         success: false,
+
         message:
           error.message ||
           "Unable to submit complaint"
@@ -171,12 +408,22 @@ const createComplaint =
     }
   };
 
+
+// ==========================================
+// UPDATE COMPLAINT
+// ==========================================
+
 const updateComplaint =
   async (req, res) => {
     try {
       const updateData = {
         ...req.body
       };
+
+
+      // ======================================
+      // WHEN COMPLAINT IS RESOLVED
+      // ======================================
 
       if (
         updateData.status ===
@@ -191,15 +438,23 @@ const updateComplaint =
           req.user?._id;
       }
 
+
+      // ======================================
+      // UPDATE
+      // ======================================
+
       const complaint =
         await Complaint.findByIdAndUpdate(
           req.params.id,
+
           updateData,
+
           {
             new: true,
             runValidators: true
           }
         );
+
 
       if (!complaint) {
         return res.status(404).json({
@@ -209,12 +464,20 @@ const updateComplaint =
         });
       }
 
+
+      // ======================================
+      // RESPONSE
+      // ======================================
+
       res.json({
         success: true,
+
         message:
           "Complaint updated successfully",
+
         complaint
       });
+
     } catch (error) {
       console.error(
         "Update complaint error:",
@@ -223,11 +486,18 @@ const updateComplaint =
 
       res.status(500).json({
         success: false,
+
         message:
+          error.message ||
           "Unable to update complaint"
       });
     }
   };
+
+
+// ==========================================
+// EXPORT
+// ==========================================
 
 module.exports = {
   getComplaints,

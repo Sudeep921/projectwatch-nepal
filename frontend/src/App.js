@@ -8,100 +8,52 @@ import {
   Navigate
 } from "react-router-dom";
 
-import {
-  useAuth
-} from "./context/AuthContext";
-
-import DashboardLayout
-  from "./layouts/DashboardLayout";
+import { useAuth } from "./context/AuthContext";
+import DashboardLayout from "./layouts/DashboardLayout";
 
 // ========================================
 // ADMIN PAGES
 // ========================================
 
-import Dashboard
-  from "./pages/Dashboard";
-
-import Projects
-  from "./pages/Projects";
-
-import ProjectDetails
-  from "./pages/ProjectDetails";
-
-import Map
-  from "./pages/Map";
-
-import FieldReports
-  from "./pages/FieldReports";
-
-import Complaints
-  from "./pages/Complaints";
-
-import Evidence
-  from "./pages/Evidence";
-
-import Alerts
-  from "./pages/Alerts";
-
-import Reports
-  from "./pages/Reports";
-
-import Settings
-  from "./pages/Settings";
-
-import Notifications
-  from "./pages/Notifications";
-
-import AddProjectPage
-  from "./pages/AddProjectPage";
-
-import EditProjectPage
-  from "./pages/EditProjectPage";
-
-import UserManagement
-  from "./pages/UserManagement";
-
-import AuditLogs
-  from "./pages/AuditLogs";
-
-import SystemSettings
-  from "./pages/SystemSettings";
+import Dashboard from "./pages/Dashboard";
+import Projects from "./pages/Projects";
+import ProjectDetails from "./pages/ProjectDetails";
+import Map from "./pages/Map";
+import FieldReports from "./pages/FieldReports";
+import Complaints from "./pages/Complaints";
+import Evidence from "./pages/Evidence";
+import Alerts  from "./pages/Alerts";
+import Reports from "./pages/Reports";
+import Settings  from "./pages/Settings";
+import Notifications  from "./pages/Notifications";
+import AddProjectPage  from "./pages/AddProjectPage";
+import EditProjectPage from "./pages/EditProjectPage";
+import UserManagement from "./pages/UserManagement";
+import AuditLogs from "./pages/AuditLogs";
+import SystemSettings  from "./pages/SystemSettings";
 
 // ========================================
 // PUBLIC PAGES
 // ========================================
 
-import PublicPortal
-  from "./pages/PublicPortal";
-
-import PublicProjectDetails
-  from "./pages/PublicProjectDetails";
-
-import PublicComplaintForm
-  from "./pages/PublicComplaintForm";
-
-import PublicComplaint
-  from "./pages/PublicComplaint";
-
-import PublicMap
-  from "./pages/PublicMap";
+import PublicPortal from "./pages/PublicPortal";
+import PublicProjectDetails from "./pages/PublicProjectDetails";
+import PublicComplaintForm from "./pages/PublicComplaintForm";
+import PublicComplaint from "./pages/PublicComplaint";
+import PublicMap from "./pages/PublicMap";
 
 // ========================================
 // AUTH
 // ========================================
 
-import AdminLogin
-  from "./pages/AdminLogin";
+import AdminLogin from "./pages/AdminLogin";
 
 // ========================================
 // TEST PAGES
 // ========================================
 
-import SystemTest
-  from "./pages/SystemTest";
-
-import ApiTest
-  from "./pages/ApiTest";
+import SystemTest from "./pages/SystemTest";
+import ApiTest from "./pages/ApiTest";
 
 // ========================================
 // ERROR / NOT FOUND
@@ -110,9 +62,10 @@ import ApiTest
 import ErrorBoundary
   from "./components/ErrorBoundary";
 
-import NotFound
-  from "./pages/NotFound";
+import NotFound from "./pages/NotFound";
 import ReleaseStatus from "./pages/ReleaseStatus";
+import NetworkStatus
+  from "./components/NetworkStatus";
 
 // ========================================
 // REACT CREATE ELEMENT

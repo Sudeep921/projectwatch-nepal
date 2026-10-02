@@ -7,16 +7,22 @@ const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
+const helmet = require("helmet");
 
 dotenv.config();
-
 
 /* =====================================================
    APP
    ===================================================== */
 
 const app = express();
-
+app.use(
+  helmet({
+    crossOriginResourcePolicy: {
+      policy: "cross-origin"
+    }
+  })
+);
 
 /* =====================================================
    CORS
@@ -32,21 +38,27 @@ app.use(
   })
 );
 
-
 /* =====================================================
    BODY PARSER
    ===================================================== */
 
 app.use(
-  express.json()
+  express.json({
+    limit: "2mb"
+  })
 );
 
+app.use(
+  express.urlencoded({
+    extended: true,
+    limit: "2mb"
+  })
+);
 app.use(
   express.urlencoded({
     extended: true
   })
 );
-
 
 /* =====================================================
    STATIC FILES
@@ -56,7 +68,6 @@ app.use(
   "/uploads",
   express.static("uploads")
 );
-
 
 /* =====================================================
    ROUTE IMPORTS
@@ -113,7 +124,6 @@ const userRoutes =
 const healthRoutes =
   require("./routes/healthRoutes");
 
-
 /* =====================================================
    ROOT
    ===================================================== */
@@ -135,6 +145,71 @@ app.get(
   }
 );
 
+/* =====================================================
+   API INFORMATION
+   ===================================================== */
+
+app.get(
+  "/api",
+  (req, res) => {
+
+    res.json({
+
+      success: true,
+
+      name:
+        "ProjectWatch Nepal API",
+
+      version:
+        "1.0.0",
+
+      status:
+        "running",
+
+      timestamp:
+        new Date().toISOString(),
+
+      endpoints: {
+
+        auth:
+          "/api/auth",
+
+        projects:
+          "/api/projects",
+
+        users:
+          "/api/users",
+
+        dashboard:
+          "/api/dashboard",
+
+        fieldReports:
+          "/api/field-reports",
+
+        complaints:
+          "/api/complaints",
+
+        notifications:
+          "/api/notifications",
+
+        alerts:
+          "/api/alerts",
+
+        evidence:
+          "/api/evidence",
+
+        audit:
+          "/api/audit",
+
+        health:
+          "/api/health"
+
+      }
+
+    });
+
+  }
+);
 
 /* =====================================================
    API HEALTH
@@ -165,7 +240,6 @@ app.get(
   }
 );
 
-
 /* =====================================================
    API ROUTES
    ===================================================== */
@@ -175,96 +249,80 @@ app.use(
   authRoutes
 );
 
-
 app.use(
   "/api/projects",
   projectRoutes
 );
-
 
 app.use(
   "/api/workers",
   workerRoutes
 );
 
-
 app.use(
   "/api/bookings",
   bookingRoutes
 );
-
 
 app.use(
   "/api/dashboard",
   dashboardRoutes
 );
 
-
 app.use(
   "/api/field-reports",
   fieldReportRoutes
 );
-
 
 app.use(
   "/api/complaints",
   complaintRoutes
 );
 
-
 app.use(
   "/api/notifications",
   notificationRoutes
 );
-
 
 app.use(
   "/api/verifications",
   verificationRoutes
 );
 
-
 app.use(
   "/api/evidence",
   evidenceRoutes
 );
-
 
 app.use(
   "/api/alerts",
   alertRoutes
 );
 
-
 app.use(
   "/api/public",
   publicRoutes
 );
-
 
 app.use(
   "/api/audit",
   auditRoutes
 );
 
-
 app.use(
   "/api/reports",
   reportRoutes
 );
-
 
 app.use(
   "/api/ai",
   aiRoutes
 );
 
-
 app.use(
   "/api/users",
   userRoutes
 );
-
 
 /*
   healthRoutes पनि राख्ने।
@@ -276,7 +334,6 @@ app.use(
   "/api/system-health",
   healthRoutes
 );
-
 
 /* =====================================================
    API 404 HANDLER
@@ -313,7 +370,6 @@ app.use(
   }
 );
 
-
 /* =====================================================
    GLOBAL ERROR HANDLER
    ===================================================== */
@@ -331,7 +387,6 @@ app.use(
       err
     );
 
-
     res.status(
       err.status || 500
     ).json({
@@ -346,7 +401,6 @@ app.use(
 
   }
 );
-
 
 /* =====================================================
    MONGODB CONNECTION
@@ -363,21 +417,32 @@ mongoose
       "✅ MongoDB connected successfully"
     );
 
-
     const PORT =
       process.env.PORT || 8000;
 
-
     /* =================================================
        START SERVER
-    ================================================= */
+       ================================================= */
 
-    app.listen(
+       const errorHandler = require(
+          "./middleware/errorHandler"
+        );
+
+app.use(errorHandler);
+       app.listen(
       PORT,
       () => {
 
         console.log(
           `🚀 ProjectWatch API running on http://localhost:${PORT}`
+        );
+
+        console.log(
+          `📡 API Information: http://localhost:${PORT}/api`
+        );
+
+        console.log(
+          `❤️ API Health: http://localhost:${PORT}/api/health`
         );
 
       }

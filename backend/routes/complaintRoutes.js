@@ -4,35 +4,29 @@ const {
   getComplaints,
   createComplaint,
   updateComplaint
-} = require(
-  "../controllers/complaintController"
-);
+} = require("../controllers/complaintController");
+
+const {
+  updateComplaintStatus
+} = require("../controllers/complaintAdminController");
 
 const authMiddleware =
-  require(
-    "../middleware/authMiddleware"
-  );
-  const {
-  updateComplaintStatus
-} = require(
-  "../controllers/complaintAdminController"
-);
+  require("../middleware/authMiddleware");
+
 const adminMiddleware =
   require("../middleware/adminMiddleware");
 
-const router =
-  express.Router();
-
-router.use(authMiddleware);
-
-router.get(
-  "/",
-  getComplaints
-);
+const router = express.Router();
 
 router.post(
   "/",
   createComplaint
+);
+
+router.get(
+  "/",
+  authMiddleware,
+  getComplaints
 );
 
 router.put(
@@ -41,4 +35,5 @@ router.put(
   adminMiddleware,
   updateComplaintStatus
 );
+
 module.exports = router;

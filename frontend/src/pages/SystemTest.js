@@ -3,9 +3,7 @@ import React, {
   useState
 } from "react";
 
-import {
-  checkApiHealth
-} from "../services/api";
+import { checkApiHealth} from "../services/api";
 
 const h = React.createElement;
 

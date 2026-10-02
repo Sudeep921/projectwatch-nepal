@@ -50,6 +50,33 @@ const PublicComplaint = () => {
     setSuccess(null);
 
     if (
+      !form.name.trim()
+    ) {
+      setError(
+        "Please enter your name."
+      );
+      return;
+    }
+
+    if (
+      !form.phone.trim()
+    ) {
+      setError(
+        "Please enter your phone number."
+      );
+      return;
+    }
+
+    if (
+      !form.project.trim()
+    ) {
+      setError(
+        "Please enter the project name or code."
+      );
+      return;
+    }
+
+    if (
       !form.description.trim()
     ) {
       setError(
@@ -61,41 +88,126 @@ const PublicComplaint = () => {
     try {
       setLoading(true);
 
-      const data =
-        new FormData();
+      // ======================================
+      // CATEGORY MAPPING
+      // Must match Complaint.js enum
+      // ======================================
 
-      Object.keys(form).forEach(
-        (key) => {
-          if (
-            form[key] !== undefined &&
-            form[key] !== ""
-          ) {
-            data.append(
-              key,
-              form[key]
-            );
-          }
-        }
-      );
+      let backendCategory =
+        "Other";
 
-      if (file) {
-        data.append(
-          "evidence",
-          file
-        );
+      if (
+        form.category ===
+        "project-delay"
+      ) {
+        backendCategory =
+          "Delay";
+      } else if (
+        form.category ===
+        "quality"
+      ) {
+        backendCategory =
+          "Quality";
+      } else if (
+        form.category ===
+        "corruption"
+      ) {
+        backendCategory =
+          "Other";
+      } else if (
+        form.category ===
+        "environment"
+      ) {
+        backendCategory =
+          "Other";
+      } else if (
+        form.category ===
+        "other"
+      ) {
+        backendCategory =
+          "Other";
       }
 
+      // ======================================
+      // PRIORITY MAPPING
+      // ======================================
+
+      let backendPriority =
+        "Medium";
+
+      if (
+        form.priority ===
+        "high"
+      ) {
+        backendPriority =
+          "High";
+      } else if (
+        form.priority ===
+        "critical"
+      ) {
+        backendPriority =
+          "Critical";
+      } else {
+        backendPriority =
+          "Medium";
+      }
+
+      // ======================================
+      // SEND COMPLAINT
+      //
+      // Send project code directly.
+      // Backend will find the Project by
+      // projectCode and convert it to _id.
+      // ======================================
+
       const response =
-        await submitPublicComplaint(
-          data
-        );
+        await submitPublicComplaint({
+          citizenName:
+            form.name.trim(),
+
+          citizenPhone:
+            form.phone.trim(),
+
+          citizenEmail:
+            form.email.trim(),
+
+          project:
+            form.project.trim(),
+
+          title:
+            form.description
+              .trim()
+              .substring(0, 100),
+
+          description:
+            form.description.trim(),
+
+          category:
+            backendCategory,
+
+          location:
+            form.location.trim(),
+
+          priority:
+            backendPriority
+        });
+
+      // ======================================
+      // SUCCESS
+      // ======================================
 
       setSuccess(
         response?.complaintId ||
         response?.complaint
           ?.complaintId ||
+        response?.complaint
+          ?._id ||
         "Complaint submitted successfully."
       );
+
+      // ======================================
+      // RESET
+      // ======================================
 
       setForm({
         name: "",
@@ -109,11 +221,18 @@ const PublicComplaint = () => {
       });
 
       setFile(null);
+
     } catch (err) {
+      console.error(
+        "Complaint submit error:",
+        err
+      );
+
       setError(
         err.message ||
         "Failed to submit complaint."
       );
+
     } finally {
       setLoading(false);
     }
@@ -209,11 +328,13 @@ const PublicComplaint = () => {
             "input",
             {
               value: form.name,
+
               onChange: (e) =>
                 update(
                   "name",
                   e.target.value
                 ),
+
               placeholder:
                 "Your name (optional)"
             }
@@ -223,11 +344,13 @@ const PublicComplaint = () => {
             "input",
             {
               value: form.phone,
+
               onChange: (e) =>
                 update(
                   "phone",
                   e.target.value
                 ),
+
               placeholder:
                 "Phone (optional)"
             }
@@ -237,12 +360,15 @@ const PublicComplaint = () => {
             "input",
             {
               type: "email",
+
               value: form.email,
+
               onChange: (e) =>
                 update(
                   "email",
                   e.target.value
                 ),
+
               placeholder:
                 "Email (optional)"
             }
@@ -253,11 +379,13 @@ const PublicComplaint = () => {
             {
               value:
                 form.project,
+
               onChange: (e) =>
                 update(
                   "project",
                   e.target.value
                 ),
+
               placeholder:
                 "Project name or code"
             }
@@ -268,11 +396,13 @@ const PublicComplaint = () => {
             {
               value:
                 form.location,
+
               onChange: (e) =>
                 update(
                   "location",
                   e.target.value
                 ),
+
               placeholder:
                 "Issue location"
             }
@@ -283,6 +413,7 @@ const PublicComplaint = () => {
             {
               value:
                 form.category,
+
               onChange: (e) =>
                 update(
                   "category",
@@ -347,6 +478,7 @@ const PublicComplaint = () => {
             {
               value:
                 form.priority,
+
               onChange: (e) =>
                 update(
                   "priority",
@@ -388,14 +520,18 @@ const PublicComplaint = () => {
           {
             value:
               form.description,
+
             onChange: (e) =>
               update(
                 "description",
                 e.target.value
               ),
+
             placeholder:
               "Describe the issue in detail...",
+
             rows: 7,
+
             required: true
           }
         ),
@@ -417,8 +553,10 @@ const PublicComplaint = () => {
             "input",
             {
               type: "file",
+
               accept:
                 "image/*,.pdf,.doc,.docx",
+
               onChange: (e) =>
                 setFile(
                   e.target.files?.[0] ||
@@ -432,10 +570,14 @@ const PublicComplaint = () => {
           "button",
           {
             type: "submit",
-            disabled: loading,
+
+            disabled:
+              loading,
+
             className:
               "public-complaint-submit"
           },
+
           loading
             ? "Submitting..."
             : "Submit Complaint"
