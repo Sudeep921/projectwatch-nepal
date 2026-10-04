@@ -3,7 +3,8 @@ const express = require("express");
 const {
   getUsers,
   getMySettings,
-  updateMySettings
+  updateMySettings,
+  changeMyCredentials
 } = require("../controllers/userController");
 
 const {
@@ -80,6 +81,11 @@ router.put(
   authMiddleware,
   adminMiddleware,
   updateUserRole
+);
+router.put(
+  "/credentials",
+  authMiddleware,
+  changeMyCredentials
 );
 
 

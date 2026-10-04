@@ -134,9 +134,118 @@ const updateMySettings = async (req, res) => {
     });
   }
 };
+// ========================================
+// CHANGE MY EMAIL & PASSWORD
+// ADMIN / OFFICER
+// ========================================
+
+const changeMyCredentials = async (req, res) => {
+  try {
+    const userId =
+      req.user._id || req.user.id;
+
+    const {
+      email,
+      currentPassword,
+      newPassword
+    } = req.body;
+
+    if (!email || !currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Email, current password and new password are required"
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "New password must be at least 6 characters"
+      });
+    }
+
+    const user =
+      await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message:
+          "User not found"
+      });
+    }
+
+    const bcrypt =
+      require("bcryptjs");
+
+    const passwordMatch =
+      await bcrypt.compare(
+        currentPassword,
+        user.password
+      );
+
+    if (!passwordMatch) {
+      return res.status(401).json({
+        success: false,
+        message:
+          "Current password is incorrect"
+      });
+    }
+
+    const existingUser =
+      await User.findOne({
+        email: email.toLowerCase().trim(),
+        _id: { $ne: userId }
+      });
+
+    if (existingUser) {
+      return res.status(409).json({
+        success: false,
+        message:
+          "This email is already in use"
+      });
+    }
+
+    const hashedPassword =
+      await bcrypt.hash(
+        newPassword,
+        10
+      );
+
+    user.email =
+      email.toLowerCase().trim();
+
+    user.password =
+      hashedPassword;
+
+    await user.save();
+
+    res.json({
+      success: true,
+      message:
+        "Email and password changed successfully"
+    });
+
+  } catch (error) {
+    console.error(
+      "CHANGE CREDENTIALS ERROR:",
+      error
+    );
+
+    res.status(500).json({
+      success: false,
+      message:
+        "Failed to change email and password",
+      error: error.message
+    });
+  }
+};
 
 module.exports = {
   getUsers,
   getMySettings,
-  updateMySettings
+  updateMySettings,
+  changeMyCredentials
 };

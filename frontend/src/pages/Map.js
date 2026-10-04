@@ -19,710 +19,981 @@ import {
 
 const h = React.createElement;
 
+
+/* ===================================
+   DEFAULT NEPAL LOCATIONS
+=================================== */
+
+const LOCATION_COORDINATES = {
+
+  kathmandu: [
+    27.7172,
+    85.3240
+  ],
+
+  lalitpur: [
+    27.6588,
+    85.3247
+  ],
+
+  bhaktapur: [
+    27.6710,
+    85.4298
+  ],
+
+  pokhara: [
+    28.2096,
+    83.9856
+  ],
+
+  biratnagar: [
+    26.4525,
+    87.2718
+  ],
+
+  bharatpur: [
+    27.6833,
+    84.4333
+  ],
+
+  hetauda: [
+    27.4284,
+    85.0322
+  ],
+
+  butwal: [
+    27.7006,
+    83.4483
+  ],
+
+  nepalgunj: [
+    28.0500,
+    81.6167
+  ],
+
+  janakpur: [
+    26.7288,
+    85.9263
+  ],
+
+  dhangadhi: [
+    28.6833,
+    80.6000
+  ],
+
+  dharan: [
+    26.8125,
+    87.2833
+  ],
+
+  bagmati: [
+    27.7172,
+    85.3240
+  ],
+
+  gandaki: [
+    28.2096,
+    83.9856
+  ],
+
+  koshi: [
+    26.4525,
+    87.2718
+  ],
+
+  lumbini: [
+    27.7006,
+    83.4483
+  ],
+
+  madhesh: [
+    26.7288,
+    85.9263
+  ],
+
+  karnali: [
+    29.0000,
+    82.0000
+  ],
+
+  sudurpashchim: [
+    28.6833,
+    80.6000
+  ]
+
+};
+
+
+/* ===================================
+   FALLBACK LOCATION SEARCH
+=================================== */
+
+const searchFallbackLocation = (
+  query
+) => {
+
+  const cleanQuery =
+    String(query || "")
+      .trim()
+      .toLowerCase();
+
+
+  if (!cleanQuery) {
+    return null;
+  }
+
+
+  const exactKey =
+    Object.keys(
+      LOCATION_COORDINATES
+    ).find(
+      (key) =>
+        key === cleanQuery ||
+        cleanQuery.includes(key) ||
+        key.includes(cleanQuery)
+    );
+
+
+  if (!exactKey) {
+    return null;
+  }
+
+
+  const coordinates =
+    LOCATION_COORDINATES[
+      exactKey
+    ];
+
+
+  return {
+
+    lat:
+      coordinates[0],
+
+    lng:
+      coordinates[1],
+
+    displayName:
+      exactKey
+        .replace(
+          /\b\w/g,
+          (letter) =>
+            letter.toUpperCase()
+        ) +
+      ", Nepal"
+
+  };
+
+};
+
+
+/* ===================================
+   REAL NEPAL LOCATION SEARCH
+=================================== */
+
+const searchNepalLocation = async (
+  query
+) => {
+
+  const cleanQuery =
+    String(query || "")
+      .trim();
+
+
+  if (!cleanQuery) {
+    return null;
+  }
+
+
+  try {
+
+    const url =
+      "https://nominatim.openstreetmap.org/search" +
+      "?format=jsonv2" +
+      "&addressdetails=1" +
+      "&limit=5" +
+      "&countrycodes=np" +
+      "&q=" +
+      encodeURIComponent(
+        cleanQuery + ", Nepal"
+      );
+
+
+    const response =
+      await fetch(
+        url,
+        {
+          method: "GET",
+
+          headers: {
+            Accept:
+              "application/json",
+
+            "Accept-Language":
+              "en"
+          }
+        }
+      );
+
+
+    if (!response.ok) {
+      return null;
+    }
+
+
+    const data =
+      await response.json();
+
+
+    if (
+      !Array.isArray(data) ||
+      data.length === 0
+    ) {
+
+      return null;
+
+    }
+
+
+    const result =
+      data.find(
+        (item) => {
+
+          const lat =
+            Number(
+              item?.lat
+            );
+
+          const lon =
+            Number(
+              item?.lon
+            );
+
+
+          return (
+            Number.isFinite(lat) &&
+            Number.isFinite(lon)
+          );
+
+        }
+      );
+
+
+    if (!result) {
+      return null;
+    }
+
+
+    return {
+
+      lat:
+        Number(
+          result.lat
+        ),
+
+      lng:
+        Number(
+          result.lon
+        ),
+
+      displayName:
+        result.display_name ||
+        cleanQuery
+
+    };
+
+
+  } catch (error) {
+
+    console.error(
+      "Location search error:",
+      error
+    );
+
+    return null;
+
+  }
+
+};
+
+
+/* ===================================
+   MAP PAGE
+=================================== */
+
 const MapPage = () => {
-  const navigate = useNavigate();
+
+  const navigate =
+    useNavigate();
+
+
+  /* =================================
+     MAP REFS
+  ================================= */
 
   const mapContainerRef =
     useRef(null);
 
+
   const mapRef =
     useRef(null);
+
 
   const markersRef =
     useRef([]);
 
-  const tileLayerRef =
-    useRef(null);
 
-  const [projects, setProjects] =
-    useState([]);
+  /* =================================
+     STATE
+  ================================= */
 
-  const [loading, setLoading] =
-    useState(true);
+  const [
+    projects,
+    setProjects
+  ] = useState([]);
 
-  const [refreshing, setRefreshing] =
-    useState(false);
 
-  const [error, setError] =
-    useState("");
+  const [
+    loading,
+    setLoading
+  ] = useState(true);
 
-  const [tileError, setTileError] =
-    useState(false);
 
-  const [search, setSearch] =
-    useState("");
+  const [
+    refreshing,
+    setRefreshing
+  ] = useState(false);
 
-  const [statusFilter, setStatusFilter] =
-    useState("All Status");
 
-  const [riskFilter, setRiskFilter] =
-    useState("All Risk");
+  const [
+    error,
+    setError
+  ] = useState("");
 
-  /* =========================================
+
+  const [
+    search,
+    setSearch
+  ] = useState("");
+
+
+  const [
+    statusFilter,
+    setStatusFilter
+  ] = useState(
+    "All Status"
+  );
+
+
+  const [
+    riskFilter,
+    setRiskFilter
+  ] = useState(
+    "All Risk"
+  );
+
+
+  /* =================================
+     SEARCH MESSAGE
+  ================================= */
+
+  const [
+    searchMessage,
+    setSearchMessage
+  ] = useState("");
+
+
+  const [
+    searching,
+    setSearching
+  ] = useState(false);
+
+
+  /* =================================
      LOAD PROJECTS
-  ========================================= */
+  ================================= */
 
-  const loadProjects = async (
-    isRefresh = false
-  ) => {
-    try {
-      if (isRefresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
+  const loadProjects =
+    async (
+      isRefresh = false
+    ) => {
 
-      setError("");
+      try {
 
-      const result =
-        await getProjects();
+        if (isRefresh) {
 
-      let data =
-        result?.projects ||
-        result?.data ||
-        result;
-
-      if (
-        data &&
-        !Array.isArray(data) &&
-        Array.isArray(data.projects)
-      ) {
-        data = data.projects;
-      }
-
-      if (!Array.isArray(data)) {
-        data = [];
-      }
-
-      setProjects(data);
-
-    } catch (err) {
-      console.error(
-        "Map project loading error:",
-        err
-      );
-
-      setError(
-        err?.message ||
-        "Failed to load projects."
-      );
-
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  useEffect(() => {
-    loadProjects(false);
-  }, []);
-
-  /* =========================================
-     GET COORDINATES
-  ========================================= */
-
-  const getCoordinates = (
-    project
-  ) => {
-    const latitude =
-      Number(
-        project?.latitude ??
-        project?.lat ??
-        project?.location?.latitude ??
-        project?.location?.lat
-      );
-
-    const longitude =
-      Number(
-        project?.longitude ??
-        project?.lng ??
-        project?.lon ??
-        project?.location?.longitude ??
-        project?.location?.lon
-      );
-
-    if (
-      Number.isFinite(latitude) &&
-      Number.isFinite(longitude) &&
-      latitude >= -90 &&
-      latitude <= 90 &&
-      longitude >= -180 &&
-      longitude <= 180
-    ) {
-      return {
-        latitude,
-        longitude
-      };
-    }
-
-    return null;
-  };
-
-  /* =========================================
-     FILTER PROJECTS
-  ========================================= */
-
-  const filteredProjects =
-    useMemo(() => {
-
-      let result =
-        [...projects];
-
-      const query =
-        search
-          .trim()
-          .toLowerCase();
-
-      if (query) {
-
-        result =
-          result.filter(
-            (project) => {
-
-              const name =
-                project?.name ||
-                project?.projectName ||
-                "";
-
-              const code =
-                project?.projectCode ||
-                project?.code ||
-                "";
-
-              const province =
-                project?.province ||
-                "";
-
-              const district =
-                project?.district ||
-                "";
-
-              const municipality =
-                project?.municipality ||
-                "";
-
-              const location =
-                project?.location ||
-                "";
-
-              const text =
-                `${name} ${code} ${province} ${district} ${municipality} ${location}`
-                  .toLowerCase();
-
-              return text.includes(
-                query
-              );
-            }
+          setRefreshing(
+            true
           );
-      }
 
-      if (
-        statusFilter !==
-        "All Status"
-      ) {
+        } else {
 
-        result =
-          result.filter(
-            (project) =>
-              String(
-                project?.status ||
-                ""
-              ).toLowerCase() ===
-              statusFilter.toLowerCase()
+          setLoading(
+            true
           );
-      }
 
-      if (
-        riskFilter !==
-        "All Risk"
-      ) {
-
-        result =
-          result.filter(
-            (project) =>
-              String(
-                project?.riskLevel ||
-                project?.risk ||
-                ""
-              ).toLowerCase() ===
-              riskFilter.toLowerCase()
-          );
-      }
-
-      return result;
-
-    }, [
-      projects,
-      search,
-      statusFilter,
-      riskFilter
-    ]);
-
-  /* =========================================
-     INITIALIZE LEAFLET MAP
-  ========================================= */
-
-  useEffect(() => {
-
-    if (
-      loading ||
-      !mapContainerRef.current
-    ) {
-      return;
-    }
-
-    if (mapRef.current) {
-      return;
-    }
-
-    const map =
-      L.map(
-        mapContainerRef.current,
-        {
-          zoomControl: true,
-          attributionControl: true
         }
-      );
 
-    /* Nepal */
 
-    map.setView(
-      [28.3949, 84.1240],
-      7
-    );
+        setError("");
 
-    /* OpenStreetMap */
 
-    const tileLayer =
-      L.tileLayer(
-        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-        {
-          attribution:
-            "&copy; OpenStreetMap contributors",
+        const result =
+          await getProjects();
 
-          maxZoom: 19,
 
-          minZoom: 5
+        let data =
+          result?.projects ||
+          result?.data ||
+          result;
+
+
+        if (
+          data &&
+          !Array.isArray(data) &&
+          Array.isArray(
+            data.projects
+          )
+        ) {
+
+          data =
+            data.projects;
+
         }
-      );
 
-    tileLayer.addTo(map);
 
-    tileLayerRef.current =
-      tileLayer;
+        if (
+          !Array.isArray(data)
+        ) {
 
-    tileLayer.on(
-      "tileerror",
-      () => {
+          data = [];
 
-        console.error(
-          "OpenStreetMap tile failed to load."
+        }
+
+
+        setProjects(
+          data
         );
 
-        setTileError(true);
+
+      } catch (err) {
+
+        console.error(err);
+
+
+        setError(
+          err?.message ||
+          "Failed to load projects."
+        );
+
+
+      } finally {
+
+        setLoading(
+          false
+        );
+
+        setRefreshing(
+          false
+        );
+
       }
-    );
-
-    tileLayer.on(
-      "tileload",
-      () => {
-        setTileError(false);
-      }
-    );
-
-    mapRef.current =
-      map;
-
-    /* Scale */
-
-    L.control
-      .scale({
-        imperial: false
-      })
-      .addTo(map);
-
-    /* Fix map size */
-
-    setTimeout(() => {
-
-      if (map) {
-        map.invalidateSize(true);
-      }
-
-    }, 500);
-
-    window.setTimeout(() => {
-
-      if (map) {
-        map.invalidateSize(true);
-      }
-
-    }, 1200);
-
-    const handleResize =
-      () => {
-
-        if (mapRef.current) {
-          mapRef.current
-            .invalidateSize(true);
-        }
-
-      };
-
-    window.addEventListener(
-      "resize",
-      handleResize
-    );
-
-    return () => {
-
-      window.removeEventListener(
-        "resize",
-        handleResize
-      );
-
-      if (mapRef.current) {
-        mapRef.current.remove();
-      }
-
-      mapRef.current =
-        null;
-
-      tileLayerRef.current =
-        null;
 
     };
 
-  }, [loading]);
 
-  /* =========================================
-     MARKER ICON
-  ========================================= */
+  useEffect(
+    () => {
 
-  const createMarkerIcon = (
-    project
-  ) => {
+      loadProjects();
 
-    const status =
-      String(
-        project?.status ||
-        ""
-      ).toLowerCase();
+    },
+    []
+  );
 
-    let symbol =
-      "●";
 
-    if (
-      status.includes(
-        "complete"
-      )
-    ) {
-      symbol = "✓";
+  /* =================================
+     PROJECT LOCATION
+  ================================= */
 
-    } else if (
-      status.includes(
-        "delay"
-      )
-    ) {
-      symbol = "!";
+  const getCoordinates =
+    (project) => {
 
-    } else if (
-      status.includes(
-        "critical"
-      )
-    ) {
-      symbol = "!";
+      const latitude =
+        Number(
+          project?.latitude ??
+          project?.lat ??
+          project?.location?.latitude ??
+          project?.location?.lat
+        );
 
-    }
 
-    return L.divIcon({
+      const longitude =
+        Number(
+          project?.longitude ??
+          project?.lng ??
+          project?.lon ??
+          project?.location?.longitude ??
+          project?.location?.lng ??
+          project?.location?.lon
+        );
 
-      className:
-        "project-map-marker-wrapper",
 
-      html:
-        `<div class="project-map-marker">
-          ${symbol}
-        </div>`,
+      if (
+        Number.isFinite(
+          latitude
+        ) &&
+        Number.isFinite(
+          longitude
+        ) &&
+        latitude >= -90 &&
+        latitude <= 90 &&
+        longitude >= -180 &&
+        longitude <= 180 &&
+        latitude !== 0 &&
+        longitude !== 0
+      ) {
 
-      iconSize: [
-        34,
-        34
-      ],
+        return {
 
-      iconAnchor: [
-        17,
-        17
-      ],
+          latitude,
 
-      popupAnchor: [
-        0,
-        -17
+          longitude
+
+        };
+
+      }
+
+
+      /* ===============================
+         LOCATION TEXT FALLBACK
+      =============================== */
+
+      const text = [
+
+        project?.location,
+
+        project?.municipality,
+
+        project?.district,
+
+        project?.province,
+
+        project?.name,
+
+        project?.projectName
+
       ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
 
-    });
-  };
 
-  /* =========================================
-     UPDATE MARKERS
-  ========================================= */
+      for (
+        const key of Object.keys(
+          LOCATION_COORDINATES
+        )
+      ) {
 
-  useEffect(() => {
+        if (
+          text.includes(key)
+        ) {
 
-    const map =
-      mapRef.current;
+          return {
 
-    if (!map) {
-      return;
-    }
+            latitude:
+              LOCATION_COORDINATES[
+                key
+              ][0],
 
-    /* Remove old markers */
+            longitude:
+              LOCATION_COORDINATES[
+                key
+              ][1]
 
-    markersRef.current.forEach(
-      (marker) => {
+          };
 
-        try {
-          map.removeLayer(
-            marker
-          );
-        } catch (err) {
-          console.error(err);
         }
 
       }
-    );
 
-    markersRef.current =
-      [];
 
-    /* Find mapped projects */
+      return null;
 
-    const mappedProjects =
-      filteredProjects.filter(
-        (project) =>
-          getCoordinates(
-            project
-          )
-      );
+    };
 
-    /* Add markers */
 
-    mappedProjects.forEach(
-      (project) => {
+  /* =================================
+     FILTER PROJECTS
+  ================================= */
 
-        const coordinates =
-          getCoordinates(
-            project
-          );
+  const filteredProjects =
+    useMemo(
+      () => {
 
-        if (!coordinates) {
-          return;
-        }
+        let result =
+          [
+            ...projects
+          ];
 
-        const name =
-          project?.name ||
-          project?.projectName ||
-          "Unnamed Project";
 
-        const code =
-          project?.projectCode ||
-          project?.code ||
-          "N/A";
+        const query =
+          search
+            .trim()
+            .toLowerCase();
 
-        const status =
-          project?.status ||
-          "Unknown";
 
-        const risk =
-          project?.riskLevel ||
-          project?.risk ||
-          "Unknown";
+        if (query) {
 
-        const progress =
-          Number(
-            project?.progress ??
-            project?.completionPercentage ??
-            project?.completion ??
-            0
-          );
+          result =
+            result.filter(
+              (project) => {
 
-        const safeProgress =
-          Math.min(
-            100,
-            Math.max(
-              0,
-              Number.isFinite(
-                progress
-              )
-                ? progress
-                : 0
-            )
-          );
+                const name =
+                  project.name ||
+                  project.projectName ||
+                  "";
 
-        const budget =
-          Number(
-            project?.budget ??
-            project?.totalBudget ??
-            0
-          );
 
-        const budgetText =
-          budget > 0
-            ? `NPR ${budget.toLocaleString(
-                "en-IN"
-              )}`
-            : "NPR 0";
+                const code =
+                  project.projectCode ||
+                  project.code ||
+                  "";
 
-        const municipality =
-          project?.municipality ||
-          "N/A";
 
-        const district =
-          project?.district ||
-          "N/A";
+                const province =
+                  project.province ||
+                  "";
 
-        const province =
-          project?.province ||
-          "N/A";
 
-        const projectId =
-          project?._id ||
-          project?.id;
+                const district =
+                  project.district ||
+                  "";
 
-        const popup =
-          `
-          <div class="project-map-popup">
 
-            <div class="map-popup-code">
-              ${code}
-            </div>
+                const municipality =
+                  project.municipality ||
+                  "";
 
-            <h3>
-              ${name}
-            </h3>
 
-            <div class="map-popup-location">
-              📍 ${municipality},
-              ${district},
-              ${province}
-            </div>
+                const location =
+                  project.location ||
+                  "";
 
-            <div class="map-popup-row">
-              <span>Status</span>
-              <strong>${status}</strong>
-            </div>
 
-            <div class="map-popup-row">
-              <span>Risk</span>
-              <strong>${risk}</strong>
-            </div>
+                const text =
+                  `${name} ${code} ${province} ${district} ${municipality} ${location}`
+                    .toLowerCase();
 
-            <div class="map-popup-row">
-              <span>Budget</span>
-              <strong>${budgetText}</strong>
-            </div>
 
-            <div class="map-popup-progress">
+                return text.includes(
+                  query
+                );
 
-              <div class="map-popup-progress-head">
-                <span>Progress</span>
-                <strong>${safeProgress}%</strong>
-              </div>
-
-              <div class="map-popup-progress-track">
-
-                <div
-                  class="map-popup-progress-fill"
-                  style="width:${safeProgress}%"
-                ></div>
-
-              </div>
-
-            </div>
-
-            ${
-              projectId
-                ? `
-                  <button
-                    class="map-popup-view-btn"
-                    data-project-id="${projectId}"
-                  >
-                    View Project
-                  </button>
-                `
-                : ""
-            }
-
-          </div>
-          `;
-
-        const marker =
-          L.marker(
-            [
-              coordinates.latitude,
-              coordinates.longitude
-            ],
-            {
-              icon:
-                createMarkerIcon(
-                  project
-                )
-            }
-          )
-            .addTo(map)
-            .bindPopup(
-              popup,
-              {
-                maxWidth: 320
               }
             );
 
-        marker.on(
-          "popupopen",
-          () => {
+        }
 
-            if (!projectId) {
-              return;
-            }
 
-            const button =
-              document.querySelector(
-                `[data-project-id="${projectId}"]`
-              );
+        if (
+          statusFilter !==
+          "All Status"
+        ) {
 
-            if (button) {
+          result =
+            result.filter(
+              (project) =>
+                String(
+                  project.status ||
+                  ""
+                ).toLowerCase() ===
+                statusFilter.toLowerCase()
+            );
 
-              button.onclick =
-                () => {
+        }
 
-                  navigate(
-                    `/projects/${projectId}`
-                  );
 
-                };
+        if (
+          riskFilter !==
+          "All Risk"
+        ) {
 
-            }
+          result =
+            result.filter(
+              (project) =>
+                String(
+                  project.riskLevel ||
+                  project.risk ||
+                  ""
+                ).toLowerCase() ===
+                riskFilter.toLowerCase()
+            );
 
-          }
-        );
+        }
 
-        markersRef.current.push(
-          marker
-        );
 
-      }
+        return result;
+
+      },
+      [
+        projects,
+        search,
+        statusFilter,
+        riskFilter
+      ]
     );
 
-    /* =====================================
-       MAP VIEW
-    ===================================== */
 
-    if (
-      mappedProjects.length > 0
-    ) {
+  /* =================================
+     AUTO SCROLL TO MAP
+  ================================= */
 
-      const bounds =
-        L.latLngBounds([]);
+  const scrollToMap =
+    () => {
+
+      const mapCard =
+        document.getElementById(
+          "admin-live-map"
+        );
+
+
+      if (!mapCard) {
+        return;
+      }
+
+
+      setTimeout(
+        () => {
+
+          mapCard.scrollIntoView({
+
+            behavior:
+              "smooth",
+
+            block:
+              "start"
+
+          });
+
+        },
+        100
+      );
+
+    };
+
+
+  /* =================================
+     INITIALIZE MAP
+  ================================= */
+
+  useEffect(
+    () => {
+
+      if (
+        loading ||
+        !mapContainerRef.current
+      ) {
+
+        return;
+
+      }
+
+
+      if (
+        mapRef.current
+      ) {
+
+        return;
+
+      }
+
+
+      const map =
+        L.map(
+          mapContainerRef.current,
+          {
+            zoomControl:
+              true
+          }
+        ).setView(
+          [
+            28.3949,
+            84.1240
+          ],
+          7
+        );
+
+
+      L.tileLayer(
+        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        {
+
+          attribution:
+            "&copy; OpenStreetMap contributors",
+
+          maxZoom:
+            19
+
+        }
+      ).addTo(map);
+
+
+      mapRef.current =
+        map;
+
+
+      setTimeout(
+        () => {
+
+          map.invalidateSize();
+
+        },
+        300
+      );
+
+
+      return () => {
+
+        map.remove();
+
+        mapRef.current =
+          null;
+
+      };
+
+    },
+    [
+      loading
+    ]
+  );
+
+
+  /* =================================
+     MARKER ICON
+  ================================= */
+
+  const createMarkerIcon =
+    (project) => {
+
+      const status =
+        String(
+          project?.status ||
+          ""
+        ).toLowerCase();
+
+
+      let symbol =
+        "●";
+
+
+      if (
+        status.includes(
+          "complete"
+        )
+      ) {
+
+        symbol =
+          "✓";
+
+      } else if (
+        status.includes(
+          "delay"
+        )
+      ) {
+
+        symbol =
+          "!";
+
+      } else if (
+        status.includes(
+          "critical"
+        )
+      ) {
+
+        symbol =
+          "!";
+
+      }
+
+
+      return L.divIcon({
+
+        className:
+          "project-map-marker-wrapper",
+
+        html:
+          `<div class="project-map-marker">
+            ${symbol}
+          </div>`,
+
+        iconSize: [
+          34,
+          34
+        ],
+
+        iconAnchor: [
+          17,
+          17
+        ],
+
+        popupAnchor: [
+          0,
+          -17
+        ]
+
+      });
+
+    };
+
+
+  /* =================================
+     UPDATE MARKERS
+  ================================= */
+
+  useEffect(
+    () => {
+
+      const map =
+        mapRef.current;
+
+
+      if (!map) {
+        return;
+      }
+
+
+      /* ===============================
+         REMOVE OLD MARKERS
+      =============================== */
+
+      markersRef.current.forEach(
+        (marker) => {
+
+          map.removeLayer(
+            marker
+          );
+
+        }
+      );
+
+
+      markersRef.current =
+        [];
+
+
+      /* ===============================
+         ADD NEW MARKERS
+      =============================== */
+
+      const mappedProjects =
+        filteredProjects.filter(
+          (project) =>
+            getCoordinates(
+              project
+            )
+        );
+
 
       mappedProjects.forEach(
         (project) => {
@@ -732,78 +1003,779 @@ const MapPage = () => {
               project
             );
 
-          if (coordinates) {
 
-            bounds.extend([
-              coordinates.latitude,
-              coordinates.longitude
-            ]);
-
+          if (!coordinates) {
+            return;
           }
+
+
+          const name =
+            project.name ||
+            project.projectName ||
+            "Unnamed Project";
+
+
+          const code =
+            project.projectCode ||
+            project.code ||
+            "N/A";
+
+
+          const status =
+            project.status ||
+            "Unknown";
+
+
+          const risk =
+            project.riskLevel ||
+            project.risk ||
+            "Unknown";
+
+
+          const progress =
+            Number(
+              project.progress ??
+              project.completionPercentage ??
+              project.completion ??
+              0
+            );
+
+
+          const budget =
+            Number(
+              project.budget ||
+              project.totalBudget ||
+              0
+            );
+
+
+          const budgetText =
+            budget
+              ? `NPR ${budget.toLocaleString("en-IN")}`
+              : "NPR 0";
+
+
+          const municipality =
+            project.municipality ||
+            "N/A";
+
+
+          const district =
+            project.district ||
+            "N/A";
+
+
+          const province =
+            project.province ||
+            "N/A";
+
+
+          const projectId =
+            project._id ||
+            project.id;
+
+
+          const popup =
+            `
+            <div class="project-map-popup">
+
+              <div class="map-popup-code">
+                ${code}
+              </div>
+
+              <h3>
+                ${name}
+              </h3>
+
+              <div class="map-popup-location">
+                📍 ${municipality},
+                ${district},
+                ${province}
+              </div>
+
+              <div class="map-popup-row">
+                <span>Status</span>
+                <strong>${status}</strong>
+              </div>
+
+              <div class="map-popup-row">
+                <span>Risk</span>
+                <strong>${risk}</strong>
+              </div>
+
+              <div class="map-popup-row">
+                <span>Budget</span>
+                <strong>${budgetText}</strong>
+              </div>
+
+              <div class="map-popup-progress">
+
+                <div class="map-popup-progress-head">
+                  <span>Progress</span>
+                  <strong>${progress}%</strong>
+                </div>
+
+                <div class="map-popup-progress-track">
+
+                  <div
+                    class="map-popup-progress-fill"
+                    style="width:${Math.min(
+                      100,
+                      Math.max(
+                        0,
+                        progress
+                      )
+                    )}%"
+                  ></div>
+
+                </div>
+
+              </div>
+
+              <button
+                class="map-popup-view-btn"
+                data-project-id="${projectId}"
+              >
+                View Project
+              </button>
+
+            </div>
+            `;
+
+
+          const marker =
+            L.marker(
+              [
+                coordinates.latitude,
+                coordinates.longitude
+              ],
+              {
+
+                icon:
+                  createMarkerIcon(
+                    project
+                  )
+
+              }
+            )
+              .addTo(map)
+              .bindPopup(
+                popup,
+                {
+                  maxWidth:
+                    300
+                }
+              );
+
+
+          marker.on(
+            "popupopen",
+            () => {
+
+              const button =
+                document.querySelector(
+                  `[data-project-id="${projectId}"]`
+                );
+
+
+              if (button) {
+
+                button.onclick =
+                  () => {
+
+                    if (
+                      projectId
+                    ) {
+
+                      navigate(
+                        `/projects/${projectId}`
+                      );
+
+                    }
+
+                  };
+
+              }
+
+            }
+          );
+
+
+          markersRef.current.push(
+            marker
+          );
 
         }
       );
 
+
+      /*
+       * IMPORTANT:
+       * Search handler controls
+       * map movement.
+       */
+
+      setTimeout(
+        () => {
+
+          map.invalidateSize();
+
+        },
+        200
+      );
+
+    },
+    [
+      filteredProjects,
+      navigate
+    ]
+  );
+
+
+  /* =================================
+     SEARCH PROJECT / LOCATION
+  ================================= */
+
+  const handleSearch =
+    async (event) => {
+
+      if (event) {
+
+        event.preventDefault();
+
+      }
+
+
+      const query =
+        search.trim();
+
+
+      /* ===============================
+         EMPTY SEARCH
+      =============================== */
+
+      if (!query) {
+
+        setSearchMessage(
+          ""
+        );
+
+
+        if (
+          mapRef.current
+        ) {
+
+          mapRef.current.flyTo(
+            [
+              28.3949,
+              84.1240
+            ],
+            7,
+            {
+
+              animate:
+                true,
+
+              duration:
+                1
+
+            }
+          );
+
+        }
+
+
+        return;
+
+      }
+
+
+      setSearching(
+        true
+      );
+
+
+      setSearchMessage(
+        ""
+      );
+
+
+      /* ===============================
+         LOCAL PROJECT SEARCH
+      =============================== */
+
+      const q =
+        query.toLowerCase();
+
+
+      const projectMatches =
+        projects.filter(
+          (project) => {
+
+            const name =
+              String(
+                project?.name ||
+                project?.projectName ||
+                ""
+              ).toLowerCase();
+
+
+            const code =
+              String(
+                project?.projectCode ||
+                project?.code ||
+                ""
+              ).toLowerCase();
+
+
+            const province =
+              String(
+                project?.province ||
+                ""
+              ).toLowerCase();
+
+
+            const district =
+              String(
+                project?.district ||
+                ""
+              ).toLowerCase();
+
+
+            const municipality =
+              String(
+                project?.municipality ||
+                ""
+              ).toLowerCase();
+
+
+            const location =
+              String(
+                project?.location ||
+                ""
+              ).toLowerCase();
+
+
+            return (
+
+              name.includes(q) ||
+
+              code.includes(q) ||
+
+              province.includes(q) ||
+
+              district.includes(q) ||
+
+              municipality.includes(q) ||
+
+              location.includes(q)
+
+            );
+
+          }
+        );
+
+
+      /* ===============================
+         SEARCH LOCATION
+      =============================== */
+
+      let location =
+        await searchNepalLocation(
+          query
+        );
+
+
+      if (!location) {
+
+        location =
+          searchFallbackLocation(
+            query
+          );
+
+      }
+
+
+      setSearching(
+        false
+      );
+
+
+      /* ===============================
+         PROJECT FOUND
+      =============================== */
+
       if (
-        bounds.isValid()
+        projectMatches.length > 0
       ) {
 
-        map.fitBounds(
-          bounds,
-          {
-            padding: [
-              50,
-              50
-            ],
-            maxZoom: 12
+        const projectsWithCoordinates =
+          projectMatches
+
+            .map(
+              (project) => ({
+
+                project,
+
+                coordinates:
+                  getCoordinates(
+                    project
+                  )
+
+              })
+            )
+
+            .filter(
+              (item) =>
+                Boolean(
+                  item.coordinates
+                )
+            );
+
+
+        /* =============================
+           PROJECTS WITH COORDINATES
+        ============================= */
+
+        if (
+          projectsWithCoordinates.length >
+          0 &&
+          mapRef.current
+        ) {
+
+          /* ===========================
+             ONE PROJECT
+          =========================== */
+
+          if (
+            projectsWithCoordinates.length ===
+            1
+          ) {
+
+            const coordinates =
+              projectsWithCoordinates[0]
+                .coordinates;
+
+
+            scrollToMap();
+
+
+            setTimeout(
+              () => {
+
+                if (
+                  mapRef.current
+                ) {
+
+                  mapRef.current.flyTo(
+                    [
+                      coordinates.latitude,
+                      coordinates.longitude
+                    ],
+                    14,
+                    {
+
+                      animate:
+                        true,
+
+                      duration:
+                        1.2
+
+                    }
+                  );
+
+                }
+
+              },
+              150
+            );
+
           }
+
+
+          /* ===========================
+             MULTIPLE PROJECTS
+          =========================== */
+
+          else {
+
+            const bounds =
+              L.latLngBounds(
+                projectsWithCoordinates.map(
+                  (item) => [
+
+                    item.coordinates.latitude,
+
+                    item.coordinates.longitude
+
+                  ]
+                )
+              );
+
+
+            scrollToMap();
+
+
+            setTimeout(
+              () => {
+
+                if (
+                  mapRef.current
+                ) {
+
+                  mapRef.current.fitBounds(
+                    bounds,
+                    {
+
+                      padding: [
+                        60,
+                        60
+                      ],
+
+                      maxZoom:
+                        14,
+
+                      animate:
+                        true
+
+                    }
+                  );
+
+                }
+
+              },
+              150
+            );
+
+          }
+
+
+          setSearchMessage(
+
+            `${projectMatches.length} project${
+              projectMatches.length !== 1
+                ? "s"
+                : ""
+            } found for "${query}".`
+
+          );
+
+
+          return;
+
+        }
+
+
+        /* =============================
+           PROJECT FOUND BUT NO COORDINATE
+        ============================= */
+
+        if (
+          location &&
+          mapRef.current
+        ) {
+
+          scrollToMap();
+
+
+          setTimeout(
+            () => {
+
+              if (
+                mapRef.current
+              ) {
+
+                mapRef.current.flyTo(
+                  [
+                    location.lat,
+                    location.lng
+                  ],
+                  14,
+                  {
+
+                    animate:
+                      true,
+
+                    duration:
+                      1.2
+
+                  }
+                );
+
+              }
+
+            },
+            150
+          );
+
+
+          setSearchMessage(
+
+            `${projectMatches.length} project${
+              projectMatches.length !== 1
+                ? "s"
+                : ""
+            } found for "${query}". Location shown on map.`
+
+          );
+
+
+          return;
+
+        }
+
+
+        setSearchMessage(
+
+          `${projectMatches.length} project${
+            projectMatches.length !== 1
+              ? "s"
+              : ""
+          } found for "${query}", but no map coordinates are available.`
+
+        );
+
+
+        return;
+
+      }
+
+
+      /* ===============================
+         LOCATION FOUND
+      =============================== */
+
+      if (
+        location
+      ) {
+
+        setSearchMessage(
+
+          `No project found for "${query}", but this location was found on the map.`
+
+        );
+
+
+        if (
+          mapRef.current
+        ) {
+
+          scrollToMap();
+
+
+          setTimeout(
+            () => {
+
+              if (
+                mapRef.current
+              ) {
+
+                mapRef.current.flyTo(
+                  [
+                    location.lat,
+                    location.lng
+                  ],
+                  14,
+                  {
+
+                    animate:
+                      true,
+
+                    duration:
+                      1.2
+
+                  }
+                );
+
+              }
+
+            },
+            150
+          );
+
+        }
+
+
+        return;
+
+      }
+
+
+      /* ===============================
+         NOTHING FOUND
+      =============================== */
+
+      setSearchMessage(
+
+        `"${query}" was not found in Nepal and no matching project was found.`
+
+      );
+
+
+      if (
+        mapRef.current
+      ) {
+
+        scrollToMap();
+
+
+        setTimeout(
+          () => {
+
+            if (
+              mapRef.current
+            ) {
+
+              mapRef.current.flyTo(
+                [
+                  28.3949,
+                  84.1240
+                ],
+                7,
+                {
+
+                  animate:
+                    true,
+
+                  duration:
+                    1
+
+                }
+              );
+
+            }
+
+          },
+          150
         );
 
       }
 
-    } else {
+    };
 
-      /* Keep Nepal visible */
 
-      map.setView(
-        [28.3949, 84.1240],
-        7
+  /* =================================
+     SEARCH INPUT
+  ================================= */
+
+  const handleSearchChange =
+    (event) => {
+
+      setSearch(
+        event.target.value
       );
 
-    }
 
-    setTimeout(() => {
-
-      map.invalidateSize(
-        true
+      setSearchMessage(
+        ""
       );
 
-    }, 300);
+    };
 
-  }, [
-    filteredProjects,
-    navigate
-  ]);
 
-  /* =========================================
-     COUNTS
-  ========================================= */
-
-  const mappedCount =
-    filteredProjects.filter(
-      (project) =>
-        getCoordinates(
-          project
-        )
-    ).length;
-
-  const unmappedCount =
-    filteredProjects.length -
-    mappedCount;
-
-  /* =========================================
+  /* =================================
      CLEAR FILTERS
-  ========================================= */
+  ================================= */
 
   const clearFilters =
     () => {
@@ -818,11 +1790,58 @@ const MapPage = () => {
         "All Risk"
       );
 
+      setSearchMessage(
+        ""
+      );
+
+
+      if (
+        mapRef.current
+      ) {
+
+        mapRef.current.flyTo(
+          [
+            28.3949,
+            84.1240
+          ],
+          7,
+          {
+
+            animate:
+              true,
+
+            duration:
+              1
+
+          }
+        );
+
+      }
+
     };
 
-  /* =========================================
+
+  /* =================================
+     PROJECT COUNTS
+  ================================= */
+
+  const mappedCount =
+    filteredProjects.filter(
+      (project) =>
+        getCoordinates(
+          project
+        )
+    ).length;
+
+
+  const unmappedCount =
+    filteredProjects.length -
+    mappedCount;
+
+
+  /* =================================
      LOADING
-  ========================================= */
+  ================================= */
 
   if (loading) {
 
@@ -855,11 +1874,13 @@ const MapPage = () => {
       )
 
     );
+
   }
 
-  /* =========================================
+
+  /* =================================
      PAGE
-  ========================================= */
+  ================================= */
 
   return h(
     "div",
@@ -868,7 +1889,10 @@ const MapPage = () => {
         "page project-map-page"
     },
 
-    /* HEADER */
+
+    /* =================================
+       HEADER
+    ================================= */
 
     h(
       "div",
@@ -895,6 +1919,7 @@ const MapPage = () => {
 
       ),
 
+
       h(
         "div",
         {
@@ -910,7 +1935,9 @@ const MapPage = () => {
 
             onClick:
               () =>
-                loadProjects(true),
+                loadProjects(
+                  true
+                ),
 
             disabled:
               refreshing
@@ -926,7 +1953,10 @@ const MapPage = () => {
 
     ),
 
-    /* ERROR */
+
+    /* =================================
+       ERROR
+    ================================= */
 
     error
       ? h(
@@ -937,11 +1967,16 @@ const MapPage = () => {
           },
 
           "⚠️ ",
+
           error
+
         )
       : null,
 
-    /* CONTROLS */
+
+    /* =================================
+       CONTROLS
+    ================================= */
 
     h(
       "div",
@@ -950,13 +1985,20 @@ const MapPage = () => {
           "project-map-controls"
       },
 
-      /* SEARCH */
+      /*
+       * SEARCH INPUT
+       * Search happens when ENTER is pressed.
+       * Search button removed.
+       */
 
       h(
-        "div",
+        "form",
         {
           className:
-            "map-search-box"
+            "map-search-box",
+
+          onSubmit:
+            handleSearch
         },
 
         h(
@@ -971,25 +2013,23 @@ const MapPage = () => {
         h(
           "input",
           {
-            type: "text",
+            type:
+              "text",
 
             value:
               search,
 
             placeholder:
-              "Search project, code, province, district...",
+              "Search project, code, province, district or location...",
 
             onChange:
-              (event) =>
-                setSearch(
-                  event.target.value
-                )
+              handleSearchChange
           }
+
         )
 
       ),
 
-      /* STATUS */
 
       h(
         "select",
@@ -1036,7 +2076,6 @@ const MapPage = () => {
 
       ),
 
-      /* RISK */
 
       h(
         "select",
@@ -1083,7 +2122,6 @@ const MapPage = () => {
 
       ),
 
-      /* CLEAR */
 
       h(
         "button",
@@ -1101,7 +2139,28 @@ const MapPage = () => {
 
     ),
 
-    /* STATS */
+
+    /* =================================
+       SEARCH MESSAGE
+    ================================= */
+
+    searchMessage
+      ? h(
+          "div",
+          {
+            className:
+              "map-search-message"
+          },
+
+          searchMessage
+
+        )
+      : null,
+
+
+    /* =================================
+       MAP STATS
+    ================================= */
 
     h(
       "div",
@@ -1131,6 +2190,7 @@ const MapPage = () => {
 
       ),
 
+
       h(
         "div",
         {
@@ -1151,6 +2211,7 @@ const MapPage = () => {
         )
 
       ),
+
 
       h(
         "div",
@@ -1175,14 +2236,21 @@ const MapPage = () => {
 
     ),
 
-    /* MAP CARD */
+
+    /* =================================
+       MAP
+    ================================= */
 
     h(
       "div",
       {
+        id:
+          "admin-live-map",
+
         className:
           "project-map-card"
       },
+
 
       h(
         "div",
@@ -1209,6 +2277,7 @@ const MapPage = () => {
 
         ),
 
+
         h(
           "span",
           {
@@ -1222,7 +2291,6 @@ const MapPage = () => {
 
       ),
 
-      /* ACTUAL MAP */
 
       h(
         "div",
@@ -1233,38 +2301,18 @@ const MapPage = () => {
           className:
             "project-map-container"
         }
-      ),
 
-      /* TILE ERROR */
-
-      tileError
-        ? h(
-            "div",
-            {
-              className:
-                "map-tile-error"
-            },
-
-            h(
-              "strong",
-              null,
-              "⚠️ Map tiles could not be loaded"
-            ),
-
-            h(
-              "span",
-              null,
-              "Please check your internet connection."
-            )
-
-          )
-        : null
+      )
 
     ),
 
-    /* NO COORDINATES */
+
+    /* =================================
+       NO COORDINATES NOTICE
+    ================================= */
 
     unmappedCount > 0
+
       ? h(
           "div",
           {
@@ -1299,9 +2347,12 @@ const MapPage = () => {
           )
 
         )
+
       : null
 
   );
+
 };
+
 
 export default MapPage;
