@@ -32,8 +32,8 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173",
-      "http://localhost:5174"
-    ],
+      "http://localhost:5174",
+      "https://projectwatch-nepal.vercel.app",    ],
     credentials: true
   })
 );
