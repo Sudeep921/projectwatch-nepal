@@ -1,0 +1,10 @@
+User Mobile / Browser
+        ↓
+     Vercel
+  React Frontend
+        ↓
+     Render
+ Node + Express API
+        ↓
+  MongoDB Atlas
+    Database

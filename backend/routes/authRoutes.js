@@ -1,4 +1,5 @@
 const express = require("express");
+
 const {
   loginLimiter
 } = require("../middleware/rateLimiter");
@@ -6,24 +7,57 @@ const {
 const {
   register,
   login,
-  getMe
+  getMe,
+  changeEmail
 } = require("../controllers/authController");
 
-const authMiddleware = require("../middleware/authMiddleware");
+const authMiddleware =
+  require("../middleware/authMiddleware");
 
-const router = express.Router();
+const router =
+  express.Router();
 
-router.post("/register", register);
+// ========================================
+// REGISTER
+// ========================================
+
+router.post(
+  "/register",
+  register
+);
+
+// ========================================
+// LOGIN
+// ========================================
+
 router.post(
   "/login",
   loginLimiter,
   login
 );
 
+// ========================================
+// GET CURRENT USER
+// ========================================
+
 router.get(
   "/me",
   authMiddleware,
   getMe
 );
+
+// ========================================
+// CHANGE EMAIL
+// ========================================
+
+router.put(
+  "/change-email",
+  authMiddleware,
+  changeEmail
+);
+
+// ========================================
+// EXPORT ROUTER
+// ========================================
 
 module.exports = router;

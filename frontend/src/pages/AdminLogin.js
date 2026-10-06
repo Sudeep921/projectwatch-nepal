@@ -95,7 +95,7 @@ const AdminLogin = () => {
 
       setError("");
 
-
+      console.log("LOGIN BUTTON CLICKED");
       console.log(
         "ADMIN LOGIN START:",
         email
@@ -306,6 +306,8 @@ const AdminLogin = () => {
         "form",
         {
           onSubmit: submit
+          
+          
         },
 
 
@@ -328,7 +330,7 @@ const AdminLogin = () => {
           h(
             "input",
             {
-              type: "email",
+              type: "text",
               value: email,
               onChange: (
                 event

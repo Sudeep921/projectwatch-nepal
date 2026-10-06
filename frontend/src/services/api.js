@@ -107,37 +107,40 @@ const apiRequest = async (
     // 401 UNAUTHORIZED
     // ====================================
 
-    if (
-      response.status === 401
-    ) {
+    if (response.status === 401) {
 
-      localStorage.removeItem(
-        "projectwatch_token"
-      );
+  // Login endpoint मा 401 भनेको
+  // wrong email/password हुन सक्छ.
+  // त्यसैले login page मा redirect नगर्ने.
+  if (endpoint === "/auth/login") {
 
-      localStorage.removeItem(
-        "projectwatch_user"
-      );
+    throw new Error(
+      data?.message ||
+      data?.error ||
+      "Invalid email or password."
+    );
+  }
 
+  // Other authenticated requests
+  localStorage.removeItem(
+    "projectwatch_token"
+  );
 
-      if (
-        window.location.pathname.startsWith(
-          "/admin"
-        )
-      ) {
+  localStorage.removeItem(
+    "projectwatch_user"
+  );
 
-        window.location.href =
-          "/admin-login";
+  if (
+    window.location.pathname.startsWith("/admin")
+  ) {
+    window.location.href =
+      "/admin-login";
+  }
 
-      }
-
-
-      throw new Error(
-        "Your session has expired. Please login again."
-      );
-
-    }
-
+  throw new Error(
+    "Your session has expired. Please login again."
+  );
+}
 
     // ====================================
     // 403 FORBIDDEN

@@ -414,9 +414,13 @@ mongoose
   .then(() => {
 
     console.log(
-      "✅ MongoDB connected successfully"
+      "📦 MongoDB database:",
+      mongoose.connection.name
     );
 
+    console.log(
+      "✅ MongoDB connected successfully"
+    );
     const PORT =
       process.env.PORT || 8000;
 
