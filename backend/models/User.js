@@ -27,6 +27,30 @@ const userSchema = new mongoose.Schema(
       required: true,
       minlength: 6
     },
+    twoFactorEnabled: {
+        type: Boolean,
+        default: false
+      },
+
+      loginOTPHash: {
+        type: String,
+        default: ""
+      },
+
+      loginOTPExpires: {
+        type: Date,
+        default: null
+      },
+
+      resetOTPHash: {
+        type: String,
+        default: ""
+      },
+
+      resetOTPExpires: {
+        type: Date,
+        default: null
+      },
 
     role: {
       type: String,

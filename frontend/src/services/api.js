@@ -2,9 +2,40 @@ const API_BASE_URL =
   import.meta.env.VITE_API_URL ||
   "http://localhost:8000/api";
 
+
 // ========================================
 // API REQUEST
 // ========================================
+export const forgotPassword = async (email) => {
+  return apiRequest(
+    "/auth/forgot-password",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        email
+      })
+    }
+  );
+};
+
+
+export const resetPassword = async (
+  email,
+  otp,
+  newPassword
+) => {
+  return apiRequest(
+    "/auth/reset-password",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        email,
+        otp,
+        newPassword
+      })
+    }
+  );
+};
 
 const apiRequest = async (
   endpoint,
@@ -102,45 +133,56 @@ const apiRequest = async (
 
   if (!response.ok) {
 
-
     // ====================================
     // 401 UNAUTHORIZED
     // ====================================
 
-    if (response.status === 401) {
+    if (
+      response.status === 401
+    ) {
 
-  // Login endpoint मा 401 भनेको
-  // wrong email/password हुन सक्छ.
-  // त्यसैले login page मा redirect नगर्ने.
-  if (endpoint === "/auth/login") {
+      // Login endpoint
+      if (
+        endpoint === "/auth/login"
+      ) {
 
-    throw new Error(
-      data?.message ||
-      data?.error ||
-      "Invalid email or password."
-    );
-  }
+        throw new Error(
+          data?.message ||
+          data?.error ||
+          "Invalid email or password."
+        );
 
-  // Other authenticated requests
-  localStorage.removeItem(
-    "projectwatch_token"
-  );
+      }
 
-  localStorage.removeItem(
-    "projectwatch_user"
-  );
 
-  if (
-    window.location.pathname.startsWith("/admin")
-  ) {
-    window.location.href =
-      "/admin-login";
-  }
+      // Other authenticated requests
+      localStorage.removeItem(
+        "projectwatch_token"
+      );
 
-  throw new Error(
-    "Your session has expired. Please login again."
-  );
-}
+      localStorage.removeItem(
+        "projectwatch_user"
+      );
+
+
+      if (
+        window.location.pathname.startsWith(
+          "/admin"
+        )
+      ) {
+
+        window.location.href =
+          "/admin-login";
+
+      }
+
+
+      throw new Error(
+        "Your session has expired. Please login again."
+      );
+
+    }
+
 
     // ====================================
     // 403 FORBIDDEN
@@ -180,6 +222,7 @@ const apiRequest = async (
 
     throw new Error(
       data?.message ||
+      data?.error ||
       `Server error: ${response.status}`
     );
 
@@ -240,6 +283,32 @@ export const loginUser = async (
     null;
 
 
+  // ======================================
+  // IMPORTANT:
+  // OTP REQUIRED
+  // ======================================
+
+  if (
+    authData?.requires2FA === true
+  ) {
+
+    return {
+      ...authData,
+
+      requires2FA: true,
+
+      token: undefined,
+
+      user
+    };
+
+  }
+
+
+  // ======================================
+  // NORMAL LOGIN TOKEN
+  // ======================================
+
   if (token) {
 
     localStorage.setItem(
@@ -264,7 +333,90 @@ export const loginUser = async (
 
   return {
     ...authData,
+
     token,
+
+    user
+  };
+
+};
+
+
+// ========================================
+// VERIFY LOGIN OTP
+// ========================================
+
+export const verifyLoginOTP = async (
+  email,
+  otp
+) => {
+
+  const data =
+    await apiRequest(
+      "/auth/verify-login-otp",
+      {
+        method: "POST",
+
+        body:
+          JSON.stringify({
+            email,
+            otp
+          })
+      }
+    );
+
+
+  const authData =
+    data?.data ||
+    data;
+
+
+  const token =
+    authData?.token ||
+    authData?.accessToken;
+
+
+  const user =
+    authData?.user ||
+    data?.user ||
+    null;
+
+
+  // ======================================
+  // OTP TOKEN
+  // ======================================
+
+  if (token) {
+
+    localStorage.setItem(
+      "projectwatch_token",
+      token
+    );
+
+  }
+
+
+  // ======================================
+  // OTP USER
+  // ======================================
+
+  if (user) {
+
+    localStorage.setItem(
+      "projectwatch_user",
+      JSON.stringify(
+        user
+      )
+    );
+
+  }
+
+
+  return {
+    ...authData,
+
+    token,
+
     user
   };
 
@@ -548,7 +700,9 @@ export const createFieldReport = (
       method: "POST",
 
       body:
-        JSON.stringify(data)
+        JSON.stringify(
+          data
+        )
     }
   );
 
@@ -563,7 +717,9 @@ export const updateFieldReport = (
       method: "PUT",
 
       body:
-        JSON.stringify(data)
+        JSON.stringify(
+          data
+        )
     }
   );
 
@@ -598,7 +754,9 @@ export const createComplaint = (
       method: "POST",
 
       body:
-        JSON.stringify(data)
+        JSON.stringify(
+          data
+        )
     }
   );
 
@@ -613,7 +771,9 @@ export const updateComplaint = (
       method: "PUT",
 
       body:
-        JSON.stringify(data)
+        JSON.stringify(
+          data
+        )
     }
   );
 
@@ -650,7 +810,9 @@ export const submitPublicComplaint = (
       method: "POST",
 
       body:
-        JSON.stringify(data)
+        JSON.stringify(
+          data
+        )
     }
   );
 
@@ -687,7 +849,9 @@ export const createEvidence = (
       method: "POST",
 
       body:
-        JSON.stringify(data)
+        JSON.stringify(
+          data
+        )
     }
   );
 
@@ -772,7 +936,9 @@ export const createVerification = (
       method: "POST",
 
       body:
-        JSON.stringify(data)
+        JSON.stringify(
+          data
+        )
     }
   );
 
@@ -856,7 +1022,9 @@ export const createNotification = (
       method: "POST",
 
       body:
-        JSON.stringify(data)
+        JSON.stringify(
+          data
+        )
     }
   );
 

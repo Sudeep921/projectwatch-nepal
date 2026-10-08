@@ -7,6 +7,7 @@ import React, {
 
 import {
   loginUser,
+  verifyLoginOTP,
   getCurrentUser
 } from "../services/api";
 
@@ -54,16 +55,13 @@ export const AuthProvider = ({
           );
 
 
-        // --------------------------------
-        // NO TOKEN
-        // --------------------------------
-
         if (!token) {
 
           setUser(null);
           setLoading(false);
 
           return;
+
         }
 
 
@@ -106,7 +104,7 @@ export const AuthProvider = ({
 
 
         // --------------------------------
-        // VERIFY USER FROM BACKEND
+        // VERIFY USER
         // --------------------------------
 
         try {
@@ -114,28 +112,6 @@ export const AuthProvider = ({
           const response =
             await getCurrentUser();
 
-
-          /*
-            Supported responses:
-
-            {
-              user: {...}
-            }
-
-            OR
-
-            {
-              data: {
-                user: {...}
-              }
-            }
-
-            OR
-
-            {
-              data: {...user}
-            }
-          */
 
           const currentUser =
             response?.data?.user ||
@@ -170,31 +146,17 @@ export const AuthProvider = ({
           );
 
 
-          // --------------------------------
-          // INVALID TOKEN
-          // --------------------------------
-
           const message =
             error?.message
               ?.toLowerCase() || "";
 
 
           if (
-            message.includes(
-              "invalid"
-            ) ||
-            message.includes(
-              "expired"
-            ) ||
-            message.includes(
-              "jwt"
-            ) ||
-            message.includes(
-              "unauthorized"
-            ) ||
-            message.includes(
-              "401"
-            )
+            message.includes("invalid") ||
+            message.includes("expired") ||
+            message.includes("jwt") ||
+            message.includes("unauthorized") ||
+            message.includes("401")
           ) {
 
             localStorage.removeItem(
@@ -251,10 +213,6 @@ export const AuthProvider = ({
       );
 
 
-      // ------------------------------------
-      // LOGIN API
-      // ------------------------------------
-
       const response =
         await loginUser(
           email,
@@ -268,32 +226,10 @@ export const AuthProvider = ({
       );
 
 
-      /*
-        Supported response formats:
-
-        {
-          token,
-          user
-        }
-
-        OR
-
-        {
-          data: {
-            token,
-            user
-          }
-        }
-      */
-
       const authData =
         response?.data ||
         response;
 
-
-      // ------------------------------------
-      // TOKEN
-      // ------------------------------------
 
       const token =
         authData?.token ||
@@ -302,10 +238,6 @@ export const AuthProvider = ({
         response?.accessToken;
 
 
-      // ------------------------------------
-      // USER
-      // ------------------------------------
-
       const loggedInUser =
         authData?.user ||
         response?.user ||
@@ -313,7 +245,30 @@ export const AuthProvider = ({
 
 
       // ------------------------------------
-      // SAVE TOKEN
+      // IMPORTANT: OTP REQUIRED
+      // ------------------------------------
+
+      if (
+        authData?.requires2FA === true
+      ) {
+
+        console.log(
+          "2FA REQUIRED - OTP SENT"
+        );
+
+
+        return {
+          ...authData,
+          token: undefined,
+          user: loggedInUser,
+          requires2FA: true
+        };
+
+      }
+
+
+      // ------------------------------------
+      // NORMAL TOKEN LOGIN
       // ------------------------------------
 
       if (token) {
@@ -325,10 +280,6 @@ export const AuthProvider = ({
 
       }
 
-
-      // ------------------------------------
-      // SAVE USER
-      // ------------------------------------
 
       if (loggedInUser) {
 
@@ -346,32 +297,6 @@ export const AuthProvider = ({
       }
 
 
-      // ------------------------------------
-      // CHECK LOGIN DATA
-      // ------------------------------------
-
-      if (!token) {
-
-        console.warn(
-          "Login successful but token was not found."
-        );
-
-      }
-
-
-      if (!loggedInUser) {
-
-        console.warn(
-          "Login successful but user data was not found."
-        );
-
-      }
-
-
-      // ------------------------------------
-      // LOGIN SUCCESS LOG
-      // ------------------------------------
-
       console.log(
         "AUTH LOGIN SUCCESS:",
         {
@@ -380,10 +305,6 @@ export const AuthProvider = ({
         }
       );
 
-
-      // ------------------------------------
-      // RETURN LOGIN RESULT
-      // ------------------------------------
 
       return {
         ...authData,
@@ -406,6 +327,126 @@ export const AuthProvider = ({
 
 
   // ========================================
+  // VERIFY LOGIN OTP
+  // ========================================
+
+  const verifyOTP = async (
+    email,
+    otp
+  ) => {
+
+    try {
+
+      console.log(
+        "AUTH OTP VERIFY START:",
+        email
+      );
+
+
+      const response =
+        await verifyLoginOTP(
+          email,
+          otp
+        );
+
+
+      console.log(
+        "AUTH OTP VERIFY RESPONSE:",
+        response
+      );
+
+
+      const authData =
+        response?.data ||
+        response;
+
+
+      const token =
+        authData?.token ||
+        authData?.accessToken ||
+        response?.token ||
+        response?.accessToken;
+
+
+      const verifiedUser =
+        authData?.user ||
+        response?.user ||
+        null;
+
+
+      // ------------------------------------
+      // TOKEN MUST EXIST
+      // ------------------------------------
+
+      if (!token) {
+
+        throw new Error(
+          "OTP verified but login token was not received."
+        );
+
+      }
+
+
+      // ------------------------------------
+      // SAVE TOKEN
+      // ------------------------------------
+
+      localStorage.setItem(
+        "projectwatch_token",
+        token
+      );
+
+
+      // ------------------------------------
+      // SAVE USER
+      // ------------------------------------
+
+      if (verifiedUser) {
+
+        localStorage.setItem(
+          "projectwatch_user",
+          JSON.stringify(
+            verifiedUser
+          )
+        );
+
+        setUser(
+          verifiedUser
+        );
+
+      }
+
+
+      console.log(
+        "AUTH OTP VERIFY SUCCESS:",
+        {
+          tokenExists: !!token,
+          user: verifiedUser
+        }
+      );
+
+
+      return {
+        ...authData,
+        token,
+        user: verifiedUser
+      };
+
+    } catch (error) {
+
+      console.error(
+        "AUTH OTP VERIFY ERROR:",
+        error
+      );
+
+      throw error;
+
+    }
+
+  };
+
+
+  // ========================================
   // LOGOUT
   // ========================================
 
@@ -413,23 +454,13 @@ export const AuthProvider = ({
 
     try {
 
-      // ------------------------------------
-      // REMOVE AUTH TOKEN
-      // ------------------------------------
-
       localStorage.removeItem(
         "projectwatch_token"
       );
 
-
-      // ------------------------------------
-      // REMOVE SAVED USER
-      // ------------------------------------
-
       localStorage.removeItem(
         "projectwatch_user"
       );
-
 
     } catch (error) {
 
@@ -440,10 +471,6 @@ export const AuthProvider = ({
 
     }
 
-
-    // --------------------------------------
-    // CLEAR REACT USER STATE
-    // --------------------------------------
 
     setUser(null);
 
@@ -495,6 +522,9 @@ export const AuthProvider = ({
 
     login,
 
+    // IMPORTANT
+    verifyLoginOTP: verifyOTP,
+
     logout,
 
     setUser: updateUser
@@ -542,9 +572,5 @@ export const useAuth = () => {
 
 };
 
-
-// ========================================
-// EXPORT
-// ========================================
 
 export default AuthContext;

@@ -7,6 +7,9 @@ const {
 const {
   register,
   login,
+  verifyLoginOTP,
+  forgotPassword,
+  resetPassword,
   getMe,
   changeEmail
 } = require("../controllers/authController");
@@ -34,6 +37,33 @@ router.post(
   "/login",
   loginLimiter,
   login
+);
+
+// ========================================
+// VERIFY LOGIN 2FA OTP
+// ========================================
+
+router.post(
+  "/verify-login-otp",
+  verifyLoginOTP
+);
+
+// ========================================
+// FORGOT PASSWORD
+// ========================================
+
+router.post(
+  "/forgot-password",
+  forgotPassword
+);
+
+// ========================================
+// RESET PASSWORD
+// ========================================
+
+router.post(
+  "/reset-password",
+  resetPassword
 );
 
 // ========================================
